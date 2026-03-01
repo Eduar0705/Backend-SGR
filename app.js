@@ -38,6 +38,24 @@ app.use('/api/docentes', docentesRouter);
 let rubricasRouter = require('./routes/rubricas');
 app.use('/api/rubricas', rubricasRouter);
 
+let usuariosRouter = require('./routes/usuarios');
+app.use('/api/usuarios', usuariosRouter);
+
+let calificacionesRouter = require('./routes/calificaciones');
+app.use('/api/calificaciones', calificacionesRouter);
+
+let studentEvaluacionesRouter = require('./routes/studentEvaluaciones');
+app.use('/api/student/evaluaciones', studentEvaluacionesRouter);
+
+let teacherRubricasRouter = require('./routes/teacherRubricas');
+app.use('/api/teacher/rubricas', teacherRubricasRouter);
+
+let teacherEvaluacionesRouter = require('./routes/teacherEvaluaciones');
+app.use('/api/teacher/evaluaciones', teacherEvaluacionesRouter);
+
+let teacherEstudiantesRouter = require('./routes/teacherEstudiantes');
+app.use('/api', teacherEstudiantesRouter);
+
 // AcademicoRouter captura lo que queda bajo /api (incluyendo /api/evaluaciones)
 let academicoRouter = require('./routes/academico');
 app.use('/api', academicoRouter);

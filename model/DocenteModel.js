@@ -133,27 +133,41 @@ class DocenteModel {
             connection.getConnection((err, conn) => {
                 if (err) return reject(err);
 
-                conn.beginTransaction((err) => {
-                    if (err) { conn.release(); return reject(err); }
+                // Validar que no exista ya un usuario con la nueva cédula
+                const checkUsuario = `SELECT cedula FROM usuario WHERE cedula = ?`;
+                conn.query(checkUsuario, [cedula], (err, results) => {
+                    if (err) {
+                        conn.release();
+                        return reject(err);
+                    }
 
-                    const updateUsuario = `UPDATE usuario SET cedula = ?, nombre = ?, apeliido = ?, email = ?, activo = ? WHERE cedula = ?`;
-                    conn.query(updateUsuario, [cedula, nombre, apellido, email, activo || 1, cedula_og], (err) => {
-                        if (err) {
-                            return conn.rollback(() => { conn.release(); reject(err); });
-                        }
+                    if (results.length > 0 && cedula_og !== cedula) {
+                        conn.release();
+                        return resolve({ success: false, message: 'Esa cédula ya pertenece a otro profesor. Por favor, asegurese de evitar duplicados.' });
+                    }
 
-                        const updateDocente = `UPDATE usuario_docente SET cedula_usuario = ?, especializacion = ?, descripcion = ?, telf = ? WHERE cedula_usuario = ?`;
-                        conn.query(updateDocente, [cedula, especialidad, notas || '', telefono, cedula_og], (err) => {
+                    conn.beginTransaction((err) => {
+                        if (err) { conn.release(); return reject(err); }
+
+                        const updateUsuario = `UPDATE usuario SET cedula = ?, nombre = ?, apeliido = ?, email = ?, activo = ? WHERE cedula = ?`;
+                        conn.query(updateUsuario, [cedula, nombre, apellido, email, activo || 1, cedula_og], (err) => {
                             if (err) {
                                 return conn.rollback(() => { conn.release(); reject(err); });
                             }
 
-                            conn.commit((err) => {
+                            const updateDocente = `UPDATE usuario_docente SET cedula_usuario = ?, especializacion = ?, descripcion = ?, telf = ? WHERE cedula_usuario = ?`;
+                            conn.query(updateDocente, [cedula, especialidad, notas || '', telefono, cedula_og], (err) => {
                                 if (err) {
                                     return conn.rollback(() => { conn.release(); reject(err); });
                                 }
-                                conn.release();
-                                resolve({ success: true, message: 'Profesor actualizado exitosamente' });
+
+                                conn.commit((err) => {
+                                    if (err) {
+                                        return conn.rollback(() => { conn.release(); reject(err); });
+                                    }
+                                    conn.release();
+                                    resolve({ success: true, message: 'Profesor actualizado exitosamente' });
+                                });
                             });
                         });
                     });

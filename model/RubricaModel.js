@@ -383,11 +383,12 @@ class RubricaModel {
                 INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
                 INNER JOIN rubrica r ON r.id = ru.id_rubrica
                 INNER JOIN seccion s ON e.id_seccion = s.id
+                INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
+                INNER JOIN usuario u ON u.cedula = ud.cedula_usuario
                 INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
                 INNER JOIN materia m ON pp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
-                INNER JOIN usuario_docente ud ON ud.cedula_usuario = r.cedula_docente
-                INNER JOIN usuario u ON u.cedula = ud.cedula_usuario
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                 LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
                 WHERE r.id = ?

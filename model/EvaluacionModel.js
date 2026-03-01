@@ -43,7 +43,8 @@ class EvaluacionModel {
                         c.nombre as carrera_nombre,
                         estud_sec.cantidad_en_seccion AS total_evaluaciones, 
                         CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                        COUNT(DISTINCT eval_est.id) AS completadas,
+                        (SELECT COUNT(DISTINCT er.id) FROM evaluacion_realizada er
+                        INNER JOIN evaluacion ON er.id_evaluacion = e.id) AS completadas,
                         e.fecha_evaluacion,
                         IFNULL(MAX(he.id_horario), MAX(hec.id)) AS id_horario, 
                         CASE 

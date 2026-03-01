@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const AcademicoController = require('../controllers/AcademicoController');
+const ReportesController = require('../controllers/ReportesController');
 const authMiddleware = require('../middleware/auth.middleware');
 const evaluacionesRouter = require('./evaluaciones');
 
@@ -18,5 +19,6 @@ router.get('/admin/materias/:carreraCodigo/:semestreId', AcademicoController.get
 router.get('/admin/secciones/:materiaCodigo/:carreraCodigo', AcademicoController.getSecciones);
 router.get('/admin/evaluaciones/:seccionId', AcademicoController.getEvaluaciones); // Agregada
 router.get('/admin/evaluacion/:evalId', AcademicoController.getEvaluacionDetalle);
+router.get('/admin/reportes/data', ReportesController.getAdminStats);
 
 module.exports = router;

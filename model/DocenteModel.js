@@ -29,11 +29,12 @@ class DocenteModel {
 
     async createDocente({ cedula, nombre, apellido, email, telefono, especialidad, notas }) {
         return new Promise((resolve, reject) => {
-            // Verificar si el docente ya existe (posiblemente inactivo)
+            // Verificar si el usuario ya existe (en usuario y/o usuario_docente)
             const checkQuery = `
-                SELECT u.*, ud.*
-                FROM usuario_docente ud
-                INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+                SELECT u.cedula, u.nombre, u.apeliido, u.email, u.activo, u.id_rol,
+                       ud.cedula_usuario AS docente_existe
+                FROM usuario u
+                LEFT JOIN usuario_docente ud ON u.cedula = ud.cedula_usuario
                 WHERE u.cedula = ?
             `;
 
@@ -46,8 +47,8 @@ class DocenteModel {
                     conn.beginTransaction((err) => {
                         if (err) { conn.release(); return reject(err); }
 
-                        if (results.length > 0 && results[0].activo == 0) {
-                            // Re-activar docente existente
+                        if (results.length > 0 && results[0].docente_existe && results[0].activo == 0) {
+                            // Re-activar docente existente (tiene registro en usuario y usuario_docente)
                             const updateUsuario = `UPDATE usuario SET nombre = ?, apeliido = ?, email = ?, activo = 1 WHERE cedula = ?`;
                             conn.query(updateUsuario, [nombre, apellido, email, cedula], (err) => {
                                 if (err) {
@@ -69,12 +70,36 @@ class DocenteModel {
                                     });
                                 });
                             });
-                        } else if (results.length > 0 && results[0].activo == 1) {
-                            // Ya existe y está activo
+                        } else if (results.length > 0 && results[0].docente_existe && results[0].activo == 1) {
+                            // Ya existe como docente y está activo
                             conn.release();
                             resolve({ success: false, message: 'Ya existe un docente con esa cédula' });
+                        } else if (results.length > 0 && !results[0].docente_existe) {
+                            // El usuario existe en la tabla usuario pero NO en usuario_docente
+                            // Actualizar su rol a docente e insertar en usuario_docente
+                            const updateUsuario = `UPDATE usuario SET nombre = ?, apeliido = ?, email = ?, id_rol = 2, activo = 1 WHERE cedula = ?`;
+                            conn.query(updateUsuario, [nombre, apellido, email, cedula], (err) => {
+                                if (err) {
+                                    return conn.rollback(() => { conn.release(); reject(err); });
+                                }
+
+                                const insertDocente = `INSERT INTO usuario_docente (cedula_usuario, especializacion, descripcion, telf) VALUES (?, ?, ?, ?)`;
+                                conn.query(insertDocente, [cedula, especialidad, notas || '', telefono], (err) => {
+                                    if (err) {
+                                        return conn.rollback(() => { conn.release(); reject(err); });
+                                    }
+
+                                    conn.commit((err) => {
+                                        if (err) {
+                                            return conn.rollback(() => { conn.release(); reject(err); });
+                                        }
+                                        conn.release();
+                                        resolve({ success: true, message: 'Profesor agregado exitosamente (usuario existente actualizado)' });
+                                    });
+                                });
+                            });
                         } else {
-                            // Crear nuevo
+                            // Crear nuevo (no existe en ninguna tabla)
                             const insertUsuario = `INSERT INTO usuario (cedula, nombre, apeliido, email, id_rol) VALUES (?, ?, ?, ?, 2)`;
                             conn.query(insertUsuario, [cedula, nombre, apellido, email], (err) => {
                                 if (err) {

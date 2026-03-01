@@ -18,4 +18,9 @@ router.put('/:cedula', DocenteController.updateDocente);
 // DELETE /api/docentes/:cedula  → Eliminar (soft-delete) un docente
 router.delete('/:cedula', DocenteController.deleteDocente);
 
+// Rutas de Permisos
+router.get('/:cedula/permisos', DocenteController.getPermisos);
+router.post('/:cedula/permisos', DocenteController.savePermisos);
+router.delete('/permisos/:id', DocenteController.deletePermiso);
+
 module.exports = router;

@@ -1,17 +1,15 @@
 const connection = require('./conexion');
+const NotificacionModel = require('./NotificacionModel');
 
 class RubricaModel {
-    async getCarreras() {
+    async getAllCarreras() {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
-                    c.codigo, 
-                    c.nombre, 
-                    COUNT(DISTINCT pp.num_semestre) AS duracion_semestres
-                FROM carrera c
-                INNER JOIN plan_periodo pp ON c.codigo = pp.codigo_carrera
-                WHERE c.activo = 1
-                GROUP BY c.codigo
+                    codigo, 
+                    nombre
+                FROM carrera
+                WHERE activo = 1
                 ORDER BY nombre
             `;
             connection.query(query, (err, results) => {
@@ -279,9 +277,22 @@ class RubricaModel {
                             }
                         }
 
-                        conn.commit((err) => {
+                        conn.commit(async (err) => {
                             if (err) throw err;
                             conn.release();
+                            
+                            // Notificar al docente que la rúbrica ha sido habilitada
+                            try {
+                                await NotificacionModel.create({
+                                    usuario_destino: data.cedula_docente,
+                                    mensaje: `La rúbrica "${data.nombre_rubrica}" ha sido habilitada exitosamente para su uso.`,
+                                    id_rubrica: rubricaId
+                                });
+                            } catch (notifErr) {
+                                console.error('Error al crear notificación de rúbrica:', notifErr);
+                                // No bloqueamos la respuesta principal por un error en notificaciones
+                            }
+
                             resolve({ success: true, rubricaId });
                         });
 

@@ -6,6 +6,10 @@ const authMiddleware = require('../middleware/auth.middleware');
 // Proteger todas las rutas
 router.use(authMiddleware);
 
+// Perfil y cambio de clave (Para todos los usuarios autenticados)
+router.get('/profile', UserController.getProfile);
+router.put('/change-password', UserController.changePassword);
+
 // GET    /api/usuarios          → Listar todos los usuarios
 router.get('/', UserController.getUsuarios);
 

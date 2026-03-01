@@ -53,6 +53,25 @@ class DashboardController {
             });
         }
     }
+
+    async getAdvancedDashboardStats(req, res) {
+        try {
+            const { cedula } = req.user;
+            const { roleId } = req.query;
+            const stats = await dashboardModel.getAdvancedStats(cedula, parseInt(roleId));
+            
+            return res.json({
+                success: true,
+                data: stats
+            });
+        } catch (error) {
+            console.error('Error al obtener estadísticas avanzadas:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error interno del servidor'
+            });
+        }
+    }
 }
 
 module.exports = new DashboardController();

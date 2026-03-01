@@ -447,6 +447,26 @@ class EvaluacionModel {
             });
         });
     }
+
+    static getEvaluacionesBySeccion(seccionId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT 
+                    e.id, e.contenido, e.ponderacion, e.fecha_evaluacion,
+                    CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END as tiene_rubrica,
+                    r.id as rubrica_id, r.nombre_rubrica
+                FROM evaluacion e
+                LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
+                LEFT JOIN rubrica r ON ru.id_rubrica = r.id
+                WHERE e.id_seccion = ?
+                ORDER BY e.fecha_evaluacion DESC
+            `;
+            pool.query(query, [seccionId], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
 }
 
 module.exports = EvaluacionModel;

@@ -24,6 +24,8 @@ app.use('/users', usersRouter);
 // --- Rutas de la API ---
 app.use('/api/auth', authRouter);
 app.use('/api/dashboard', dashboardRouter);
+let notificacionesRouter = require('./routes/notificaciones');
+app.use('/api/notificaciones', notificacionesRouter);
 
 // Middleware de Log para API
 app.use('/api', (req, res, next) => {
@@ -55,6 +57,9 @@ app.use('/api/teacher/evaluaciones', teacherEvaluacionesRouter);
 
 let teacherEstudiantesRouter = require('./routes/teacherEstudiantes');
 app.use('/api', teacherEstudiantesRouter);
+
+let permisosRouter = require('./routes/permisos');
+app.use('/api/permisos', permisosRouter);
 
 // AcademicoRouter captura lo que queda bajo /api (incluyendo /api/evaluaciones)
 let academicoRouter = require('./routes/academico');

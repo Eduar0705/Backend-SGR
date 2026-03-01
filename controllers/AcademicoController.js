@@ -1,9 +1,10 @@
 const RubricaModel = require('../model/RubricaModel');
+const EvaluacionModel = require('../model/EvaluacionModel');
 
 class AcademicoController {
     async getCarreras(req, res) {
         try {
-            const carreras = await RubricaModel.getCarreras();
+            const carreras = await RubricaModel.getAllCarreras();
             res.json({ success: true, data: carreras });
         } catch (error) {
             console.error('Error getCarreras:', error);
@@ -46,7 +47,7 @@ class AcademicoController {
 
     async getEstrategias(req, res) {
         try {
-            const estrategias = await RubricaModel.getEstrategias();
+            const estrategias = await EvaluacionModel.getEstrategias();
             res.json({ success: true, estrategias_eval: estrategias });
         } catch (error) {
             console.error('Error getEstrategias:', error);

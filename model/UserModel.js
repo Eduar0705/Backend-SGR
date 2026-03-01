@@ -11,8 +11,34 @@ class UserModel {
         });
     }
 
+    async getByCedula(cedula) {
+        const query = `
+            SELECT u.cedula, u.nombre, u.apeliido as apellido, u.email, r.nombre as rol_nombre, u.id_rol
+            FROM usuario u
+            INNER JOIN rol r ON u.id_rol = r.id
+            WHERE u.cedula = ?
+        `;
+        return new Promise((resolve, reject) => {
+            connection.query(query, [cedula], (err, results) => {
+                if (err) return reject(err);
+                resolve(results[0]);
+            });
+        });
+    }
+
+    async changePassword(cedula, newPassword) {
+        const query = 'UPDATE usuario SET password = ? WHERE cedula = ?';
+        return new Promise((resolve, reject) => {
+            connection.query(query, [newPassword, cedula], (err, result) => {
+                if (err) return reject(err);
+                if (result.affectedRows === 0) return resolve({ status: 'error', mensaje: 'Usuario no encontrado' });
+                resolve({ status: 'ok', mensaje: 'Contraseña actualizada correctamente' });
+            });
+        });
+    }
+
     async getAll() {
-        const query = 'SELECT cedula, nombre, apeliido, email, id_rol, activo FROM usuario ORDER BY nombre';
+        const query = 'SELECT cedula, nombre, apeliido as apellido, email, id_rol, activo FROM usuario ORDER BY nombre';
         return new Promise((resolve, reject) => {
             connection.query(query, (err, results) => {
                 if (err) return reject(err);
@@ -71,6 +97,35 @@ class UserModel {
                 if (err) return reject(err);
                 if (result.affectedRows === 0) return resolve({ status: 'error', mensaje: 'Usuario no encontrado' });
                 resolve({ status: 'ok', mensaje: 'Usuario eliminado exitosamente' });
+            });
+        });
+    }
+    async updateSessionToken(cedula, token) {
+        return new Promise((resolve, reject) => {
+            const query = 'UPDATE usuario SET session_token = ? WHERE cedula = ?';
+            connection.query(query, [token, cedula], (err, result) => {
+                if (err) return reject(err);
+                resolve(result.affectedRows > 0);
+            });
+        });
+    }
+
+    async getSessionToken(cedula) {
+        return new Promise((resolve, reject) => {
+            const query = 'SELECT session_token FROM usuario WHERE cedula = ?';
+            connection.query(query, [cedula], (err, results) => {
+                if (err) return reject(err);
+                resolve(results.length > 0 ? results[0].session_token : null);
+            });
+        });
+    }
+
+    async clearSessionToken(cedula) {
+        return new Promise((resolve, reject) => {
+            const query = 'UPDATE usuario SET session_token = NULL WHERE cedula = ?';
+            connection.query(query, [cedula], (err, result) => {
+                if (err) return reject(err);
+                resolve(result.affectedRows > 0);
             });
         });
     }

@@ -306,7 +306,73 @@ function calcularTiempoTranscurrido(fecha) {
     return 'hace unos segundos';
 }
 
+class DashboardModelExtended extends DashboardModel {
+    async getAdvancedStats(cedula, roleId) {
+        // Implementación de reportes avanzados combinando lógica de Admin y Docente
+        // Si roleId === 1 (Admin), devolvemos reporte global
+        // Si roleId === 2 (Docente), devolvemos reporte filtrado por docente
+        
+        const isDocente = roleId === 2;
+        const filter = isDocente ? 'WHERE pd.docente_cedula = ?' : '';
+        const params = isDocente ? [cedula] : [];
+
+        return new Promise((resolve, reject) => {
+            const queries = {
+                distribucionNotas: `
+                    SELECT 
+                        CASE 
+                            WHEN puntaje / 5 >= 18 THEN 'Sobresaliente'
+                            WHEN puntaje / 5 >= 15 THEN 'Notable'
+                            WHEN puntaje / 5 >= 10 THEN 'Aprobado'
+                            ELSE 'Reprobado'
+                        END as rango,
+                        COUNT(*) as cantidad
+                    FROM (
+                        SELECT er.id, SUM(de.puntaje_obtenido) as puntaje
+                        FROM evaluacion_realizada er
+                        INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                        ${isDocente ? 'WHERE er.cedula_evaluador = ?' : ''}
+                        GROUP BY er.id
+                    ) as notas
+                    GROUP BY rango
+                `,
+                rendimientoMateria: `
+                    SELECT m.nombre, AVG(de.puntaje_obtenido / 5) as promedio
+                    FROM evaluacion e
+                    INNER JOIN seccion s ON e.id_seccion = s.id
+                    INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
+                    INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                    INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
+                    INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                    ${isDocente ? 'INNER JOIN permiso_docente pd ON s.id = pd.id_seccion' : ''}
+                    ${isDocente ? 'WHERE pd.docente_cedula = ?' : ''}
+                    GROUP BY m.codigo
+                    ORDER BY promedio DESC
+                `
+            };
+
+            const promises = Object.entries(queries).map(([key, query]) => {
+                return new Promise((res, rej) => {
+                    connection.query(query, params, (err, results) => {
+                        if (err) return rej(err);
+                        res({ key, results });
+                    });
+                });
+            });
+
+            Promise.all(promises)
+                .then(results => {
+                    resolve(results.reduce((acc, item) => {
+                        acc[item.key] = item.results;
+                        return acc;
+                    }, {}));
+                })
+                .catch(reject);
+        });
+    }
+}
+
 module.exports = {
-    model: new DashboardModel(),
+    model: new DashboardModelExtended(),
     utils: { calcularTiempoTranscurrido }
 };

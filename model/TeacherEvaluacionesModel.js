@@ -1,4 +1,5 @@
 const conexion = require('./conexion');
+const NotificacionModel = require('./NotificacionModel');
 
 function query(sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -444,6 +445,31 @@ class TeacherEvaluacionesModel {
 
         // update evaluacion_realizada fecha and observ
         await query(`UPDATE evaluacion_realizada SET fecha_evaluado = NOW(), observaciones = ? WHERE id = ?`, [payload.observaciones || '', er_id]);
+
+        // Notificar al estudiante que ha sido evaluado
+        try {
+            const [evalInfo] = await query(`
+                SELECT r.nombre_rubrica, m.nombre as materia_nombre
+                FROM evaluacion_realizada er
+                INNER JOIN evaluacion e ON er.id_evaluacion = e.id
+                INNER JOIN seccion s ON e.id_seccion = s.id
+                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
+                INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
+                INNER JOIN rubrica r ON ru.id_rubrica = r.id
+                WHERE er.id = ?
+            `, [er_id]);
+
+            if (evalInfo) {
+                await NotificacionModel.create({
+                    usuario_destino: estudianteCedula,
+                    mensaje: `Tu evaluación en la materia "${evalInfo.materia_nombre}" ha sido corregida (Rúbrica: ${evalInfo.nombre_rubrica}).`,
+                    id_rubrica: null // Opcional: podrías pasar el ID de la rúbrica si quieres linkear
+                });
+            }
+        } catch (notifErr) {
+            console.error('Error al crear notificación de evaluación:', notifErr);
+        }
 
         return { er_id };
     }

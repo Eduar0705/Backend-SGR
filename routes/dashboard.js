@@ -7,5 +7,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 router.use(authMiddleware);
 
 router.get('/', dashboardController.getDashboardStats);
+router.get('/student', dashboardController.getStudentDashboardStats);
+router.get('/teacher', dashboardController.getTeacherDashboardStats);
 
 module.exports = router;

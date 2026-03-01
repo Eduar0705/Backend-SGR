@@ -8,6 +8,14 @@ const pool = mysql.createPool({
     database: 'sistems_sgr'
 });
 
+const pool1 = mysql.createPool({
+    connectionLimit: 10,
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'sgr'
+});
+
 // Test connection
 pool.getConnection((err, connection) => {
     if (err) {

@@ -222,7 +222,7 @@ class TeacherRubricaModel {
                 CASE WHEN cantidad_personas=1 THEN 'Individual' WHEN cantidad_personas=2 THEN 'En Pareja' ELSE 'Grupal' END AS modalidad,
                 e.cantidad_personas, r.activo, r.fecha_creacion AS created_at, r.fecha_actualizacion AS updated_at,
                 m.nombre AS materia_nombre, CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                c.nombre AS carrera_nombre, CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
+                c.nombre AS carrera_nombre, CONCAT(u_p.nombre, ' ', u_p.apeliido) AS docente_nombre
             FROM evaluacion e
             INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
             INNER JOIN rubrica r ON r.id = ru.id_rubrica
@@ -230,11 +230,12 @@ class TeacherRubricaModel {
             INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
             INNER JOIN materia m ON pp.codigo_materia = m.codigo
             INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
-            INNER JOIN usuario_docente ud ON ud.cedula_usuario = r.cedula_docente
-            INNER JOIN usuario u ON u.cedula = ud.cedula_usuario
+            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+            INNER JOIN usuario_docente ud_p ON ud_p.cedula_usuario = pd.docente_cedula
+            INNER JOIN usuario u_p ON u_p.cedula = ud_p.cedula_usuario
             LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
             LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
-            WHERE r.id = ? AND r.cedula_docente = ? -- Aseguramos que es de este docente
+            WHERE r.id = ? AND pd.docente_cedula = ? -- Aseguramos acceso por sección
             GROUP BY r.id
         `;
         const queryCriterios = `SELECT cr.id, cr.descripcion, cr.puntaje_maximo, cr.orden FROM criterio_rubrica cr WHERE cr.rubrica_id = ? ORDER BY cr.orden`;

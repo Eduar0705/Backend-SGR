@@ -28,8 +28,8 @@ class TeacherEvaluacionesModel {
                     er.cedula_evaluado as estudiante_cedula,
                     u.nombre AS estudiante_nombre,
                     u.apeliido AS estudiante_apellido,
-                    r.nombre_rubrica,
-                    tr.nombre as tipo_evaluacion,
+                    IFNULL(r.nombre_rubrica, 'Sin rúbrica') as nombre_rubrica,
+                    IFNULL(tr.nombre, 'Pendiente') as tipo_evaluacion,
                     (SELECT SUM(cr2.puntaje_maximo)
                     FROM  criterio_rubrica cr2
                     WHERE cr2.rubrica_id = r.id) as porcentaje_evaluacion,
@@ -52,9 +52,9 @@ class TeacherEvaluacionesModel {
                         ELSE 'Pendiente'
                     END as estado
                 FROM evaluacion e 
-                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
-                INNER JOIN rubrica r ON r.id = ru.id_rubrica
-                INNER JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+                LEFT JOIN rubrica_uso ru ON ru.id_eval = e.id
+                LEFT JOIN rubrica r ON r.id = ru.id_rubrica
+                LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
@@ -82,8 +82,8 @@ class TeacherEvaluacionesModel {
                     er.cedula_evaluado as estudiante_cedula,
                     u.nombre AS estudiante_nombre,
                     u.apeliido AS estudiante_apellido,
-                    r.nombre_rubrica,
-                    tr.nombre as tipo_evaluacion,
+                    IFNULL(r.nombre_rubrica, 'Sin rúbrica') as nombre_rubrica,
+                    IFNULL(tr.nombre, 'Pendiente') as tipo_evaluacion,
                     (SELECT SUM(cr2.puntaje_maximo)
                     FROM criterio_rubrica cr2
                     WHERE cr2.rubrica_id = r.id) as porcentaje_evaluacion,
@@ -106,9 +106,9 @@ class TeacherEvaluacionesModel {
                         ELSE 'Pendiente'
                     END as estado
                 FROM evaluacion e 
-                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
-                INNER JOIN rubrica r ON r.id = ru.id_rubrica
-                INNER JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+                LEFT JOIN rubrica_uso ru ON ru.id_eval = e.id
+                LEFT JOIN rubrica r ON r.id = ru.id_rubrica
+                LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id

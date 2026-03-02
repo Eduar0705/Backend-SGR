@@ -75,12 +75,26 @@ class RubricaController {
                 return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
             }
 
+            // FIX: Validar que criterios sea un array válido (igual que en updateRubrica)
+            let criteriosParsed = criterios;
+            if (typeof criterios === 'string') {
+                try {
+                    criteriosParsed = JSON.parse(criterios);
+                } catch (e) {
+                    return res.status(400).json({ success: false, message: 'Formato de criterios inválido' });
+                }
+            }
+
+            if (!Array.isArray(criteriosParsed) || criteriosParsed.length === 0) {
+                return res.status(400).json({ success: false, message: 'Debe agregar al menos un criterio de evaluación' });
+            }
+
             const result = await RubricaModel.saveRubrica({
                 nombre_rubrica,
                 id_evaluacion,
                 tipo_rubrica,
                 instrucciones,
-                criterios,
+                criterios: criteriosParsed,
                 porcentaje,
                 cedula_docente
             });
@@ -92,22 +106,21 @@ class RubricaController {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // FIX PRINCIPAL: updateRubrica reescrito usando async/await con Promises
+    // para evitar el bug de callbacks concurrentes con contadores manuales
+    // que causaba que commit se ejecutara múltiples veces o nunca.
+    // ─────────────────────────────────────────────────────────────────────────
     async updateRubrica(req, res) {
         const { id } = req.params;
-        
+
         if (!req.user || !req.user.cedula) {
             return res.status(401).json({ success: false, mensaje: 'Sesión no válida' });
         }
 
-        const {
-            nombre_rubrica,
-            id_evaluacion,
-            tipo_rubrica,
-            instrucciones,
-            criterios,
-            porcentaje
-        } = req.body;
+        const { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje } = req.body;
 
+        // ── Parsear criterios ─────────────────────────────────────────────────
         let criteriosParsed = criterios;
         if (typeof criterios === 'string') {
             try {
@@ -117,6 +130,7 @@ class RubricaController {
             }
         }
 
+        // ── Validaciones ──────────────────────────────────────────────────────
         if (!nombre_rubrica || !id_evaluacion || !tipo_rubrica || !instrucciones) {
             return res.status(400).json({ success: false, mensaje: 'Todos los campos obligatorios deben estar completos' });
         }
@@ -128,9 +142,11 @@ class RubricaController {
         let sumaPuntajes = 0;
         for (let i = 0; i < criteriosParsed.length; i++) {
             const criterio = criteriosParsed[i];
+
             if (!criterio.descripcion || criterio.descripcion.trim() === '') {
                 return res.status(400).json({ success: false, mensaje: `El criterio ${i + 1} necesita una descripción` });
             }
+
             const puntajeCriterio = parseFloat(criterio.puntaje_maximo);
             if (isNaN(puntajeCriterio) || puntajeCriterio < 1) {
                 return res.status(400).json({ success: false, mensaje: `El criterio ${i + 1} debe tener un puntaje mínimo de 1 punto` });
@@ -160,114 +176,69 @@ class RubricaController {
         }
 
         if (Math.abs(sumaPuntajes - porcentaje) > 0.01) {
-            return res.status(400).json({ success: false, mensaje: `La suma de puntajes (${sumaPuntajes.toFixed(2)}) debe ser EXACTAMENTE IGUAL al porcentaje de evaluación (${porcentaje}%)` });
+            return res.status(400).json({
+                success: false,
+                mensaje: `La suma de puntajes (${sumaPuntajes.toFixed(2)}) debe ser EXACTAMENTE IGUAL al porcentaje de evaluación (${porcentaje}%)`
+            });
         }
 
-        connection.getConnection((err, conn) => {
-            if (err) return res.status(500).json({ success: false, mensaje: 'Error del servidor al conectar con la base de datos' });
+        // ── Transacción con async/await ───────────────────────────────────────
+        let conn;
+        try {
+            conn = await RubricaModel.getConnectionAsync();
+            await RubricaModel.beginTransactionAsync(conn);
 
-            conn.beginTransaction((err) => {
-                if (err) { conn.release(); return res.status(500).json({ success: false, mensaje: 'Error del servidor al iniciar la transacción' }); }
+            // 1. Actualizar datos base de la rúbrica
+            await RubricaModel.queryAsync(conn,
+                `UPDATE rubrica SET nombre_rubrica = ?, instrucciones = ?, id_tipo = ? WHERE id = ?`,
+                [nombre_rubrica, instrucciones, tipo_rubrica, id]
+            );
 
-                const queryUpdateRubrica = `UPDATE rubrica SET nombre_rubrica = ?, instrucciones = ?, id_tipo = ? WHERE id = ?`;
-                conn.query(queryUpdateRubrica, [nombre_rubrica, instrucciones, tipo_rubrica, id], (error) => {
-                    if (error) return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: 'Error al actualizar la rúbrica' }); });
+            // 2. Actualizar relación con evaluación
+            await RubricaModel.queryAsync(conn, 'DELETE FROM rubrica_uso WHERE id_rubrica = ?', [id]);
+            await RubricaModel.queryAsync(conn, 'INSERT INTO rubrica_uso (id_eval, id_rubrica) VALUES (?, ?)', [id_evaluacion, id]);
 
-                    const queryDeleteRubricaUso = 'DELETE FROM rubrica_uso WHERE id_rubrica = ?';
-                    conn.query(queryDeleteRubricaUso, [id], (error) => {
-                        if (error) return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: 'Error al actualizar la relación con la evaluación' }); });
+            // 3. Eliminar criterios y niveles existentes
+            const criteriosExistentes = await RubricaModel.queryAsync(conn, 'SELECT id FROM criterio_rubrica WHERE rubrica_id = ?', [id]);
+            if (criteriosExistentes.length > 0) {
+                const criteriosIds = criteriosExistentes.map(c => c.id);
+                await RubricaModel.queryAsync(conn, `DELETE FROM nivel_desempeno WHERE criterio_id IN (?)`, [criteriosIds]);
+                await RubricaModel.queryAsync(conn, `DELETE FROM criterio_rubrica WHERE rubrica_id = ?`, [id]);
+            }
 
-                        const queryInsertRubricaUso = 'INSERT INTO rubrica_uso (id_eval, id_rubrica) VALUES (?, ?)';
-                        conn.query(queryInsertRubricaUso, [id_evaluacion, id], (error) => {
-                            if (error) return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: 'Error al asociar la rúbrica con la nueva evaluación' }); });
+            // 4. Insertar nuevos criterios y niveles (secuencialmente con for...of)
+            for (let i = 0; i < criteriosParsed.length; i++) {
+                const criterio = criteriosParsed[i];
+                const resCriterio = await RubricaModel.queryAsync(conn,
+                    `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)`,
+                    [id, criterio.descripcion.trim(), parseFloat(criterio.puntaje_maximo), parseInt(criterio.orden) || (i + 1)]
+                );
+                const criterioId = resCriterio.insertId;
 
-                            const querySelectCriterios = 'SELECT id FROM criterio_rubrica WHERE rubrica_id = ?';
-                            conn.query(querySelectCriterios, [id], (error, criteriosExistentes) => {
-                                if (error) return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: 'Error al preparar actualización de criterios' }); });
+                if (criterio.niveles && criterio.niveles.length > 0) {
+                    for (let j = 0; j < criterio.niveles.length; j++) {
+                        const nivel = criterio.niveles[j];
+                        await RubricaModel.queryAsync(conn,
+                            `INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)`,
+                            [criterioId, nivel.nombre_nivel.trim(), nivel.descripcion.trim(), parseFloat(nivel.puntaje), parseInt(nivel.orden) || (j + 1)]
+                        );
+                    }
+                }
+            }
 
-                                const eliminarCriterios = () => {
-                                    let criteriosCompletados = 0;
-                                    const totalCriterios = criteriosParsed.length;
-                                    let hayError = false;
+            await RubricaModel.commitAsync(conn);
+            conn.release();
 
-                                    criteriosParsed.forEach((criterio, indexCriterio) => {
-                                        if (hayError) return;
+            res.json({ success: true, mensaje: '¡Rúbrica actualizada exitosamente!', rubricaId: id });
 
-                                        const queryInsertCriterio = `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)`;
-                                        const valuesCriterio = [id, criterio.descripcion.trim(), parseFloat(criterio.puntaje_maximo), parseInt(criterio.orden) || (indexCriterio + 1)];
-
-                                        conn.query(queryInsertCriterio, valuesCriterio, (error, resultCriterio) => {
-                                            if (error) {
-                                                hayError = true;
-                                                return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: `Error al guardar el criterio: ${criterio.descripcion}` }); });
-                                            }
-
-                                            const criterioId = resultCriterio.insertId;
-
-                                            if (criterio.niveles && criterio.niveles.length > 0) {
-                                                let nivelesCompletados = 0;
-                                                const totalNiveles = criterio.niveles.length;
-
-                                                criterio.niveles.forEach((nivel, indexNivel) => {
-                                                    if (hayError) return;
-
-                                                    const queryInsertNivel = `INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)`;
-                                                    const valuesNivel = [criterioId, nivel.nombre_nivel.trim(), nivel.descripcion.trim(), parseFloat(nivel.puntaje), parseInt(nivel.orden) || (indexNivel + 1)];
-
-                                                    conn.query(queryInsertNivel, valuesNivel, (error) => {
-                                                        if (error) {
-                                                            hayError = true;
-                                                            return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: `Error al guardar el nivel: ${nivel.nombre_nivel}` }); });
-                                                        }
-
-                                                        nivelesCompletados++;
-                                                        if (nivelesCompletados === totalNiveles) {
-                                                            criteriosCompletados++;
-                                                            if (criteriosCompletados === totalCriterios && !hayError) {
-                                                                conn.commit((err) => {
-                                                                    if (err) return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: 'Error al confirmar la transacción' }); });
-                                                                    conn.release();
-                                                                    res.json({ success: true, mensaje: '¡Rúbrica actualizada exitosamente!', rubricaId: id });
-                                                                });
-                                                            }
-                                                        }
-                                                    });
-                                                });
-                                            } else {
-                                                criteriosCompletados++;
-                                                if (criteriosCompletados === totalCriterios && !hayError) {
-                                                    conn.commit((err) => {
-                                                        if (err) return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: 'Error al confirmar la transacción' }); });
-                                                        conn.release();
-                                                        res.json({ success: true, mensaje: '¡Rúbrica actualizada exitosamente!', rubricaId: id });
-                                                    });
-                                                }
-                                            }
-                                        });
-                                    });
-                                };
-
-                                if (criteriosExistentes.length > 0) {
-                                    const criteriosIds = criteriosExistentes.map(c => c.id);
-                                    const queryDeleteNiveles = `DELETE FROM nivel_desempeno WHERE criterio_id IN (?)`;
-                                    conn.query(queryDeleteNiveles, [criteriosIds], (error) => {
-                                        if (error) return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: 'Error al eliminar niveles existentes' }); });
-
-                                        const queryDeleteCriterios = `DELETE FROM criterio_rubrica WHERE rubrica_id = ?`;
-                                        conn.query(queryDeleteCriterios, [id], (error) => {
-                                            if (error) return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, mensaje: 'Error al eliminar criterios existentes' }); });
-                                            eliminarCriterios();
-                                        });
-                                    });
-                                } else {
-                                    eliminarCriterios();
-                                }
-                            });
-                        });
-                    });
-                });
-            });
-        });
+        } catch (error) {
+            if (conn) {
+                await RubricaModel.rollbackAsync(conn);
+                conn.release();
+            }
+            console.error('Error al actualizar rúbrica:', error);
+            res.status(500).json({ success: false, mensaje: error.message || 'Error interno del servidor' });
+        }
     }
 }
 

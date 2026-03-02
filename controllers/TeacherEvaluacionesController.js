@@ -15,7 +15,8 @@ class TeacherEvaluacionesController {
 
     static async getCarreras(req, res) {
         try {
-            const carreras = await TeacherEvaluacionesModel.getCarreras(req.user.cedula);
+            const docenteCedula = req.user.cedula;
+            const carreras = await TeacherEvaluacionesModel.getCarreras(docenteCedula);
             res.json({ success: true, carreras });
         } catch (error) {
             console.error('Error:', error);

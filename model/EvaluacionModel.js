@@ -111,7 +111,6 @@ class EvaluacionModel {
                     COUNT(DISTINCT pp.num_semestre) AS duracion_semestres
                 FROM carrera c
                 INNER JOIN plan_periodo pp ON c.codigo = pp.codigo_carrera
-                WHERE c.activo = 1
                 GROUP BY c.codigo
                 ORDER BY nombre
             `;
@@ -134,7 +133,6 @@ class EvaluacionModel {
                 INNER JOIN plan_periodo pp ON m.codigo = pp.codigo_materia
                 INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
                 WHERE pp.codigo_carrera = ?
-                AND c.activo = 1
                 ORDER BY semestre, nombre
             `;
             pool.query(query, [carreraCodigo], (error, results) => {
@@ -159,7 +157,6 @@ class EvaluacionModel {
                 LEFT JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 WHERE pp.codigo_materia = ? 
                 AND pp.codigo_carrera = ? 
-                AND s.activo = 1
                 GROUP BY s.id
                 ORDER BY codigo;
             `;

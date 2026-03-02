@@ -129,6 +129,36 @@ class UserModel {
             });
         });
     }
+
+    async storeResetToken(cedula, token, expires) {
+        return new Promise((resolve, reject) => {
+            const query = 'UPDATE usuario SET reset_token = ?, reset_token_expires = ? WHERE cedula = ?';
+            connection.query(query, [token, expires, cedula], (err, result) => {
+                if (err) return reject(err);
+                resolve(result.affectedRows > 0);
+            });
+        });
+    }
+
+    async verifyResetToken(cedula, token) {
+        return new Promise((resolve, reject) => {
+            const query = 'SELECT * FROM usuario WHERE cedula = ? AND reset_token = ? AND reset_token_expires > ?';
+            connection.query(query, [cedula, token, new Date()], (err, results) => {
+                if (err) return reject(err);
+                resolve(results.length > 0);
+            });
+        });
+    }
+
+    async clearResetToken(cedula) {
+        return new Promise((resolve, reject) => {
+            const query = 'UPDATE usuario SET reset_token = NULL, reset_token_expires = NULL WHERE cedula = ?';
+            connection.query(query, [cedula], (err, result) => {
+                if (err) return reject(err);
+                resolve(result.affectedRows > 0);
+            });
+        });
+    }
 }
 
 module.exports = new UserModel();

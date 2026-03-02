@@ -151,10 +151,10 @@ class TeacherEvaluacionesModel {
                 c.nombre,
                 c.descripcion
             FROM permiso_docente pd
-            INNER JOIN seccion s ON pd.id_seccion = s.id AND s.activo = 1
+            INNER JOIN seccion s ON pd.id_seccion = s.id
             INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id 
-            INNER JOIN materia m ON pp.codigo_materia = m.codigo AND m.activo = 1
-            INNER JOIN carrera c ON pp.codigo_carrera = c.codigo AND c.activo = 1
+            INNER JOIN materia m ON pp.codigo_materia = m.codigo
+            INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
             WHERE pd.docente_cedula = ?
             ORDER BY c.nombre
         `;
@@ -169,10 +169,10 @@ class TeacherEvaluacionesModel {
                 pp.num_semestre as semestre,
                 pp.unidades_credito as creditos
             FROM permiso_docente pd
-            INNER JOIN seccion s ON pd.id_seccion = s.id AND s.activo = 1
+            INNER JOIN seccion s ON pd.id_seccion = s.id
             INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id 
-            INNER JOIN materia m ON pp.codigo_materia = m.codigo AND m.activo = 1
-            INNER JOIN carrera c ON pp.codigo_carrera = c.codigo AND c.activo = 1
+            INNER JOIN materia m ON pp.codigo_materia = m.codigo
+            INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
             WHERE c.codigo = ?
               AND pd.docente_cedula = ?
             ORDER BY semestre, m.nombre
@@ -190,9 +190,9 @@ class TeacherEvaluacionesModel {
                  (SELECT hs2.aula FROM horario_seccion hs2 WHERE hs2.id_seccion = s.id LIMIT 1) AS aula,
                 s.capacidad_maxima
             FROM permiso_docente pd
-            INNER JOIN seccion s ON pd.id_seccion = s.id AND s.activo = 1
+            INNER JOIN seccion s ON pd.id_seccion = s.id
             INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id 
-            INNER JOIN materia m ON pp.codigo_materia = m.codigo AND m.activo = 1
+            INNER JOIN materia m ON pp.codigo_materia = m.codigo
             WHERE m.codigo = ?
               AND pd.docente_cedula = ?
             ORDER BY codigo
@@ -243,8 +243,6 @@ class TeacherEvaluacionesModel {
             INNER JOIN materia m ON pp.codigo_materia = m.codigo
             INNER JOIN permiso_docente pd ON pd.id_seccion = s.id 
             WHERE r.activo = 1
-              AND m.activo = 1
-              AND s.activo = 1
               AND pd.docente_cedula = ?
             ORDER BY r.nombre_rubrica
         `;
@@ -286,8 +284,7 @@ class TeacherEvaluacionesModel {
             id_evaluacion,
             cedula,
             docenteCedula, // cedula_evaluador
-            observaciones || null,
-            null // fecha_evaluado until scored? No, we will wait to put fecha until graded or maybe now? let's leave it null. But we don't insert fecha here. Wait, evaluacion_realizada might not record the scores yet. 
+            observaciones || null
         ]);
 
         const insertQ = `

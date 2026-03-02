@@ -4,7 +4,8 @@ const connection = require('../model/conexion');
 class RubricaController {
     async getHierarchicalData(req, res) {
         try {
-            const carreras = await RubricaModel.getCarreras();
+            const esAdmin = req.user.id_rol === 1;
+            const carreras = await RubricaModel.getCarreras(req.user.cedula, esAdmin);
             const tiposRubrica = await RubricaModel.getTiposRubrica();
             res.json({ success: true, carreras, tiposRubrica });
         } catch (error) {
@@ -94,7 +95,7 @@ class RubricaController {
     async updateRubrica(req, res) {
         const { id } = req.params;
         
-        if (!req.session || !req.session.cedula) {
+        if (!req.user || !req.user.cedula) {
             return res.status(401).json({ success: false, mensaje: 'Sesión no válida' });
         }
 

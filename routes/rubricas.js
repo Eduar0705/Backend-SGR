@@ -66,7 +66,7 @@ router.post('/rubrica/actualizar/:id', RubricaController.updateRubrica);
 router.get('/admin/rubricas/editar/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const resultado = await RubricaModel.getRubricaForEdit(id, req.session);
+        const resultado = await RubricaModel.getRubricaForEdit(id, req.user);
         if (resultado) {
             res.json({ success: true, ...resultado });
         } else {
@@ -97,8 +97,8 @@ router.get('/admin/rubricas/carrera-materia/:materia_codigo', async (req, res) =
 // Obtener carreras
 router.get('/admin/carreras', async (req, res) => {
     try {
-        const esAdmin = req.session.id_rol === 1;
-        const resultado = await RubricaModel.getCarreras(req.session.cedula, esAdmin);
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getCarreras(req.user.cedula, esAdmin);
         res.json({ success: true, carreras: resultado });
     } catch (error) {
         console.error('Error:', error);
@@ -109,8 +109,8 @@ router.get('/admin/carreras', async (req, res) => {
 // Obtener materias y secciones (para el modal)
 router.get('/admin/opciones', async (req, res) => {
     try {
-        const esAdmin = req.session.id_rol === 1;
-        const resultado = await RubricaModel.getOpciones(req.session.cedula, esAdmin);
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getOpciones(req.user.cedula, esAdmin);
         res.json({ success: true, ...resultado });
     } catch (error) {
         console.error('Error al obtener opciones:', error);
@@ -156,8 +156,8 @@ router.get("/admin/evaluaciones_con_rubrica/:seccionId", async function (req, re
 router.get("/api/admin/semestres/:carrera", async (req, res) => {
     try {
         const { carrera } = req.params;
-        const esAdmin = req.session.id_rol === 1;
-        const resultado = await RubricaModel.getSemestresAdmin(carrera, req.session.cedula, esAdmin);
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getSemestresAdmin(carrera, req.user.cedula, esAdmin);
         res.json(resultado);
     } catch (error) {
         console.error('Error al obtener semestres:', error);
@@ -169,8 +169,8 @@ router.get("/api/admin/semestres/:carrera", async (req, res) => {
 router.get("/api/admin/materias/:carrera/:semestre", async (req, res) => {
     try {
         const { carrera, semestre } = req.params;
-        const esAdmin = req.session.id_rol === 1;
-        const resultado = await RubricaModel.getMateriasAdmin(carrera, semestre, req.session.cedula, esAdmin);
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getMateriasAdmin(carrera, semestre, req.user.cedula, esAdmin);
         res.json(resultado);
     } catch (error) {
         console.error('Error al obtener materias:', error);
@@ -182,8 +182,8 @@ router.get("/api/admin/materias/:carrera/:semestre", async (req, res) => {
 router.get("/api/admin/secciones/:materia/:carreraCodigo", async (req, res) => {
     try {
         const { materia, carreraCodigo } = req.params;
-        const esAdmin = req.session.id_rol === 1;
-        const resultado = await RubricaModel.getSeccionesAdmin(materia, carreraCodigo, req.session.cedula, esAdmin);
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getSeccionesAdmin(materia, carreraCodigo, req.user.cedula, esAdmin);
         res.json(resultado);
     } catch (error) {
         console.error('Error al obtener secciones:', error);

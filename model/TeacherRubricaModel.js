@@ -9,7 +9,7 @@ class TeacherRubricaModel {
             INNER JOIN plan_periodo pp ON c.codigo = pp.codigo_carrera
             INNER JOIN seccion s ON pp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-            WHERE pd.docente_cedula = ? AND c.activo = 1
+            WHERE pd.docente_cedula = ?
             ORDER BY c.nombre
         `;
         return new Promise((resolve, reject) => {

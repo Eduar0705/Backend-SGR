@@ -9,7 +9,6 @@ class RubricaModel {
                     codigo, 
                     nombre
                 FROM carrera
-                WHERE activo = 1
                 ORDER BY nombre
             `;
             connection.query(query, (err, results) => {
@@ -86,7 +85,6 @@ class RubricaModel {
                 LEFT JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 WHERE pp.codigo_materia = ? 
                 AND pp.codigo_carrera = ? 
-                AND s.activo = 1
                 GROUP BY s.id
                 ORDER BY codigo;
             `;
@@ -178,7 +176,7 @@ class RubricaModel {
 
     async getEstrategias() {
         return new Promise((resolve, reject) => {
-            const query = 'SELECT id, nombre FROM estrategia_eval WHERE activo = 1 ORDER BY nombre';
+            const query = 'SELECT id, nombre FROM estrategia_eval ORDER BY nombre';
             connection.query(query, (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
@@ -519,7 +517,7 @@ class RubricaModel {
         return new Promise((resolve, reject) => {
             let query, params = [];
             if (esAdmin) {
-                query = `SELECT c.codigo, c.nombre, COUNT(DISTINCT pp.num_semestre) AS duracion_semestres FROM carrera c INNER JOIN plan_periodo pp ON c.codigo = pp.codigo_carrera WHERE c.activo = 1 ORDER BY nombre`;
+                query = `SELECT c.codigo, c.nombre, COUNT(DISTINCT pp.num_semestre) AS duracion_semestres FROM carrera c INNER JOIN plan_periodo pp ON c.codigo = pp.codigo_carrera GROUP BY c.codigo ORDER BY nombre`;
             } else {
                 query = `SELECT c.codigo, c.nombre, COUNT(DISTINCT pp.num_semestre) AS duracion_semestres FROM carrera c INNER JOIN plan_periodo pp ON c.codigo = pp.codigo_carrera INNER JOIN seccion s ON pp.id = s.id_materia_plan INNER JOIN permiso_docente pd ON s.id = pd.id_seccion WHERE pd.docente_cedula = ? GROUP BY c.codigo`;
                 params = [cedula];

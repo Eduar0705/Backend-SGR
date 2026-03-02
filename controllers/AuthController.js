@@ -1,5 +1,6 @@
 const userModel = require('../model/UserModel');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 
 class AuthController {
     async login(req, res) {
@@ -33,11 +34,12 @@ class AuthController {
             if (loginResults && loginResults.length > 0) {
                 const loggedUser = loginResults[0];
 
+                /* 
+                // Comentamos este bloqueo para evitar que el usuario quede atrapado si su navegador falla
                 const existingToken = await userModel.getSessionToken(loggedUser.cedula);
                 if (existingToken) {
                     try {
                         const decoded = jwt.verify(existingToken, process.env.JWT_SECRET);
-                        // If it doesn't throw, the token is still valid. Deny login!
                         if (decoded) {
                             return res.status(401).json({
                                 success: false,
@@ -45,10 +47,10 @@ class AuthController {
                             });
                         }
                     } catch (e) {
-                        // Token expired or invalid. Safe to let them login and overwrite.
                         console.log(`[AUTH] Old session token expired for ${loggedUser.cedula}`);
                     }
                 }
+                */
 
                 // Remover password de la respuesta
                 const { password: _, ...userWithoutPassword } = loggedUser;
@@ -102,6 +104,106 @@ class AuthController {
                 success: false,
                 message: 'Error interno del servidor al cerrar sesión'
             });
+        }
+    }
+
+    async requestPasswordRecovery(req, res) {
+        try {
+            const { cedula, email } = req.body;
+            if (!cedula || !email) {
+                return res.status(400).json({ success: false, message: 'Cédula y correo son requeridos' });
+            }
+
+            const user = await userModel.getByCedula(cedula);
+            if (!user || user.email.toLowerCase() !== email.toLowerCase()) {
+                return res.status(404).json({ success: false, message: 'Los datos proporcionados no coinciden con nuestros registros' });
+            }
+
+            // Generar código de 6 dígitos
+            const recoveryCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+            await userModel.storeResetToken(cedula, recoveryCode, expires);
+
+            // Enviar email (Configuración temporal)
+            // NOTA: El usuario debe proporcionar credenciales SMTP reales para producción
+            const transporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                port: process.env.SMTP_PORT || 587,
+                secure: false,
+                auth: {
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS
+                }
+            });
+
+            const mailOptions = {
+                from: `"SGR Soporte" <${process.env.SMTP_USER || 'no-reply@sgr.com'}>`,
+                to: email,
+                subject: 'Código de Recuperación de Contraseña - SGR',
+                text: `Tu código de recuperación es: ${recoveryCode}. Expira en 15 minutos.`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                        <h2 style="color: #076fe5; text-align: center;">Recuperación de Contraseña</h2>
+                        <p>Hola, <strong>${user.nombre}</strong>.</p>
+                        <p>Has solicitado recuperar tu contraseña en el Sistema de Gestión de Rúbricas (SGR).</p>
+                        <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+                            ${recoveryCode}
+                        </div>
+                        <p>Este código expira en <strong>15 minutos</strong>.</p>
+                        <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                        <p style="font-size: 12px; color: #888; text-align: center;">Este es un correo automático, por favor no lo respondas.</p>
+                    </div>
+                `
+            };
+
+            // Intentamos enviar el correo. Si falla, al menos registramos el código en consola para desarrollo
+            try {
+                if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+                    await transporter.sendMail(mailOptions);
+                    return res.json({ success: true, message: 'Código de recuperación enviado a tu correo' });
+                } else {
+                    console.log(`[AUTH] DEVELOPMENT MODE: Recovery code for ${cedula} is ${recoveryCode}`);
+                    return res.json({ 
+                        success: true, 
+                        message: 'Código generado (Modo Desarrollo). Ver consola del servidor.',
+                        devCode: recoveryCode // Solo para desarrollo inicial
+                    });
+                }
+            } catch (mailError) {
+                console.error('Error enviando email:', mailError);
+                return res.status(500).json({ 
+                    success: false, 
+                    message: 'Error al enviar el correo, pero el código fue generado. Contacte al administrador.' 
+                });
+            }
+
+        } catch (error) {
+            console.error('Error en requestPasswordRecovery:', error);
+            return res.status(500).json({ success: false, message: 'Error interno del servidor' });
+        }
+    }
+
+    async resetPassword(req, res) {
+        try {
+            const { cedula, code, newPassword } = req.body;
+            if (!cedula || !code || !newPassword) {
+                return res.status(400).json({ success: false, message: 'Todos los campos son requeridos' });
+            }
+
+            const isValid = await userModel.verifyResetToken(cedula, code);
+            if (!isValid) {
+                return res.status(400).json({ success: false, message: 'Código inválido o expirado' });
+            }
+
+            await userModel.changePassword(cedula, newPassword);
+            await userModel.clearResetToken(cedula);
+
+            return res.json({ success: true, message: 'Contraseña actualizada correctamente' });
+        } catch (error) {
+            console.error('Error en resetPassword:', error);
+            return res.status(500).json({ success: false, message: 'Error interno del servidor' });
         }
     }
 }

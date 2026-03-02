@@ -348,8 +348,16 @@ class TeacherRubricaModel {
                     if (err) { conn.release(); return reject(err); }
 
                     try {
-                        // 1. Verificar propiedad de la rúbrica
-                        const checkOwnerQuery = 'SELECT id FROM rubrica WHERE id = ? AND cedula_docente = ?';
+                        // 1. Verificar propiedad de la rúbrica (por permisos de sección)
+                        const checkOwnerQuery = `
+                            SELECT r.id 
+                            FROM rubrica r
+                            INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+                            INNER JOIN evaluacion e ON ru.id_eval = e.id
+                            INNER JOIN seccion s ON e.id_seccion = s.id
+                            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                            WHERE r.id = ? AND pd.docente_cedula = ?
+                        `;
                         const checkResults = await new Promise((res, rej) => conn.query(checkOwnerQuery, [id, cedula], (e, r) => e ? rej(e) : res(r)));
                         if (checkResults.length === 0) {
                             throw new Error('Rúbrica no encontrada o no tiene permisos para editarla');
@@ -424,7 +432,15 @@ class TeacherRubricaModel {
                     if (err) { conn.release(); return reject(err); }
 
                     try {
-                        const checkOwnerQuery = 'SELECT id FROM rubrica WHERE id = ? AND cedula_docente = ?';
+                        const checkOwnerQuery = `
+                            SELECT r.id 
+                            FROM rubrica r
+                            INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+                            INNER JOIN evaluacion e ON ru.id_eval = e.id
+                            INNER JOIN seccion s ON e.id_seccion = s.id
+                            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                            WHERE r.id = ? AND pd.docente_cedula = ?
+                        `;
                         const checkResults = await new Promise((res, rej) => conn.query(checkOwnerQuery, [id, cedula], (e, r) => e ? rej(e) : res(r)));
                         if (checkResults.length === 0) {
                             throw new Error('Rúbrica no encontrada o no tiene permisos para eliminarla');

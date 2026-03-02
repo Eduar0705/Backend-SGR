@@ -375,8 +375,19 @@ class TeacherRubricaModel {
 
                         if (prevEvalId && data.id_evaluacion && prevEvalId != data.id_evaluacion) {
                             // Cambiar la evaluación vinculada
-                            const updateUsoQ = 'UPDATE rubrica_uso SET id_eval = ? WHERE id_rubrica = ?';
-                            await new Promise((res, rej) => conn.query(updateUsoQ, [data.id_evaluacion, id], (e, r) => e ? rej(e) : res(r)));
+                            // Primero verificamos si YA existe el vínculo con la nueva evaluación para evitar ER_DUP_ENTRY
+                            const checkCurrentLinkQ = 'SELECT COUNT(*) as count FROM rubrica_uso WHERE id_eval = ? AND id_rubrica = ?';
+                            const [linkCheck] = await new Promise((res, rej) => conn.query(checkCurrentLinkQ, [data.id_evaluacion, id], (e, r) => e ? rej(e) : res(r)));
+                            
+                            if (linkCheck.count > 0) {
+                                // Si ya existe el vínculo nuevo, eliminamos el viejo (limpieza de duplicados accidentales)
+                                const deleteOldLinkQ = 'DELETE FROM rubrica_uso WHERE id_eval = ? AND id_rubrica = ?';
+                                await new Promise((res, rej) => conn.query(deleteOldLinkQ, [prevEvalId, id], (e, r) => e ? rej(e) : res(r)));
+                            } else {
+                                // Si no existe, actualizamos el vínculo anterior al nuevo
+                                const updateUsoQ = 'UPDATE rubrica_uso SET id_eval = ? WHERE id_rubrica = ? AND id_eval = ?';
+                                await new Promise((res, rej) => conn.query(updateUsoQ, [data.id_evaluacion, id, prevEvalId], (e, r) => e ? rej(e) : res(r)));
+                            }
                         }
 
                         // 4. Eliminar niveles y criterios anteriores

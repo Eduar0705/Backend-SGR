@@ -24,7 +24,7 @@ class EvaluacionModel {
                     id_horario,
                     tipo_horario,
                     CASE
-                        WHEN rubrica_id IS NULL OR total_evaluaciones=0 THEN 'Pendiente'
+                        WHEN rubrica_id IS NULL OR completadas=0 THEN 'Pendiente'
                         WHEN rubrica_id IS NOT NULL AND total_evaluaciones = completadas THEN 'Completada'
                         ELSE 'En Progreso'
                     END as estado

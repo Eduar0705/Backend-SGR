@@ -24,8 +24,8 @@ class EvaluacionModel {
                     id_horario,
                     tipo_horario,
                     CASE
-                        WHEN rubrica_id IS NULL THEN 'Pendiente'
-                        WHEN rubrica_id IS NOT NULL AND total_evaluaciones = completadas AND total_evaluaciones != 0 THEN 'Completada'
+                        WHEN rubrica_id IS NULL OR total_evaluaciones=0 THEN 'Pendiente'
+                        WHEN rubrica_id IS NOT NULL AND total_evaluaciones = completadas THEN 'Completada'
                         ELSE 'En Progreso'
                     END as estado
                 FROM
@@ -33,23 +33,23 @@ class EvaluacionModel {
                     SELECT 
                         e.id AS evaluacion_id,
                         e.contenido AS contenido_evaluacion,
-                        MAX(r.id) AS rubrica_id,
-                        IFNULL(MAX(r.nombre_rubrica), 'Sin rubrica') AS nombre_rubrica,
+                        r.id AS rubrica_id,
+                        IFNULL(r.nombre_rubrica, 'Sin rubrica') AS nombre_rubrica,
                         e.ponderacion as valor,
                         u.cedula as docente_cedula,
                         u.nombre as docente_nombre,
                         u.apeliido as docente_apellido,
                         m.nombre as materia_nombre,
                         c.nombre as carrera_nombre,
-                        estud_sec.cantidad_en_seccion AS total_evaluaciones, 
+                        COALESCE(estud_sec.cantidad_en_seccion,0) AS total_evaluaciones, 
                         CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                        (SELECT COUNT(DISTINCT er.id) FROM evaluacion_realizada er
+                        (SELECT COALESCE(COUNT(DISTINCT er.id),0) FROM evaluacion_realizada er
                         INNER JOIN evaluacion ON er.id_evaluacion = e.id) AS completadas,
                         e.fecha_evaluacion,
-                        IFNULL(MAX(he.id_horario), MAX(hec.id)) AS id_horario, 
+                        IFNULL(he.id_horario, hec.id) AS id_horario, 
                         CASE 
-                            WHEN MAX(he.id_horario) IS NOT NULL THEN 'Sección'
-                            WHEN MAX(hec.id) IS NOT NULL THEN 'Otro'
+                            WHEN he.id_horario IS NOT NULL THEN 'Sección'
+                            WHEN hec.id IS NOT NULL THEN 'Otro'
                             ELSE 'Sin horario'
                         END AS tipo_horario,
                         s.id AS id_seccion
@@ -58,16 +58,16 @@ class EvaluacionModel {
                     INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
                     INNER JOIN materia m ON pp.codigo_materia = m.codigo
                     INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
-                    INNER JOIN (
+                    INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                    INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
+                    INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+                    LEFT JOIN (
                         SELECT 
                             COUNT(DISTINCT ins.cedula_estudiante) AS cantidad_en_seccion, 
                             ins.id_seccion
                         FROM inscripcion_seccion ins
                         GROUP BY ins.id_seccion
                     ) AS estud_sec ON s.id = estud_sec.id_seccion
-                    INNER JOIN permiso_docente pd ON estud_sec.id_seccion = pd.id_seccion
-                    INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
-                    INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
                     LEFT JOIN (
                         SELECT 
                             er.id,
@@ -86,6 +86,7 @@ class EvaluacionModel {
                 ORDER BY fecha_evaluacion DESC;
             `;
             pool.query(query, (error, results) => {
+                console.log(results);
                 if (error) return reject(error);
                 resolve(results);
             });

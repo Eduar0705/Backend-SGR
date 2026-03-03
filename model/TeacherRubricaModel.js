@@ -222,7 +222,7 @@ class TeacherRubricaModel {
                 CASE WHEN cantidad_personas=1 THEN 'Individual' WHEN cantidad_personas=2 THEN 'En Pareja' ELSE 'Grupal' END AS modalidad,
                 e.cantidad_personas, r.activo, r.fecha_creacion AS created_at, r.fecha_actualizacion AS updated_at,
                 m.nombre AS materia_nombre, CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                c.nombre AS carrera_nombre, CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
+                c.nombre AS carrera_nombre, CONCAT(u_p.nombre, ' ', u_p.apeliido) AS docente_nombre
             FROM evaluacion e
             INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
             INNER JOIN rubrica r ON r.id = ru.id_rubrica
@@ -230,11 +230,12 @@ class TeacherRubricaModel {
             INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
             INNER JOIN materia m ON pp.codigo_materia = m.codigo
             INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
-            INNER JOIN usuario_docente ud ON ud.cedula_usuario = r.cedula_docente
-            INNER JOIN usuario u ON u.cedula = ud.cedula_usuario
+            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+            INNER JOIN usuario_docente ud_p ON ud_p.cedula_usuario = pd.docente_cedula
+            INNER JOIN usuario u_p ON u_p.cedula = ud_p.cedula_usuario
             LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
             LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
-            WHERE r.id = ? AND r.cedula_docente = ? -- Aseguramos que es de este docente
+            WHERE r.id = ? AND pd.docente_cedula = ? -- Aseguramos acceso por sección
             GROUP BY r.id
         `;
         const queryCriterios = `SELECT cr.id, cr.descripcion, cr.puntaje_maximo, cr.orden FROM criterio_rubrica cr WHERE cr.rubrica_id = ? ORDER BY cr.orden`;
@@ -347,58 +348,84 @@ class TeacherRubricaModel {
                     if (err) { conn.release(); return reject(err); }
 
                     try {
-                        // 1. Verificar propiedad de la rúbrica
-                        const checkOwnerQuery = 'SELECT id FROM rubrica WHERE id = ? AND cedula_docente = ?';
+                        // 1. Verificar propiedad de la rúbrica (por permisos de sección)
+                        const checkOwnerQuery = `
+                            SELECT COUNT(*) as count
+                            FROM rubrica r
+                            INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+                            INNER JOIN evaluacion e ON ru.id_eval = e.id
+                            INNER JOIN seccion s ON e.id_seccion = s.id
+                            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                            WHERE r.id = ? AND pd.docente_cedula = ?
+                        `;
                         const checkResults = await new Promise((res, rej) => conn.query(checkOwnerQuery, [id, cedula], (e, r) => e ? rej(e) : res(r)));
-                        if (checkResults.length === 0) {
+                        
+                        if (checkResults[0].count === 0) {
                             throw new Error('Rúbrica no encontrada o no tiene permisos para editarla');
                         }
 
                         // 2. Actualizar datos base de la rúbrica
-                        const updateRubricaQ = 'UPDATE rubrica SET nombre_rubrica = ?, instrucciones = ?, id_tipo = ? WHERE id = ?';
+                        const updateRubricaQ = 'UPDATE rubrica SET nombre_rubrica = ?, instrucciones = ?, id_tipo = ?, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = ?';
                         await new Promise((res, rej) => conn.query(updateRubricaQ, [data.nombre_rubrica, data.instrucciones, data.tipo_rubrica, id], (e, r) => e ? rej(e) : res(r)));
 
-                        // 3. Obtener id de la evaluación anterior (por si cambió)
+                        // 3. Obtener id de la evaluación anterior
                         const getEvalAnteriorQ = 'SELECT id_eval FROM rubrica_uso WHERE id_rubrica = ? LIMIT 1';
                         const resEvalAnt = await new Promise((res, rej) => conn.query(getEvalAnteriorQ, [id], (e, r) => e ? rej(e) : res(r)));
                         const prevEvalId = resEvalAnt.length > 0 ? resEvalAnt[0].id_eval : null;
 
-                        if (prevEvalId && prevEvalId != data.id_evaluacion) {
-                            // Actualizar rubrica_uso
-                            const updateUsoQ = 'UPDATE rubrica_uso SET id_eval = ? WHERE id_rubrica = ?';
-                            await new Promise((res, rej) => conn.query(updateUsoQ, [data.id_evaluacion, id], (e, r) => e ? rej(e) : res(r)));
+                        if (prevEvalId && data.id_evaluacion && prevEvalId != data.id_evaluacion) {
+                            // Cambiar la evaluación vinculada
+                            // Primero verificamos si YA existe el vínculo con la nueva evaluación para evitar ER_DUP_ENTRY
+                            const checkCurrentLinkQ = 'SELECT COUNT(*) as count FROM rubrica_uso WHERE id_eval = ? AND id_rubrica = ?';
+                            const [linkCheck] = await new Promise((res, rej) => conn.query(checkCurrentLinkQ, [data.id_evaluacion, id], (e, r) => e ? rej(e) : res(r)));
+                            
+                            if (linkCheck.count > 0) {
+                                // Si ya existe el vínculo nuevo, eliminamos el viejo (limpieza de duplicados accidentales)
+                                const deleteOldLinkQ = 'DELETE FROM rubrica_uso WHERE id_eval = ? AND id_rubrica = ?';
+                                await new Promise((res, rej) => conn.query(deleteOldLinkQ, [prevEvalId, id], (e, r) => e ? rej(e) : res(r)));
+                            } else {
+                                // Si no existe, actualizamos el vínculo anterior al nuevo
+                                const updateUsoQ = 'UPDATE rubrica_uso SET id_eval = ? WHERE id_rubrica = ? AND id_eval = ?';
+                                await new Promise((res, rej) => conn.query(updateUsoQ, [data.id_evaluacion, id, prevEvalId], (e, r) => e ? rej(e) : res(r)));
+                            }
                         }
 
-                        // 4. Eliminar niveles de desempeño anteriores
-                        const deleteNivelesQ = 'DELETE n FROM nivel_desempeno n INNER JOIN criterio_rubrica c ON n.criterio_id = c.id WHERE c.rubrica_id = ?';
+                        // 4. Eliminar niveles y criterios anteriores
+                        // Primero niveles (por FK)
+                        const deleteNivelesQ = 'DELETE FROM nivel_desempeno WHERE criterio_id IN (SELECT id FROM criterio_rubrica WHERE rubrica_id = ?)';
                         await new Promise((res, rej) => conn.query(deleteNivelesQ, [id], (e, r) => e ? rej(e) : res(r)));
 
-                        // 5. Eliminar criterios anteriores
                         const deleteCriteriosQ = 'DELETE FROM criterio_rubrica WHERE rubrica_id = ?';
                         await new Promise((res, rej) => conn.query(deleteCriteriosQ, [id], (e, r) => e ? rej(e) : res(r)));
 
-                        // 6. Insertar nuevos criterios y sus niveles
-                        const objCriterios = typeof data.criterios === 'string' ? JSON.parse(data.criterios) : data.criterios;
-                        if (objCriterios && objCriterios.length > 0) {
-                            for (let i = 0; i < objCriterios.length; i++) {
-                                const crit = objCriterios[i];
-                                const critQuery = 'INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)';
-                                
-                                const resCrit = await new Promise((res, rej) => conn.query(critQuery, [id, crit.descripcion, crit.puntaje_maximo, crit.orden || (i + 1)], (e, r) => e ? rej(e) : res(r)));
-                                const nuevoCriterioId = resCrit.insertId;
+                        // 5. Insertar nuevos criterios y niveles
+                        const objCriterios = Array.isArray(data.criterios) ? data.criterios : (typeof data.criterios === 'string' ? JSON.parse(data.criterios) : []);
+                        
+                        for (let i = 0; i < objCriterios.length; i++) {
+                            const crit = objCriterios[i];
+                            const critQuery = 'INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)';
+                            const resCrit = await new Promise((res, rej) => conn.query(critQuery, [id, crit.descripcion, crit.puntaje_maximo, crit.orden || (i + 1)], (e, r) => e ? rej(e) : res(r)));
+                            
+                            const nuevoCriterioId = resCrit.insertId;
 
-                                if (crit.niveles && crit.niveles.length > 0) {
-                                    for (let j = 0; j < crit.niveles.length; j++) {
-                                        const nivel = crit.niveles[j];
-                                        const nivelQuery = 'INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)';
-                                        await new Promise((res, rej) => conn.query(nivelQuery, [nuevoCriterioId, nivel.nombre_nivel, nivel.descripcion, nivel.puntaje, nivel.orden || (j + 1)], (e, r) => e ? rej(e) : res(r)));
-                                    }
+                            if (crit.niveles && Array.isArray(crit.niveles)) {
+                                for (let j = 0; j < crit.niveles.length; j++) {
+                                    const nivel = crit.niveles[j];
+                                    const nivelQuery = 'INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)';
+                                    // Usamos nivel.puntaje_maximo || nivel.puntaje para compatibilidad
+                                    const puntaje = nivel.puntaje_maximo || nivel.puntaje || 0;
+                                    await new Promise((res, rej) => conn.query(nivelQuery, [nuevoCriterioId, nivel.nombre_nivel, nivel.descripcion, puntaje, nivel.orden || (j + 1)], (e, r) => e ? rej(e) : res(r)));
                                 }
                             }
                         }
 
                         conn.commit((err) => {
-                            if (err) throw err;
+                            if (err) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    reject(err);
+                                });
+                            }
                             conn.release();
                             resolve({ success: true, message: 'Rúbrica actualizada correctamente' });
                         });
@@ -423,17 +450,31 @@ class TeacherRubricaModel {
                     if (err) { conn.release(); return reject(err); }
 
                     try {
-                        const checkOwnerQuery = 'SELECT id FROM rubrica WHERE id = ? AND cedula_docente = ?';
+                        const checkOwnerQuery = `
+                            SELECT COUNT(*) as count
+                            FROM rubrica r
+                            INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+                            INNER JOIN evaluacion e ON ru.id_eval = e.id
+                            INNER JOIN seccion s ON e.id_seccion = s.id
+                            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                            WHERE r.id = ? AND pd.docente_cedula = ?
+                        `;
                         const checkResults = await new Promise((res, rej) => conn.query(checkOwnerQuery, [id, cedula], (e, r) => e ? rej(e) : res(r)));
-                        if (checkResults.length === 0) {
+                        
+                        if (checkResults[0].count === 0) {
                             throw new Error('Rúbrica no encontrada o no tiene permisos para eliminarla');
                         }
 
-                        const updateQ = 'UPDATE rubrica SET activo = 0 WHERE id = ?';
+                        const updateQ = 'UPDATE rubrica SET activo = 0, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = ?';
                         await new Promise((res, rej) => conn.query(updateQ, [id], (e, r) => e ? rej(e) : res(r)));
 
                         conn.commit((err) => {
-                            if (err) throw err;
+                            if (err) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    reject(err);
+                                });
+                            }
                             conn.release();
                             resolve({ success: true, message: 'Rúbrica eliminada correctamente' });
                         });

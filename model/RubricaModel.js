@@ -205,106 +205,16 @@ class RubricaModel {
                 if (results.length === 0) return resolve(null);
                 
                 const evalData = results[0];
-                evalData.estrategias = evalData.estrategias_ids ? evalData.estrategias_ids.split(',').map(id => parseInt(id)) : [];
+                evalData.estrategias = evalData.estrategias_ids
+                    ? evalData.estrategias_ids.split(',').map(id => parseInt(id))
+                    : [];
                 delete evalData.estrategias_ids;
                 resolve(evalData);
             });
         });
     }
 
-    async saveRubrica(data) {
-        return new Promise((resolve, reject) => {
-            connection.getConnection((err, conn) => {
-                if (err) return reject(err);
-
-                conn.beginTransaction(async (err) => {
-                    if (err) {
-                        conn.release();
-                        return reject(err);
-                    }
-
-                    try {
-                        const checkQuery = 'SELECT id_rubrica FROM rubrica_uso WHERE id_eval = ?';
-                        const [existing] = await this.queryAsync(conn, checkQuery, [data.id_evaluacion]);
-                        if (existing) {
-                            throw new Error('Esta evaluación ya tiene una rúbrica asignada.');
-                        }
-
-                        const rubricaQuery = `
-                            INSERT INTO rubrica (nombre_rubrica, cedula_docente, instrucciones, id_tipo) 
-                            VALUES (?, ?, ?, ?)
-                        `;
-                        const resRubrica = await this.queryAsync(conn, rubricaQuery, [
-                            data.nombre_rubrica,
-                            data.cedula_docente,
-                            data.instrucciones,
-                            data.tipo_rubrica
-                        ]);
-                        const rubricaId = resRubrica.insertId;
-
-                        const rubricaUsoQuery = 'INSERT INTO rubrica_uso (id_eval, id_rubrica) VALUES (?, ?)';
-                        await this.queryAsync(conn, rubricaUsoQuery, [data.id_evaluacion, rubricaId]);
-
-                        for (const crit of data.criterios) {
-                            const critQuery = `
-                                INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) 
-                                VALUES (?, ?, ?, ?)
-                            `;
-                            const resCrit = await this.queryAsync(conn, critQuery, [
-                                rubricaId,
-                                crit.descripcion,
-                                crit.puntaje_maximo,
-                                crit.orden
-                            ]);
-                            const criterioId = resCrit.insertId;
-
-                            if (crit.niveles && crit.niveles.length > 0) {
-                                for (const nivel of crit.niveles) {
-                                    const nivelQuery = `
-                                        INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) 
-                                        VALUES (?, ?, ?, ?, ?)
-                                    `;
-                                    await this.queryAsync(conn, nivelQuery, [
-                                        criterioId,
-                                        nivel.nombre_nivel,
-                                        nivel.descripcion,
-                                        nivel.puntaje,
-                                        nivel.orden
-                                    ]);
-                                }
-                            }
-                        }
-
-                        conn.commit(async (err) => {
-                            if (err) throw err;
-                            conn.release();
-                            
-                            // Notificar al docente que la rúbrica ha sido habilitada
-                            try {
-                                await NotificacionModel.create({
-                                    usuario_destino: data.cedula_docente,
-                                    mensaje: `La rúbrica "${data.nombre_rubrica}" ha sido habilitada exitosamente para su uso.`,
-                                    id_rubrica: rubricaId
-                                });
-                            } catch (notifErr) {
-                                console.error('Error al crear notificación de rúbrica:', notifErr);
-                                // No bloqueamos la respuesta principal por un error en notificaciones
-                            }
-
-                            resolve({ success: true, rubricaId });
-                        });
-
-                    } catch (error) {
-                        conn.rollback(() => {
-                            conn.release();
-                            reject(error);
-                        });
-                    }
-                });
-            });
-        });
-    }
-
+    // ─── HELPER: queryAsync para transacciones ──────────────────────────────
     queryAsync(conn, sql, params) {
         return new Promise((resolve, reject) => {
             conn.query(sql, params, (err, results) => {
@@ -314,8 +224,108 @@ class RubricaModel {
         });
     }
 
+    // ─── HELPER: beginTransaction / commit / rollback como Promises ─────────
+    beginTransactionAsync(conn) {
+        return new Promise((resolve, reject) => {
+            conn.beginTransaction(err => (err ? reject(err) : resolve()));
+        });
+    }
+
+    commitAsync(conn) {
+        return new Promise((resolve, reject) => {
+            conn.commit(err => (err ? reject(err) : resolve()));
+        });
+    }
+
+    rollbackAsync(conn) {
+        return new Promise((resolve) => {
+            conn.rollback(() => resolve());
+        });
+    }
+
+    getConnectionAsync() {
+        return new Promise((resolve, reject) => {
+            connection.getConnection((err, conn) => {
+                if (err) return reject(err);
+                resolve(conn);
+            });
+        });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // FIX PRINCIPAL: saveRubrica usa async/await correctamente con
+    // commit/rollback como Promises para evitar throw dentro de callbacks.
+    // ────────────────────────────────────────────────────────────────────────
+    async saveRubrica(data) {
+        let conn;
+        try {
+            conn = await this.getConnectionAsync();
+            await this.beginTransactionAsync(conn);
+
+            // Verificar que la evaluación no tenga rúbrica ya asignada
+            const existing = await this.queryAsync(conn, 'SELECT id_rubrica FROM rubrica_uso WHERE id_eval = ?', [data.id_evaluacion]);
+            if (existing.length > 0) {
+                throw new Error('Esta evaluación ya tiene una rúbrica asignada.');
+            }
+
+            // Insertar rúbrica
+            const resRubrica = await this.queryAsync(conn,
+                `INSERT INTO rubrica (nombre_rubrica, cedula_docente, instrucciones, id_tipo) VALUES (?, ?, ?, ?)`,
+                [data.nombre_rubrica, data.cedula_docente, data.instrucciones, data.tipo_rubrica]
+            );
+            const rubricaId = resRubrica.insertId;
+
+            // Relacionar rúbrica con evaluación
+            await this.queryAsync(conn,
+                'INSERT INTO rubrica_uso (id_eval, id_rubrica) VALUES (?, ?)',
+                [data.id_evaluacion, rubricaId]
+            );
+
+            // Insertar criterios y niveles
+            for (const crit of data.criterios) {
+                const resCrit = await this.queryAsync(conn,
+                    `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)`,
+                    [rubricaId, crit.descripcion, crit.puntaje_maximo, crit.orden]
+                );
+                const criterioId = resCrit.insertId;
+
+                if (crit.niveles && crit.niveles.length > 0) {
+                    for (const nivel of crit.niveles) {
+                        await this.queryAsync(conn,
+                            `INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)`,
+                            [criterioId, nivel.nombre_nivel, nivel.descripcion, nivel.puntaje, nivel.orden]
+                        );
+                    }
+                }
+            }
+
+            await this.commitAsync(conn);
+            conn.release();
+
+            // Notificar al docente (no bloquea la respuesta)
+            try {
+                await NotificacionModel.create({
+                    usuario_destino: data.cedula_docente,
+                    mensaje: `La rúbrica "${data.nombre_rubrica}" ha sido habilitada exitosamente para su uso.`,
+                    id_rubrica: rubricaId
+                });
+            } catch (notifErr) {
+                console.error('Error al crear notificación de rúbrica:', notifErr);
+            }
+
+            return { success: true, rubricaId };
+
+        } catch (error) {
+            if (conn) {
+                await this.rollbackAsync(conn);
+                conn.release();
+            }
+            throw error;
+        }
+    }
+
     // ============================================================
-    // NUEVOS MÉTODOS PARA GESTIÓN DE RÚBRICAS
+    // GESTIÓN DE RÚBRICAS
     // ============================================================
 
     async getAllRubricas() {
@@ -378,7 +388,7 @@ class RubricaModel {
                     m.nombre AS materia_nombre,
                     CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     c.nombre AS carrera_nombre,
-                    CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
+                    IFNULL(CONCAT(u.nombre, ' ', u.apeliido), 'Docente no encontrado') AS docente_nombre
                 FROM evaluacion e
                 INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
                 INNER JOIN rubrica r ON r.id = ru.id_rubrica
@@ -389,12 +399,13 @@ class RubricaModel {
                 INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
                 INNER JOIN materia m ON pp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
+                LEFT JOIN usuario_docente ud ON ud.cedula_usuario = r.cedula_docente
+                LEFT JOIN usuario u ON u.cedula = ud.cedula_usuario
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                 LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
                 WHERE r.id = ?
                 GROUP BY r.id;
             `;
-
             const queryCriterios = `SELECT id, descripcion, puntaje_maximo, orden FROM criterio_rubrica WHERE rubrica_id = ? ORDER BY orden`;
             const queryNiveles = `
                 SELECT n.criterio_id, n.nombre_nivel, n.descripcion, n.puntaje_maximo AS puntaje, n.orden
@@ -429,7 +440,7 @@ class RubricaModel {
     async getRubricaForEdit(id, session) {
         return new Promise((resolve, reject) => {
             const esAdmin = session.id_rol === 1;
-            
+
             let queryRubrica = `
                 SELECT 
                     r.id, e.id AS evaluacion_id, r.nombre_rubrica AS nombre_rubrica,
@@ -578,7 +589,11 @@ class RubricaModel {
                     docente_apellido, materia_nombre, carrera_nombre, total_evaluaciones,
                     seccion_codigo, completadas, total_evaluaciones - completadas AS pendientes,
                     fecha_evaluacion,
-                    CASE WHEN rubrica_id IS NULL THEN 'Pendiente' WHEN rubrica_id IS NOT NULL AND total_evaluaciones = completadas AND total_evaluaciones != 0 THEN 'Completada' ELSE 'En Progreso' END as estado
+                    CASE 
+                        WHEN rubrica_id IS NULL THEN 'Pendiente' 
+                        WHEN rubrica_id IS NOT NULL AND total_evaluaciones = completadas AND total_evaluaciones != 0 THEN 'Completada' 
+                        ELSE 'En Progreso' 
+                    END as estado
                 FROM (
                     SELECT e.id AS evaluacion_id, e.contenido AS contenido_evaluacion,
                         GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,

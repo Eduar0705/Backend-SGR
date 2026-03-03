@@ -84,6 +84,7 @@ class EvaluacionController {
 
     async crearEvaluacion(req, res) {
         try {
+            console.log('--- CREAR EVALUACION BODY ---', JSON.stringify(req.body, null, 2));
             const { 
                 fecha_evaluacion, id_horario, id_seccion, cant_personas, 
                 contenido, competencias, instrumentos, porcentaje, estrategias_eval,
@@ -91,15 +92,26 @@ class EvaluacionController {
             } = req.body;
 
             // Validaciones básicas
-            if (!fecha_evaluacion || !id_seccion || !cant_personas || !contenido || 
-                porcentaje == null || !estrategias_eval || estrategias_eval.length === 0) {
-                return res.status(400).json({ success: false, message: 'Datos incompletos' });
+            const missingFields = [];
+            if (!fecha_evaluacion) missingFields.push('fecha_evaluacion');
+            if (!id_seccion) missingFields.push('id_seccion');
+            if (!cant_personas) missingFields.push('cant_personas');
+            if (!contenido) missingFields.push('contenido');
+            if (porcentaje == null) missingFields.push('porcentaje');
+            if (!estrategias_eval || estrategias_eval.length === 0) missingFields.push('estrategias_eval');
+
+            if (missingFields.length > 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Datos incompletos: ${missingFields.join(', ')}`,
+                    missingFields 
+                });
             }
 
             // Verificar duplicados
             if (tipo_horario === 'Sección') {
                 const duplicados = await EvaluacionModel.checkDuplicadosHorario(fecha_evaluacion, id_horario);
-                if (duplicados.length > 0) return res.status(400).json({ success: false, message: 'Ya existe una evaluación en este horario' });
+                if (duplicados.length > 0) return res.status(400).json({ success: false, message: 'Ya existe una evaluación registrada para esta sección en este horario.' });
                 
                 const evalData = { porcentaje, cant_personas, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion };
                 const horarioData = { id_horario };
@@ -107,7 +119,7 @@ class EvaluacionController {
                 res.json({ success: true, message: 'Evaluación agregada exitosamente', id });
             } else {
                 const duplicados = await EvaluacionModel.checkDuplicadosFueraHorario(fecha_evaluacion, hora_inicio, hora_fin);
-                if (duplicados.length > 0) return res.status(400).json({ success: false, message: 'Ya existe una evaluación en este horario' });
+                if (duplicados.length > 0) return res.status(400).json({ success: false, message: 'Ya existe una evaluación registrada en este horario (fuera de sección).' });
                 
                 const evalData = { porcentaje, cant_personas, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion };
                 const horarioData = { hora_inicio, hora_cierre: hora_fin };

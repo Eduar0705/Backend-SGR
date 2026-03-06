@@ -71,8 +71,8 @@ class ReportesModel {
                 usoRubricasPorMateria: `
                     SELECT m.nombre as materia, COUNT(DISTINCT r.id) as total_rubricas
                     FROM materia m
-                    INNER JOIN plan_periodo pp ON m.codigo = pp.codigo_materia
-                    INNER JOIN seccion s ON pp.id = s.id_materia_plan
+                    INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia
+                    INNER JOIN seccion s ON mp.id = s.id_materia_plan
                     INNER JOIN evaluacion e ON s.id = e.id_seccion
                     INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
                     INNER JOIN rubrica r ON ru.id_rubrica = r.id
@@ -119,8 +119,8 @@ class ReportesModel {
                 rendimientoCarrera: `
                     SELECT c.nombre, AVG(de.puntaje_obtenido / 5) as promedio
                     FROM carrera c
-                    INNER JOIN plan_periodo pp ON c.codigo = pp.codigo_carrera
-                    INNER JOIN seccion s ON pp.id = s.id_materia_plan
+                    INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera
+                    INNER JOIN seccion s ON mp.id = s.id_materia_plan
                     INNER JOIN evaluacion e ON s.id = e.id_seccion
                     INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
                     INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id

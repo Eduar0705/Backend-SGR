@@ -42,14 +42,14 @@ class TeacherEstudiantesModel {
                     ue.codigo_carrera AS carrera_codigo,
                     c.nombre AS carrera_nombre,
                     COUNT(DISTINCT num_semestre) AS duracion_semestres,
-                    CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion,
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion,
                     COUNT(e.id) AS total_evaluaciones, 
                     ROUND(AVG(COALESCE(de.puntaje_obtenido,0))/5,2) AS promedio_puntaje,
                     IFNULL(MAX(er.fecha_evaluado), 'Sin registros.') AS ultima_evaluacion
                 FROM evaluacion e
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 INNER JOIN usuario_estudiante ue ON ue.cedula_usuario = ins.cedula_estudiante
                 INNER JOIN carrera c ON ue.codigo_carrera = c.codigo
@@ -88,14 +88,14 @@ class TeacherEstudiantesModel {
                     ue.codigo_carrera AS carrera_codigo,
                     c.nombre AS carrera_nombre,
                     COUNT(DISTINCT num_semestre) AS duracion_semestres,
-                    CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion,
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion,
                     COUNT(e.id) AS total_evaluaciones, 
                     ROUND(AVG(COALESCE(de.puntaje_obtenido,0))/5,2) AS promedio_puntaje,
                     IFNULL(MAX(er.fecha_evaluado), 'Sin registros.') AS ultima_evaluacion
                 FROM evaluacion e
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN inscripcion_seccion ins ON pd.id_seccion = ins.id_seccion
                 INNER JOIN usuario_estudiante ue ON ue.cedula_usuario = ins.cedula_estudiante
@@ -126,13 +126,13 @@ class TeacherEstudiantesModel {
                     ue.codigo_carrera AS carrera_codigo,
                     c.nombre AS carrera_nombre,
                     COUNT(DISTINCT num_semestre) AS duracion_semestres,
-                    CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion,
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion,
                     COUNT(e.id) AS total_evaluaciones, 
                     ROUND(AVG(COALESCE(de.puntaje_obtenido,0))/5,2) AS promedio_puntaje,
                     IFNULL(MAX(er.fecha_evaluado), 'Sin registros.') AS ultima_evaluacion
            FROM evaluacion e
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 INNER JOIN usuario_estudiante ue ON ue.cedula_usuario = ins.cedula_estudiante
                 INNER JOIN carrera c ON ue.codigo_carrera = c.codigo

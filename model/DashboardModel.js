@@ -17,9 +17,9 @@ class DashboardModel {
                 INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
-                INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 INNER JOIN (
                     SELECT COUNT(DISTINCT ins.cedula_estudiante) AS cantidad_en_seccion, ins.id_seccion
                     FROM inscripcion_seccion ins
@@ -46,8 +46,8 @@ class DashboardModel {
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                 INNER JOIN evaluacion e ON e.id = ru.id_eval
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                 LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
                 WHERE r.activo = 1
@@ -67,8 +67,8 @@ class DashboardModel {
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                 INNER JOIN evaluacion e ON ru.id_eval = e.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
                 INNER JOIN usuario uh ON uh.cedula = pd.docente_cedula
@@ -158,8 +158,8 @@ class DashboardModel {
                 INNER JOIN rubrica_uso ru ON ru.id_eval = er.id_evaluacion
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 INNER JOIN tipo_rubrica tr ON tr.id = r.id_tipo
                 WHERE er.cedula_evaluado = ?
@@ -173,8 +173,8 @@ class DashboardModel {
                 INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
                 INNER JOIN criterio_rubrica cr ON r.id = cr.rubrica_id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN tipo_rubrica tr ON tr.id = r.id_tipo
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
                 WHERE ins.cedula_estudiante = ? AND e.fecha_evaluacion > CURDATE() AND r.activo = 1 AND er.id IS NULL
@@ -217,7 +217,7 @@ class DashboardModel {
                 INNER JOIN usuario_estudiante ue ON u.cedula = ue.cedula_usuario
                 INNER JOIN inscripcion_seccion ins ON ue.cedula_usuario = ins.cedula_estudiante
                 INNER JOIN seccion s ON ins.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 WHERE pd.docente_cedula = ? AND u.activo = 1;
             `;
@@ -246,8 +246,8 @@ class DashboardModel {
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                 INNER JOIN evaluacion e ON ru.id_eval = e.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN inscripcion_seccion ins ON pd.id_seccion = ins.id_seccion
                 INNER JOIN usuario_estudiante ue ON ue.cedula_usuario = ins.cedula_estudiante
@@ -340,8 +340,8 @@ class DashboardModelExtended extends DashboardModel {
                     SELECT m.nombre, AVG(de.puntaje_obtenido / 5) as promedio
                     FROM evaluacion e
                     INNER JOIN seccion s ON e.id_seccion = s.id
-                    INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                    INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                    INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                    INNER JOIN materia m ON mp.codigo_materia = m.codigo
                     INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
                     INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                     ${isDocente ? 'INNER JOIN permiso_docente pd ON s.id = pd.id_seccion' : ''}

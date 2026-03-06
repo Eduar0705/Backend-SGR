@@ -16,14 +16,14 @@ class NotificacionModel {
                     r.id AS rubrica_id,
                     r.nombre_rubrica,
                     m.nombre AS materia_nombre,
-                    CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo
                 FROM notificacion_rubrica nr
                 INNER JOIN rubrica r ON nr.id_rubrica = r.id
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                 INNER JOIN evaluacion e ON ru.id_eval = e.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON pp.id = s.id_materia_plan
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
+                INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 GROUP BY nr.id_notif
             ) AS datos_adicionales ON n.id = datos_adicionales.id_notif
             WHERE n.usuario_destino = ?

@@ -18,8 +18,8 @@ class StudentEvaluacionesModel {
             INNER JOIN inscripcion_seccion ins ON ins.id_seccion = s.id
             INNER JOIN permiso_docente pd ON ins.id_seccion = pd.id_seccion
             INNER JOIN usuario prof_sec ON pd.docente_cedula = prof_sec.cedula
-            INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-            INNER JOIN materia m ON pp.codigo_materia = m.codigo
+            INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+            INNER JOIN materia m ON mp.codigo_materia = m.codigo
             LEFT JOIN evaluacion_realizada er ON er.id_evaluacion = e.id
             LEFT JOIN detalle_evaluacion de ON de.evaluacion_r_id = er.id  
             LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
@@ -64,8 +64,8 @@ class StudentEvaluacionesModel {
             INNER JOIN inscripcion_seccion ins ON ins.id_seccion = s.id
             INNER JOIN permiso_docente pd ON ins.id_seccion = pd.id_seccion
             INNER JOIN usuario prof_sec ON pd.docente_cedula = prof_sec.cedula
-            INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-            INNER JOIN materia m ON pp.codigo_materia = m.codigo
+            INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+            INNER JOIN materia m ON mp.codigo_materia = m.codigo
             LEFT JOIN evaluacion_realizada er ON er.id_evaluacion = e.id
             LEFT JOIN detalle_evaluacion de ON de.evaluacion_r_id = er.id  
             LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval

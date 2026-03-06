@@ -6,19 +6,19 @@ class PermisosModel {
             const query = `
                 SELECT 
                     pd.id,
-                    pp.codigo_carrera AS carrera_codigo,
-                    pp.num_semestre AS semestre,
-                    pp.codigo_materia AS materia_codigo,
+                    mp.codigo_carrera AS carrera_codigo,
+                    mp.num_semestre AS semestre,
+                    mp.codigo_materia AS materia_codigo,
                     pd.id_seccion AS seccion_id,
                     c.nombre as carrera_nombre,
                     m.nombre as materia_nombre,
-                    CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                    pp.codigo_periodo AS lapso_academico
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                    mp.codigo_periodo AS lapso_academico
                 FROM permiso_docente pd
                 INNER JOIN seccion s ON pd.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
-                INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 WHERE pd.docente_cedula = ? AND pd.activo = 1
                 ORDER BY carrera_nombre, semestre, materia_nombre, seccion_codigo;
             `;
@@ -38,13 +38,13 @@ class PermisosModel {
                     u.apeliido as docente_apellido,
                     c.nombre as carrera_nombre,
                     m.nombre as materia_nombre,
-                    CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                    pp.codigo_periodo AS lapso_academico
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                    mp.codigo_periodo AS lapso_academico
                 FROM permiso_docente pd
                 INNER JOIN seccion s ON pd.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
-                INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
+                INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 INNER JOIN usuario u ON pd.docente_cedula = u.cedula
                 WHERE pd.id = ?
             `;

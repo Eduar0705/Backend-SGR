@@ -1,19 +1,19 @@
 const mysql = require('mysql');
 
-const pool = mysql.createPool({
+/*const pool = mysql.createPool({
     connectionLimit: 10,
     host: 'mysql-sistems.alwaysdata.net',
     user: 'sistems',
     password: '31466704',
     database: 'sistems_sgr'
-});
+});*/
 
-const pool1 = mysql.createPool({
+const pool = mysql.createPool({
     connectionLimit: 10,
     host: 'localhost',
     user: 'root',
     password: '',
-    database: 'sgr'
+    database: 'sistems_sgr'
 });
 
 // Test connection

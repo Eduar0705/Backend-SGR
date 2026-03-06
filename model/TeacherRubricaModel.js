@@ -6,8 +6,8 @@ class TeacherRubricaModel {
         const query = `
             SELECT DISTINCT c.codigo, c.nombre
             FROM carrera c
-            INNER JOIN plan_periodo pp ON c.codigo = pp.codigo_carrera
-            INNER JOIN seccion s ON pp.id = s.id_materia_plan
+            INNER JOIN plan_periodo mp ON c.codigo = mp.codigo_carrera
+            INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE pd.docente_cedula = ?
             ORDER BY c.nombre
@@ -28,12 +28,12 @@ class TeacherRubricaModel {
     // Semestres por carrera (filtrado por permisos del docente)
     async getSemestresByCarrera(carrera, cedula) {
         const query = `
-            SELECT DISTINCT pp.num_semestre as semestre
-            FROM plan_periodo pp
-            INNER JOIN seccion s ON pp.id = s.id_materia_plan
+            SELECT DISTINCT mp.num_semestre as semestre
+            FROM plan_periodo mp
+            INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-            WHERE pp.codigo_carrera = ? AND pd.docente_cedula = ?
-            ORDER BY pp.num_semestre
+            WHERE mp.codigo_carrera = ? AND pd.docente_cedula = ?
+            ORDER BY mp.num_semestre
         `;
         return new Promise((resolve, reject) => {
             connection.query(query, [carrera, cedula], (err, r) => err ? reject(err) : resolve(r.map(x => x.semestre)));
@@ -45,10 +45,10 @@ class TeacherRubricaModel {
         const query = `
             SELECT DISTINCT m.codigo, m.nombre
             FROM materia m
-            INNER JOIN plan_periodo pp ON m.codigo = pp.codigo_materia AND pp.codigo_carrera = ?
-            INNER JOIN seccion s ON pp.id = s.id_materia_plan
+            INNER JOIN plan_periodo mp ON m.codigo = mp.codigo_materia AND mp.codigo_carrera = ?
+            INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-            WHERE pp.num_semestre = ? AND pd.docente_cedula = ?
+            WHERE mp.num_semestre = ? AND pd.docente_cedula = ?
             ORDER BY m.nombre
         `;
         return new Promise((resolve, reject) => {
@@ -59,11 +59,11 @@ class TeacherRubricaModel {
     // Secciones por materia (del docente en plan_periodo)
     async getSeccionesByMateria(materia, cedula) {
         const query = `
-            SELECT DISTINCT s.id, s.letra, pp.codigo_periodo
+            SELECT DISTINCT s.id, s.letra, mp.codigo_periodo
             FROM seccion s
-            INNER JOIN plan_periodo pp ON pp.id = s.id_materia_plan
+            INNER JOIN plan_periodo mp ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-            WHERE pp.codigo_materia = ? AND pd.docente_cedula = ?
+            WHERE mp.codigo_materia = ? AND pd.docente_cedula = ?
             ORDER BY s.letra
         `;
         return new Promise((resolve, reject) => {
@@ -185,7 +185,7 @@ class TeacherRubricaModel {
                 e.ponderacion AS porcentaje_evaluacion,
                 m.nombre AS materia_nombre,
                 m.codigo AS materia_codigo,
-                CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                 CASE WHEN r.activo = 1 THEN ru.estado ELSE 'Inactivo' END AS estado,
                 r.activo,
                 CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
@@ -195,8 +195,8 @@ class TeacherRubricaModel {
             LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
             LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
             INNER JOIN seccion s ON e.id_seccion = s.id
-            INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-            INNER JOIN materia m ON pp.codigo_materia = m.codigo
+            INNER JOIN plan_periodo mp ON s.id_materia_plan = mp.id
+            INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
             INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
@@ -214,22 +214,22 @@ class TeacherRubricaModel {
         const queryRubrica = `
             SELECT
                 r.id, r.nombre_rubrica, r.cedula_docente AS docente_cedula,
-                m.codigo AS materia_id, s.letra AS seccion_id, pp.codigo_periodo AS lapso_academico,
+                m.codigo AS materia_id, s.letra AS seccion_id, mp.codigo_periodo AS lapso_academico,
                 e.fecha_evaluacion,
                 (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.competencias, r.instrucciones,
                 CASE WHEN cantidad_personas=1 THEN 'Individual' WHEN cantidad_personas=2 THEN 'En Pareja' ELSE 'Grupal' END AS modalidad,
                 e.cantidad_personas, r.activo, r.fecha_creacion AS created_at, r.fecha_actualizacion AS updated_at,
-                m.nombre AS materia_nombre, CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                m.nombre AS materia_nombre, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                 c.nombre AS carrera_nombre, CONCAT(u_p.nombre, ' ', u_p.apeliido) AS docente_nombre
             FROM evaluacion e
             INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
             INNER JOIN rubrica r ON r.id = ru.id_rubrica
             INNER JOIN seccion s ON e.id_seccion = s.id
-            INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-            INNER JOIN materia m ON pp.codigo_materia = m.codigo
-            INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
+            INNER JOIN plan_periodo mp ON s.id_materia_plan = mp.id
+            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+            INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             INNER JOIN usuario_docente ud_p ON ud_p.cedula_usuario = pd.docente_cedula
             INNER JOIN usuario u_p ON u_p.cedula = ud_p.cedula_usuario
@@ -276,20 +276,20 @@ class TeacherRubricaModel {
                 r.id, e.id AS evaluacion_id, r.nombre_rubrica AS nombre_rubrica,
                 tr.id AS id_tipo, IFNULL(tr.nombre, 'Tipo no asignado') AS tipo_rubrica,
                 u.cedula as docente_cedula, m.codigo AS materia_codigo, s.id AS seccion_id,
-                pp.codigo_periodo AS lapse_academico, e.fecha_evaluacion,
+                mp.codigo_periodo AS lapse_academico, e.fecha_evaluacion,
                 (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.contenido AS contenido_evaluacion, e.competencias, e.instrumentos, r.instrucciones,
                 CASE WHEN cantidad_personas=1 THEN 'Individual' WHEN cantidad_personas=2 THEN 'En Pareja' ELSE 'Grupal' END AS modalidad,
                 e.cantidad_personas, r.activo, r.fecha_creacion AS created_at, r.fecha_actualizacion AS updated_at,
                 m.nombre AS materia_nombre, s.id AS id_seccion,
-                CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                 CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
             FROM evaluacion e
             INNER JOIN seccion s ON e.id_seccion = s.id
-            INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-            INNER JOIN materia m ON pp.codigo_materia = m.codigo
-            INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
+            INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+            INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
             INNER JOIN usuario u ON ud.cedula_usuario = u.cedula

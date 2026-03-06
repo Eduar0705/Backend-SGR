@@ -42,7 +42,7 @@ class EvaluacionModel {
                         m.nombre as materia_nombre,
                         c.nombre as carrera_nombre,
                         COALESCE(estud_sec.cantidad_en_seccion,0) AS total_evaluaciones, 
-                        CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                        CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                         (SELECT COALESCE(COUNT(DISTINCT er.id),0) FROM evaluacion_realizada er
                         INNER JOIN evaluacion ON er.id_evaluacion = e.id) AS completadas,
                         e.fecha_evaluacion,
@@ -55,9 +55,9 @@ class EvaluacionModel {
                         s.id AS id_seccion
                     FROM evaluacion e
                     INNER JOIN seccion s ON e.id_seccion = s.id
-                    INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                    INNER JOIN materia m ON pp.codigo_materia = m.codigo
-                    INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
+                    INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                    INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                    INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                     INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                     INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
                     INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
@@ -109,9 +109,9 @@ class EvaluacionModel {
                 SELECT 
                     c.codigo, 
                     c.nombre, 
-                    COUNT(DISTINCT pp.num_semestre) AS duracion_semestres
+                    COUNT(DISTINCT mp.num_semestre) AS duracion_semestres
                 FROM carrera c
-                INNER JOIN plan_periodo pp ON c.codigo = pp.codigo_carrera
+                INNER JOIN materia_pensum pp ON c.codigo = mp.codigo_carrera
                 GROUP BY c.codigo
                 ORDER BY nombre
             `;
@@ -128,12 +128,12 @@ class EvaluacionModel {
                 SELECT 
                     m.codigo,
                     m.nombre,
-                    pp.num_semestre AS semestre,
-                    pp.unidades_credito AS creditos
+                    mp.num_semestre AS semestre,
+                    mp.unidades_credito AS creditos
                 FROM materia m
-                INNER JOIN plan_periodo pp ON m.codigo = pp.codigo_materia
-                INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
-                WHERE pp.codigo_carrera = ?
+                INNER JOIN materia_pensum pp ON m.codigo = mp.codigo_materia
+                INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+                WHERE mp.codigo_carrera = ?
                 ORDER BY semestre, nombre
             `;
             pool.query(query, [carreraCodigo], (error, results) => {
@@ -148,16 +148,16 @@ class EvaluacionModel {
             const query = `
                 SELECT 
                     s.id, 
-                    CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS codigo,
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS codigo,
                     IFNULL(GROUP_CONCAT(DISTINCT CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ' (', hs.aula, ')', ')') SEPARATOR ', '), 'No encontrado') AS horario,
                     s.capacidad_maxima,
                     COUNT(ins.cedula_estudiante) AS estudiantes_inscritos
                 FROM seccion s
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
+                INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                 LEFT JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
-                WHERE pp.codigo_materia = ? 
-                AND pp.codigo_carrera = ? 
+                WHERE mp.codigo_materia = ? 
+                AND mp.codigo_carrera = ? 
                 GROUP BY s.id
                 ORDER BY codigo;
             `;
@@ -208,10 +208,10 @@ class EvaluacionModel {
                     s.id AS seccion_id,
                     m.nombre AS materia_nombre,
                     m.codigo AS materia_codigo,
-                    pp.num_semestre AS semestre,
+                    mp.num_semestre AS semestre,
                     c.codigo as carrera_codigo,
                     c.nombre as carrera_nombre,
-                    CONCAT(pp.codigo_carrera, '-', pp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     IFNULL(GROUP_CONCAT(CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ')') SEPARATOR ', '), 'No encontrado') AS seccion_horario,
                     hs.aula AS seccion_aula,
                     pp.codigo_periodo AS seccion_lapso,
@@ -221,15 +221,17 @@ class EvaluacionModel {
                 FROM rubrica r
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                 INNER JOIN evaluacion e ON ru.id_eval = e.id
-                LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
-                LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
-                INNER JOIN materia m ON pp.codigo_materia = m.codigo
-                INNER JOIN carrera c ON pp.codigo_carrera = c.codigo
+                INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
                 INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+                LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
+                LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                 WHERE r.activo = 1 AND u.activo = 1
                 GROUP BY r.id
@@ -333,7 +335,7 @@ class EvaluacionModel {
                 SELECT 
                     e.id AS evaluacion_id, e.contenido, e.ponderacion AS porcentaje, e.cantidad_personas,
                     e.competencias, e.instrumentos, e.fecha_evaluacion, e.id_seccion,
-                    s.letra AS seccion_letra, pp.codigo_carrera AS carrera_codigo, pp.codigo_materia AS materia_codigo,
+                    s.letra AS seccion_letra, mp.codigo_carrera AS carrera_codigo, mp.codigo_materia AS materia_codigo,
                     CASE 
                         WHEN he.id_horario IS NOT NULL THEN 'Sección'
                         WHEN hec.id IS NOT NULL THEN 'Otro'
@@ -344,7 +346,7 @@ class EvaluacionModel {
                     IFNULL(hs.hora_cierre, hec.hora_cierre) AS hora_cierre
                 FROM evaluacion e
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
+                INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
                 LEFT JOIN horario_eval he ON e.id = he.id_eval
                 LEFT JOIN horario_seccion hs ON hs.id = he.id_horario
                 LEFT JOIN horario_eval_clandestina hec ON e.id = hec.id_eval
@@ -436,7 +438,9 @@ class EvaluacionModel {
                     pp.codigo_periodo AS periodo, pa.fecha_inicio, pa.fecha_fin
                 FROM seccion s
                 INNER JOIN horario_seccion hs ON s.id = hs.id_seccion
-                INNER JOIN plan_periodo pp ON s.id_materia_plan = pp.id
+                INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN periodo_academico pa ON pp.codigo_periodo = pa.codigo
                 WHERE s.id = ?
             `;

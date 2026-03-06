@@ -390,7 +390,7 @@ class RubricaModel {
                     m.nombre AS materia_nombre,
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     c.nombre AS carrera_nombre,
-                    IFNULL(CONCAT(u.nombre, ' ', u.apeliido), 'Docente no encontrado') AS docente_nombre
+                    IFNULL(CONCAT(u2.nombre, ' ', u2.apeliido), CONCAT(u.nombre, ' ', u.apeliido)) AS docente_nombre
                 FROM evaluacion e
                 INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
                 INNER JOIN rubrica r ON r.id = ru.id_rubrica
@@ -403,8 +403,8 @@ class RubricaModel {
                 INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                LEFT JOIN usuario_docente ud ON ud.cedula_usuario = r.cedula_docente
-                LEFT JOIN usuario u ON u.cedula = ud.cedula_usuario
+                LEFT JOIN usuario_docente ud2 ON ud2.cedula_usuario = r.cedula_docente
+                LEFT JOIN usuario u2 ON u2.cedula = ud2.cedula_usuario
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                 LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
                 WHERE r.id = ?

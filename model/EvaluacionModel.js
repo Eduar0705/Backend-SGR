@@ -333,9 +333,17 @@ class EvaluacionModel {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
-                    e.id AS evaluacion_id, e.contenido, e.ponderacion AS porcentaje, e.cantidad_personas,
-                    e.competencias, e.instrumentos, e.fecha_evaluacion, e.id_seccion,
-                    s.letra AS seccion_letra, mp.codigo_carrera AS carrera_codigo, mp.codigo_materia AS materia_codigo,
+                    e.id AS evaluacion_id, 
+                    e.contenido, 
+                    e.ponderacion AS porcentaje, 
+                    e.cantidad_personas,
+                    e.competencias, 
+                    e.instrumentos, 
+                    e.fecha_evaluacion, 
+                    e.id_seccion,
+                    s.letra AS seccion_letra, 
+                    mp.codigo_carrera AS carrera_codigo, 
+                    mp.codigo_materia AS materia_codigo,
                     CASE 
                         WHEN he.id_horario IS NOT NULL THEN 'Sección'
                         WHEN hec.id IS NOT NULL THEN 'Otro'
@@ -346,7 +354,7 @@ class EvaluacionModel {
                     IFNULL(hs.hora_cierre, hec.hora_cierre) AS hora_cierre
                 FROM evaluacion e
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 LEFT JOIN horario_eval he ON e.id = he.id_eval
                 LEFT JOIN horario_seccion hs ON hs.id = he.id_horario
                 LEFT JOIN horario_eval_clandestina hec ON e.id = hec.id_eval

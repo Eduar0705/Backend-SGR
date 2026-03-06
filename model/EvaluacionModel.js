@@ -86,7 +86,6 @@ class EvaluacionModel {
                 ORDER BY fecha_evaluacion DESC;
             `;
             pool.query(query, (error, results) => {
-                console.log(results);
                 if (error) return reject(error);
                 resolve(results);
             });

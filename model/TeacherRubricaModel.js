@@ -277,16 +277,36 @@ class TeacherRubricaModel {
     async getRubricaForEdit(id, cedula) {
         let queryRubrica = `
             SELECT 
-                r.id, e.id AS evaluacion_id, r.nombre_rubrica AS nombre_rubrica,
-                tr.id AS id_tipo, IFNULL(tr.nombre, 'Tipo no asignado') AS tipo_rubrica,
-                u.cedula as docente_cedula, m.codigo AS materia_codigo, s.id AS seccion_id,
-                pp.codigo_periodo AS lapse_academico, e.fecha_evaluacion,
-                (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
+                r.id, 
+                e.id AS evaluacion_id, 
+                r.nombre_rubrica AS nombre_rubrica,
+                tr.id AS id_tipo, 
+                IFNULL(tr.nombre, 'Tipo no asignado') AS tipo_rubrica,
+                u.cedula as docente_cedula, 
+                m.codigo AS materia_codigo, 
+                s.id AS seccion_id,
+                pp.codigo_periodo AS lapse_academico, 
+                e.fecha_evaluacion,
+                (SELECT SUM(puntaje_maximo) 
+                    FROM criterio_rubrica cr_sub 
+                    WHERE cr_sub.rubrica_id = r.id) 
+                AS porcentaje_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
-                e.contenido AS contenido_evaluacion, e.competencias, e.instrumentos, r.instrucciones,
-                CASE WHEN cantidad_personas=1 THEN 'Individual' WHEN cantidad_personas=2 THEN 'En Pareja' ELSE 'Grupal' END AS modalidad,
-                e.cantidad_personas, r.activo, r.fecha_creacion AS created_at, r.fecha_actualizacion AS updated_at,
-                m.nombre AS materia_nombre, s.id AS id_seccion,
+                e.contenido AS contenido_evaluacion, 
+                e.competencias, 
+                e.instrumentos, 
+                r.instrucciones,
+                CASE 
+                    WHEN cantidad_personas=1 THEN 'Individual' 
+                    WHEN cantidad_personas=2 THEN 'En Pareja' 
+                    ELSE 'Grupal' 
+                END AS modalidad,
+                e.cantidad_personas, 
+                r.activo, 
+                r.fecha_creacion AS created_at, 
+                r.fecha_actualizacion AS updated_at,
+                m.nombre AS materia_nombre, 
+                s.id AS id_seccion,
                 CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                 CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
             FROM evaluacion e

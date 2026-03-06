@@ -78,9 +78,11 @@ class RubricaModel {
                     IFNULL(GROUP_CONCAT(DISTINCT CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ' (', hs.aula, ')', ')') SEPARATOR ', '), 'No encontrado') AS horario,
                     s.capacidad_maxima,
                     COUNT(ins.cedula_estudiante) AS estudiantes_inscritos,
-                    mp.codigo_periodo AS lapse_academico
+                    pp.codigo_periodo AS lapse_academico
                 FROM seccion s
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                 LEFT JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 WHERE mp.codigo_materia = ? 
@@ -374,7 +376,7 @@ class RubricaModel {
                     r.cedula_docente AS docente_cedula,
                     m.codigo AS materia_id,
                     s.letra AS seccion_id,
-                    mp.codigo_periodo AS lapse_academico,
+                    pp.codigo_periodo AS lapse_academico,
                     e.fecha_evaluacion,
                     (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
                     GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
@@ -397,6 +399,8 @@ class RubricaModel {
                 INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
                 INNER JOIN usuario u ON u.cedula = ud.cedula_usuario
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 LEFT JOIN usuario_docente ud ON ud.cedula_usuario = r.cedula_docente
@@ -446,7 +450,7 @@ class RubricaModel {
                     r.id, e.id AS evaluacion_id, r.nombre_rubrica AS nombre_rubrica,
                     tr.id AS id_tipo, IFNULL(tr.nombre, 'Tipo no asignado') AS tipo_rubrica,
                     u.cedula as docente_cedula, m.codigo AS materia_codigo, s.id AS seccion_id,
-                    mp.codigo_periodo AS lapse_academico, e.fecha_evaluacion,
+                    pp.codigo_periodo AS lapse_academico, e.fecha_evaluacion,
                     (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
                     GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                     e.contenido AS contenido_evaluacion, e.competencias, e.instrumentos, r.instrucciones,
@@ -458,6 +462,8 @@ class RubricaModel {
                 FROM evaluacion e
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
@@ -556,9 +562,32 @@ class RubricaModel {
 
                 let querySecciones, paramsSecciones = [];
                 if (esAdmin) {
-                    querySecciones = `SELECT s.id_materia_plan AS id, s.letra, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo, mp.codigo_materia AS materia_codigo, mp.codigo_periodo AS lapse_academico FROM seccion s INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id GROUP BY codigo, lapse_academico ORDER BY codigo;`;
+                    querySecciones = `SELECT 
+                                        s.id_materia_plan AS id, 
+                                        s.letra, 
+                                        CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo, 
+                                        mp.codigo_materia AS materia_codigo,
+                                        pp.codigo_periodo AS lapse_academico 
+                                    FROM seccion s 
+                                    INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
+                                    INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                                    INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                                    GROUP BY codigo, lapse_academico 
+                                    ORDER BY codigo;`;
                 } else {
-                    querySecciones = `SELECT s.id_materia_plan AS id, s.letra, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo, mp.codigo_materia AS materia_codigo, mp.codigo_periodo AS lapse_academico FROM seccion s INNER JOIN permiso_docente pd ON pd.id_seccion = s.id INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id WHERE pd.docente_cedula = ? GROUP BY codigo, lapse_academico ORDER BY codigo;`;
+                    querySecciones = `SELECT 
+                                        s.id_materia_plan AS id, 
+                                        s.letra, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo, 
+                                        mp.codigo_materia AS materia_codigo, 
+                                        pp.codigo_periodo AS lapse_academico 
+                                    FROM seccion s 
+                                    INNER JOIN permiso_docente pd ON pd.id_seccion = s.id 
+                                    INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
+                                    INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                                    INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                                    WHERE pd.docente_cedula = ? 
+                                    GROUP BY codigo, lapse_academico 
+                                    ORDER BY codigo;`;
                     paramsSecciones = [cedula];
                 }
 
@@ -669,31 +698,41 @@ class RubricaModel {
             if (esAdmin) {
                 query = `
                     SELECT s.id_materia_plan AS id, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo,
-                    mp.codigo_periodo AS lapse_academico, s.letra,
+                    pp.codigo_periodo AS lapse_academico, s.letra,
                     IFNULL(GROUP_CONCAT(DISTINCT CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ' (', hs.aula, ')', ')') SEPARATOR ', '), 'No encontrado') AS horario,
                     hs.aula, s.capacidad_maxima, u.nombre AS docente_nombre, u.apeliido AS docente_apellido
                     FROM seccion s
                     INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                    INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                    INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                     INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                    LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                     INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
                     INNER JOIN usuario u ON u.cedula = ud.cedula_usuario
+                    LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                     WHERE mp.codigo_materia = ? AND mp.codigo_carrera = ?
                     GROUP BY codigo, lapse_academico ORDER BY codigo;
                 `;
                 params = [materia, carreraCodigo];
             } else {
                 query = `
-                    SELECT s.id_materia_plan AS id, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo,
-                    mp.codigo_periodo AS lapse_academico, s.letra,
-                    IFNULL(GROUP_CONCAT(CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ')') SEPARATOR ', '), 'No encontrado') AS horario,
-                    hs.aula, s.capacidad_maxima, u.nombre AS docente_nombre, u.apeliido AS docente_apellido
+                    SELECT 
+                        s.id_materia_plan AS id, 
+                        CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo,
+                        pp.codigo_periodo AS lapse_academico, 
+                        s.letra,
+                        IFNULL(GROUP_CONCAT(CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ')') SEPARATOR ', '), 'No encontrado') AS horario,
+                        hs.aula, 
+                        s.capacidad_maxima, 
+                        u.nombre AS docente_nombre, 
+                        u.apeliido AS docente_apellido
                     FROM seccion s
                     INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                    INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                    INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                     INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                    LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                     INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
                     INNER JOIN usuario u ON u.cedula = ud.cedula_usuario
+                    LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                     WHERE mp.codigo_materia = ? AND mp.codigo_carrera = ? AND pd.docente_cedula = ?
                     GROUP BY codigo, lapse_academico ORDER BY codigo;
                 `;

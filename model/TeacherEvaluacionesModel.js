@@ -38,7 +38,7 @@ class TeacherEvaluacionesModel {
                     m.nombre as materia_nombre,
                     m.codigo as materia_codigo,
                     c.nombre AS carrera_nombre,
-                    mp.codigo_periodo AS materia_semestre,
+                    pp.codigo_periodo AS materia_semestre,
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(hs2.dia, ' (', hs2.hora_inicio, '-', hs2.hora_cierre, ')') SEPARATOR ', ')
                     FROM horario_seccion hs2
@@ -58,6 +58,8 @@ class TeacherEvaluacionesModel {
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
@@ -92,7 +94,7 @@ class TeacherEvaluacionesModel {
                     m.nombre as materia_nombre,
                     m.codigo as materia_codigo,
                     c.nombre AS carrera_nombre,
-                    mp.codigo_periodo AS materia_semestre,
+                    pp.codigo_periodo AS materia_semestre,
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(hs2.dia, ' (', hs2.hora_inicio, '-', hs2.hora_cierre, ')') SEPARATOR ', ')
                     FROM horario_seccion hs2
@@ -112,6 +114,8 @@ class TeacherEvaluacionesModel {
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion

@@ -69,7 +69,7 @@ class RubricaModel {
         });
     }
 
-    async getSecciones(materia, carrera) {
+    async getSecciones(materia, carrera) { //CONDICIONAR POR PERIODO URGENTEMENTE
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
@@ -376,7 +376,7 @@ class RubricaModel {
                     r.cedula_docente AS docente_cedula,
                     m.codigo AS materia_id,
                     s.letra AS seccion_id,
-                    pp.codigo_periodo AS lapse_academico,
+                    e.codigo_periodo AS lapse_academico,
                     e.fecha_evaluacion,
                     (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
                     GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
@@ -447,16 +447,36 @@ class RubricaModel {
 
             let queryRubrica = `
                 SELECT 
-                    r.id, e.id AS evaluacion_id, r.nombre_rubrica AS nombre_rubrica,
-                    tr.id AS id_tipo, IFNULL(tr.nombre, 'Tipo no asignado') AS tipo_rubrica,
-                    u.cedula as docente_cedula, m.codigo AS materia_codigo, s.id AS seccion_id,
-                    pp.codigo_periodo AS lapse_academico, e.fecha_evaluacion,
-                    (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
+                    r.id, 
+                    e.id AS evaluacion_id, 
+                    r.nombre_rubrica AS nombre_rubrica,
+                    tr.id AS id_tipo, 
+                    IFNULL(tr.nombre, 'Tipo no asignado') AS tipo_rubrica,
+                    u.cedula as docente_cedula, 
+                    m.codigo AS materia_codigo, 
+                    s.id AS seccion_id,
+                    e.codigo_periodo AS lapse_academico, 
+                    e.fecha_evaluacion,
+                    (   SELECT SUM(puntaje_maximo) 
+                        FROM criterio_rubrica cr_sub 
+                        WHERE cr_sub.rubrica_id = r.id
+                    ) AS porcentaje_evaluacion,
                     GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
-                    e.contenido AS contenido_evaluacion, e.competencias, e.instrumentos, r.instrucciones,
-                    CASE WHEN cantidad_personas=1 THEN 'Individual' WHEN cantidad_personas=2 THEN 'En Pareja' ELSE 'Grupal' END AS modalidad,
-                    e.cantidad_personas, r.activo, r.fecha_creacion AS created_at, r.fecha_actualizacion AS updated_at,
-                    m.nombre AS materia_nombre, s.id AS id_seccion,
+                    e.contenido AS contenido_evaluacion, 
+                    e.competencias, 
+                    e.instrumentos, 
+                    r.instrucciones,
+                    CASE 
+                        WHEN cantidad_personas=1 THEN 'Individual' 
+                        WHEN cantidad_personas=2 THEN 'En Pareja' 
+                        ELSE 'Grupal' 
+                    END AS modalidad,
+                    e.cantidad_personas, 
+                    r.activo, 
+                    r.fecha_creacion AS created_at, 
+                    r.fecha_actualizacion AS updated_at,
+                    m.nombre AS materia_nombre, 
+                    s.id AS id_seccion,
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
                 FROM evaluacion e
@@ -534,9 +554,15 @@ class RubricaModel {
     async getCarreras(cedula, esAdmin) {
         return new Promise((resolve, reject) => {
             let query, params = [];
-            if (esAdmin) {
-                query = `SELECT c.codigo, c.nombre, COUNT(DISTINCT mp.num_semestre) AS duracion_semestres FROM carrera c INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera GROUP BY c.codigo ORDER BY nombre`;
-            } else {
+            if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
+                query = `SELECT 
+                                c.codigo, 
+                                c.nombre, 
+                                COUNT(DISTINCT mp.num_semestre) AS duracion_semestres 
+                        FROM carrera c 
+                        INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera 
+                        GROUP BY c.codigo ORDER BY nombre`;
+            } else { //CONDICIONAR POR PERIODO URGENTEMENTE
                 query = `SELECT c.codigo, c.nombre, COUNT(DISTINCT mp.num_semestre) AS duracion_semestres FROM carrera c INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera INNER JOIN seccion s ON mp.id = s.id_materia_plan INNER JOIN permiso_docente pd ON s.id = pd.id_seccion WHERE pd.docente_cedula = ? GROUP BY c.codigo`;
                 params = [cedula];
             }
@@ -550,9 +576,9 @@ class RubricaModel {
     async getOpciones(cedula, esAdmin) {
         return new Promise((resolve, reject) => {
             let queryMaterias, paramsMaterias = [];
-            if (esAdmin) {
+            if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
                 queryMaterias = `SELECT codigo, nombre FROM materia ORDER BY nombre;`;
-            } else {
+            } else { //CONDICIONAR POR PERIODO URGENTEMENTE
                 queryMaterias = `SELECT m.codigo, m.nombre FROM materia m INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia INNER JOIN seccion s ON mp.id = s.id_materia_plan INNER JOIN permiso_docente pd ON s.id = pd.id_seccion WHERE pd.docente_cedula = ? GROUP BY m.codigo ORDER BY m.nombre;`;
                 paramsMaterias = [cedula];
             }
@@ -561,7 +587,7 @@ class RubricaModel {
                 if (err) return reject(err);
 
                 let querySecciones, paramsSecciones = [];
-                if (esAdmin) {
+                if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
                     querySecciones = `SELECT 
                                         s.id_materia_plan AS id, 
                                         s.letra, 
@@ -574,7 +600,7 @@ class RubricaModel {
                                     INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                                     GROUP BY codigo, lapse_academico 
                                     ORDER BY codigo;`;
-                } else {
+                } else { //CONDICIONAR POR PERIODO URGENTEMENTE
                     querySecciones = `SELECT 
                                         s.id_materia_plan AS id, 
                                         s.letra, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo, 
@@ -661,10 +687,10 @@ class RubricaModel {
     async getSemestresAdmin(carrera, cedula, esAdmin) {
         return new Promise((resolve, reject) => {
             let query, params = [];
-            if (esAdmin) {
+            if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
                 query = `SELECT DISTINCT mp.num_semestre AS semestre FROM materia_pensum mp WHERE mp.codigo_carrera = ? ORDER BY semestre;`;
                 params = [carrera];
-            } else {
+            } else { //CONDICIONAR POR PERIODO URGENTEMENTE
                 query = `SELECT DISTINCT mp.num_semestre AS semestre FROM materia_pensum mp INNER JOIN seccion s ON mp.id = s.id_materia_plan INNER JOIN permiso_docente pd ON s.id = pd.id_seccion WHERE mp.codigo_carrera = ? AND pd.docente_cedula = ? ORDER BY semestre;`;
                 params = [carrera, cedula];
             }
@@ -678,7 +704,7 @@ class RubricaModel {
     async getMateriasAdmin(carrera, semestre, cedula, esAdmin) {
         return new Promise((resolve, reject) => {
             let query, params = [];
-            if (esAdmin) {
+            if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
                 query = `SELECT m.codigo, m.nombre, mp.num_semestre AS semestre, mp.unidades_credito AS creditos FROM materia m INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia WHERE mp.codigo_carrera = ? AND mp.num_semestre = ? ORDER BY nombre;`;
                 params = [carrera, semestre];
             } else {
@@ -695,7 +721,7 @@ class RubricaModel {
     async getSeccionesAdmin(materia, carreraCodigo, cedula, esAdmin) {
         return new Promise((resolve, reject) => {
             let query, params = [];
-            if (esAdmin) {
+            if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
                 query = `
                     SELECT s.id_materia_plan AS id, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo,
                     pp.codigo_periodo AS lapse_academico, s.letra,

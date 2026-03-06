@@ -2,7 +2,7 @@ const connection = require('./conexion');
 
 class PermisosModel {
     async getPermisosByDocente(cedula) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => { //CONDICIONAR POR PERIODO URGENTEMENTE
             const query = `
                 SELECT 
                     pd.id,
@@ -17,8 +17,8 @@ class PermisosModel {
                 FROM permiso_docente pd
                 INNER JOIN seccion s ON pd.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
-                INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                INNER JOIN pensum p ON mp.id_pensum = p.id
+                INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 WHERE pd.docente_cedula = ? AND pd.activo = 1
@@ -32,7 +32,7 @@ class PermisosModel {
     }
 
     async getPermisoById(id) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => { //CONDICIONAR POR PERIODO tal vez
             const query = `
                 SELECT 
                     pd.*,
@@ -44,7 +44,7 @@ class PermisosModel {
                     pp.codigo_periodo AS lapso_academico
                 FROM permiso_docente pd
                 INNER JOIN seccion s ON pd.id_seccion = s.id
-                INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
                 INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo

@@ -57,6 +57,7 @@ class TeacherRubricaModel {
     }
 
     // Secciones por materia (del docente en materia_pensum)
+    //CONDICIONAR POR PERIODO URGENTEMENTE
     async getSeccionesByMateria(materia, cedula) {
         const query = `
             SELECT DISTINCT s.id, s.letra, pp.codigo_periodo
@@ -216,7 +217,7 @@ class TeacherRubricaModel {
         const queryRubrica = `
             SELECT
                 r.id, r.nombre_rubrica, r.cedula_docente AS docente_cedula,
-                m.codigo AS materia_id, s.letra AS seccion_id, pp.codigo_periodo AS lapso_academico,
+                m.codigo AS materia_id, s.letra AS seccion_id, e.codigo_periodo AS lapso_academico,
                 e.fecha_evaluacion,
                 (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,

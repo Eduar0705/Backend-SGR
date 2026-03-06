@@ -213,7 +213,7 @@ class EvaluacionModel {
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     IFNULL(GROUP_CONCAT(CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ')') SEPARATOR ', '), 'No encontrado') AS seccion_horario,
                     hs.aula AS seccion_aula,
-                    pp.codigo_periodo AS seccion_lapso,
+                    e.codigo_periodo AS seccion_lapso,
                     u.cedula AS docente_cedula,
                     u.nombre as docente_nombre,
                     u.apeliido as docente_apellido
@@ -222,8 +222,6 @@ class EvaluacionModel {
                 INNER JOIN evaluacion e ON ru.id_eval = e.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
-                INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
@@ -438,7 +436,7 @@ class EvaluacionModel {
     }
 
     static getHorarioBySeccion(seccionId) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => { //COLOCAR CONDICION DE PERIODO preferible mas no obligatoriamente
             const query = `
                 SELECT 
                     hs.id, hs.dia, hs.dia_num, hs.aula, hs.hora_inicio, hs.hora_cierre,

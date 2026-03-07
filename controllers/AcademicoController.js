@@ -15,7 +15,8 @@ class AcademicoController {
     async getSemestres(req, res) {
         try {
             const { carreraCodigo } = req.params;
-            const semestres = await RubricaModel.getSemestres(carreraCodigo);
+            const periodo = req.query.periodo
+            const semestres = await RubricaModel.getSemestres(carreraCodigo, periodo);
             res.json(semestres);
         } catch (error) {
             console.error('Error getSemestres:', error);

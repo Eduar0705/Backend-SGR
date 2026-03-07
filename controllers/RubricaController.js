@@ -5,7 +5,8 @@ class RubricaController {
     async getHierarchicalData(req, res) {
         try {
             const esAdmin = req.user.id_rol === 1;
-            const carreras = await RubricaModel.getCarreras(req.user.cedula, esAdmin);
+            const periodo = req.query.periodo;
+            const carreras = await RubricaModel.getCarreras(req.user.cedula, esAdmin, periodo);
             const tiposRubrica = await RubricaModel.getTiposRubrica();
             res.json({ success: true, carreras, tiposRubrica });
         } catch (error) {
@@ -17,7 +18,8 @@ class RubricaController {
     async getSemestres(req, res) {
         try {
             const { carrera } = req.params;
-            const semestres = await RubricaModel.getSemestres(carrera);
+            const periodo = req.query.periodo;
+            const semestres = await RubricaModel.getSemestres(carrera, periodo);
             res.json(semestres);
         } catch (error) {
             console.error('Error al obtener semestres:', error);

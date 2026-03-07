@@ -10,7 +10,8 @@ router.use(authMiddleware);
 // Listar todas las rúbricas (GET /api/rubricas)
 router.get("/", async function(req, res) {
     try {
-        const rubricas = await RubricaModel.getAllRubricas();
+        const periodo = req.query.periodo
+        const rubricas = await RubricaModel.getAllRubricas(periodo);
         res.json({ success: true, rubricas });
     } catch (error) {
         console.error('Error al obtener rúbricas:', error);
@@ -35,7 +36,8 @@ router.post('/guardar', RubricaController.createRubrica);
 // Listar todas las rúbricas
 router.get("/admin/rubricas", async function(req, res) {
     try {
-        const rubricas = await RubricaModel.getAllRubricas();
+        const periodo = req.query.periodo;
+        const rubricas = await RubricaModel.getAllRubricas(periodo);
         res.json({ success: true, rubricas });
     } catch (error) {
         console.error('Error al obtener rúbricas:', error);
@@ -79,10 +81,10 @@ router.get('/admin/rubricas/editar/:id', async (req, res) => {
 });
 
 // Obtener carrera y semestre de una materia
-router.get('/admin/rubricas/carrera-materia/:materia_codigo', async (req, res) => {
+router.get('/admin/rubricas/carrera-seccion/:seccion_codigo', async (req, res) => {
     try {
-        const { materia_codigo } = req.params;
-        const resultado = await RubricaModel.getCarreraYSemestreByMateria(materia_codigo);
+        const { seccion_codigo } = req.params;
+        const resultado = await RubricaModel.getCarreraYSemestreBySeccion(seccion_codigo);
         if (resultado) {
             res.json({ success: true, ...resultado });
         } else {
@@ -156,8 +158,9 @@ router.get("/admin/evaluaciones_con_rubrica/:seccionId", async function (req, re
 router.get("/api/admin/semestres/:carrera", async (req, res) => {
     try {
         const { carrera } = req.params;
+        const periodo = req.query.periodo;
         const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getSemestresAdmin(carrera, req.user.cedula, esAdmin);
+        const resultado = await RubricaModel.getSemestresAdmin(carrera, req.user.cedula, esAdmin, periodo);
         res.json(resultado);
     } catch (error) {
         console.error('Error al obtener semestres:', error);

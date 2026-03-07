@@ -30,7 +30,8 @@ class RubricaController {
     async getMaterias(req, res) {
         try {
             const { carrera, semestre } = req.params;
-            const materias = await RubricaModel.getMaterias(carrera, semestre);
+            const periodo = req.query.periodo;
+            const materias = await RubricaModel.getMaterias(carrera, semestre, periodo);
             res.json(materias);
         } catch (error) {
             console.error('Error al obtener materias:', error);

@@ -27,7 +27,8 @@ class AcademicoController {
     async getMaterias(req, res) {
         try {
             const { carreraCodigo, semestreId } = req.params;
-            const materias = await RubricaModel.getMaterias(carreraCodigo, semestreId);
+            const periodo = req.query.periodo
+            const materias = await RubricaModel.getMaterias(carreraCodigo, semestreId, periodo);
             res.json(materias);
         } catch (error) {
             console.error('Error getMaterias:', error);
@@ -38,7 +39,8 @@ class AcademicoController {
     async getSecciones(req, res) {
         try {
             const { materiaCodigo, carreraCodigo } = req.params;
-            const secciones = await RubricaModel.getSecciones(materiaCodigo, carreraCodigo);
+            const periodo = req.query.periodo;
+            const secciones = await RubricaModel.getSecciones(materiaCodigo, carreraCodigo, periodo);
             res.json(secciones);
         } catch (error) {
             console.error('Error getSecciones:', error);

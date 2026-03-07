@@ -52,7 +52,7 @@ class RubricaModel {
         });
     }
 
-    async getMaterias(carrera, semestre) {
+    async getMaterias(carrera, semestre, periodo) {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
@@ -62,18 +62,21 @@ class RubricaModel {
                     mp.unidades_credito AS creditos
                 FROM materia m
                 INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia
+                INNER JOIN pensum pen ON mp.id_pensum = pen.id
+                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 WHERE mp.codigo_carrera = ?
                 AND mp.num_semestre = ?
+                AND pp.codigo_periodo = ?
                 ORDER BY nombre;
             `;
-            connection.query(query, [carrera, semestre], (err, results) => {
+            connection.query(query, [carrera, semestre, periodo], (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
             });
         });
     }
 
-    async getSecciones(materia, carrera) { //CONDICIONAR POR PERIODO URGENTEMENTE
+    async getSecciones(materia, carrera, periodo) { //CONDICIONAR POR PERIODO URGENTEMENTE
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
@@ -91,10 +94,11 @@ class RubricaModel {
                 LEFT JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 WHERE mp.codigo_materia = ? 
                 AND mp.codigo_carrera = ? 
+                AND pp.codigo_periodo = ?
                 GROUP BY s.id
                 ORDER BY codigo;
             `;
-            connection.query(query, [materia, carrera], (err, results) => {
+            connection.query(query, [materia, carrera, periodo], (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
             });

@@ -3,7 +3,9 @@ const { model: dashboardModel } = require('../model/DashboardModel');
 class DashboardController {
     async getDashboardStats(req, res) {
         try {
-            const stats = await dashboardModel.getStats();
+            periodo = req.user.periodo_actual
+            console.log(periodo)
+            const stats = await dashboardModel.getStats(periodo);
             
             return res.json({
                 success: true,

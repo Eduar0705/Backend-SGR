@@ -34,34 +34,28 @@ class AuthController {
             if (loginResults && loginResults.length > 0) {
                 const loggedUser = loginResults[0];
 
-                /* 
-                // Comentamos este bloqueo para evitar que el usuario quede atrapado si su navegador falla
-                const existingToken = await userModel.getSessionToken(loggedUser.cedula);
-                if (existingToken) {
-                    try {
-                        const decoded = jwt.verify(existingToken, process.env.JWT_SECRET);
-                        if (decoded) {
-                            return res.status(401).json({
-                                success: false,
-                                message: 'Esta session esta abierta no puedes ingresar hasta que la otra session se cierres'
-                            });
-                        }
-                    } catch (e) {
-                        console.log(`[AUTH] Old session token expired for ${loggedUser.cedula}`);
-                    }
-                }
-                */
-
                 // Remover password de la respuesta
                 const { password: _, ...userWithoutPassword } = loggedUser;
-                
+
                 // Generar token JWT
                 const token = jwt.sign(
                     { cedula: loggedUser.cedula, id_rol: loggedUser.id_rol },
                     process.env.JWT_SECRET,
                     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
                 );
-                
+                //Obtener periodos y adjuntarlos en user
+                const periodosSolic = await userModel.obtenerPeriodoActual(cedula, userWithoutPassword.id_rol);
+                console.log('periodosSolic: ', periodosSolic)
+                if (periodosSolic.success) {
+                    userWithoutPassword.periodo_actual = periodosSolic.periodo_general
+                    userWithoutPassword.ultimo_periodo_usuario = periodosSolic.periodo_usuario
+                }
+                else {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Contraseña incorrecta'
+                    });
+                }
                 // Guardar la nueva sesion en la BD
                 await userModel.updateSessionToken(loggedUser.cedula, token);
 
@@ -91,9 +85,9 @@ class AuthController {
             if (!cedula) {
                 return res.status(400).json({ success: false, message: 'Cédula es requerida para cerrar sesión' });
             }
-            
+
             await userModel.clearSessionToken(cedula);
-            
+
             return res.json({
                 success: true,
                 message: 'Sesión cerrada correctamente'
@@ -165,17 +159,17 @@ class AuthController {
                     return res.json({ success: true, message: 'Código de recuperación enviado a tu correo' });
                 } else {
                     console.log(`[AUTH] DEVELOPMENT MODE: Recovery code for ${cedula} is ${recoveryCode}`);
-                    return res.json({ 
-                        success: true, 
+                    return res.json({
+                        success: true,
                         message: 'Código generado (Modo Desarrollo). Ver consola del servidor.',
                         devCode: recoveryCode // Solo para desarrollo inicial
                     });
                 }
             } catch (mailError) {
                 console.error('Error enviando email:', mailError);
-                return res.status(500).json({ 
-                    success: false, 
-                    message: 'Error al enviar el correo, pero el código fue generado. Contacte al administrador.' 
+                return res.status(500).json({
+                    success: false,
+                    message: 'Error al enviar el correo, pero el código fue generado. Contacte al administrador.'
                 });
             }
 

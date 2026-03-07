@@ -3,10 +3,9 @@ const { model: dashboardModel } = require('../model/DashboardModel');
 class DashboardController {
     async getDashboardStats(req, res) {
         try {
-            periodo = req.user.periodo_actual
-            console.log(periodo)
+            const periodo = req.query.periodo;
             const stats = await dashboardModel.getStats(periodo);
-            
+
             return res.json({
                 success: true,
                 data: stats
@@ -24,7 +23,7 @@ class DashboardController {
         try {
             const { cedula } = req.user; // Obtenido del authMiddleware
             const stats = await dashboardModel.getStudentStats(cedula);
-            
+
             return res.json({
                 success: true,
                 data: stats
@@ -42,7 +41,7 @@ class DashboardController {
         try {
             const { cedula } = req.user;
             const stats = await dashboardModel.getTeacherStats(cedula);
-            
+
             return res.json({
                 success: true,
                 data: stats
@@ -61,7 +60,7 @@ class DashboardController {
             const { cedula } = req.user;
             const { roleId } = req.query;
             const stats = await dashboardModel.getAdvancedStats(cedula, parseInt(roleId));
-            
+
             return res.json({
                 success: true,
                 data: stats

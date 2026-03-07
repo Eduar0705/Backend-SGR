@@ -1,13 +1,28 @@
 const connection = require('./conexion');
 
 class DashboardModel {
-    async getStats() {
+    async getStats(periodo) {
         return new Promise((resolve, reject) => {
             // 1. Contar los profesores
-            const countProf = `SELECT COUNT(*) AS total FROM usuario_docente ud INNER JOIN usuario u ON ud.cedula_usuario = u.cedula WHERE u.activo = 1`;
+            const countProf = `SELECT 
+                                    COUNT(*) AS total 
+                                FROM usuario_docente ud 
+                                INNER JOIN usuario u ON ud.cedula_usuario = u.cedula 
+                                INNER JOIN permiso_docente pd ON u.cedula = pd.docente_cedula
+                                INNER JOIN seccion s ON pd.id_seccion = s.id
+                                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                                INNER JOIN pensum p ON mp.id_pensum = p.id
+                                INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+                                WHERE u.activo = 1
+                                AND pp.codigo_periodo = ?`;
             
             // 2. Contar las Rúbricas
-            const countRubricas = 'SELECT COUNT(*) AS total FROM rubrica WHERE activo = 1';
+            const countRubricas = ` SELECT 
+                                        COUNT(*) AS total 
+                                    FROM rubrica r
+                                    INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+                                    INNER JOIN evaluacion e ON ru.id_eval = e.id
+                                    WHERE e.codigo_periodo = ?`;
 
             // 3. Contar evaluaciones pendientes (Lucha de titanes SQL)
             const countEvaluacionesPendientes = `
@@ -33,7 +48,8 @@ class DashboardModel {
                     FROM evaluacion_realizada er 
                     INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                     GROUP BY er.id
-                ) AS eval_est ON eval_est.id_evaluacion = e.id;
+                ) AS eval_est ON eval_est.id_evaluacion = e.id
+                WHERE e.codigo_periodo = ?;
             `;
 
             // 4. Rúbricas recientes
@@ -51,6 +67,7 @@ class DashboardModel {
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                 LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
                 WHERE r.activo = 1
+                AND e.codigo_periodo = ?
                 GROUP BY r.id
                 ORDER BY r.fecha_actualizacion DESC LIMIT 4;
             `;
@@ -78,19 +95,20 @@ class DashboardModel {
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 WHERE r.activo = 1 AND u.activo = 1 AND er.id IS NOT NULL
+                AND e.codigo_periodo = ?
                 GROUP BY er.id, er.fecha_evaluado, ins.cedula_estudiante, ins.id_seccion
                 ORDER BY fecha_evaluado DESC LIMIT 4;
             `;
-
-            connection.query(countProf, (err, resP) => {
+            const periodoParam = [periodo];
+            connection.query(countProf, periodoParam, (err, resP) => {
                 if (err) return reject(err);
-                connection.query(countRubricas, (err, resR) => {
+                connection.query(countRubricas, periodoParam, (err, resR) => {
                     if (err) return reject(err);
-                    connection.query(countEvaluacionesPendientes, (err, resE) => {
+                    connection.query(countEvaluacionesPendientes, periodoParam, (err, resE) => {
                         if (err) return reject(err);
-                        connection.query(recentRubricasQuery, (err, resRR) => {
+                        connection.query(recentRubricasQuery, periodoParam, (err, resRR) => {
                             if (err) return reject(err);
-                            connection.query(recentActivityQuery, (err, resA) => {
+                            connection.query(recentActivityQuery, periodoParam, (err, resA) => {
                                 if (err) return reject(err);
 
                                 const rubricasRecientes = resRR.map(r => ({

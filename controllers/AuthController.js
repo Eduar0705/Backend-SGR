@@ -37,18 +37,11 @@ class AuthController {
                 // Remover password de la respuesta
                 const { password: _, ...userWithoutPassword } = loggedUser;
 
-                // Generar token JWT
-                const token = jwt.sign(
-                    { cedula: loggedUser.cedula, id_rol: loggedUser.id_rol },
-                    process.env.JWT_SECRET,
-                    { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
-                );
                 //Obtener periodos y adjuntarlos en user
                 const periodosSolic = await userModel.obtenerPeriodoActual(cedula, userWithoutPassword.id_rol);
-                console.log('periodosSolic: ', periodosSolic)
                 if (periodosSolic.success) {
                     userWithoutPassword.periodo_actual = periodosSolic.periodo_general
-                    userWithoutPassword.ultimo_periodo_usuario = periodosSolic.periodo_usuario
+                    userWithoutPassword.periodo_usuario = periodosSolic.periodo_usuario ? periodosSolic.periodo_usuario : periodosSolic.periodo_general
                 }
                 else {
                     return res.status(401).json({
@@ -56,14 +49,22 @@ class AuthController {
                         message: 'Contraseña incorrecta'
                     });
                 }
+                // Generar token JWT
+                const token = jwt.sign(
+                    { cedula: loggedUser.cedula, id_rol: loggedUser.id_rol, 
+                        periodo_actual: periodosSolic.periodo_general,
+                        periodo_usuario: periodosSolic.periodo_usuario ? periodosSolic.periodo_usuario : periodosSolic.periodo_general },
+                    process.env.JWT_SECRET,
+                    { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
+                );
                 // Guardar la nueva sesion en la BD
                 await userModel.updateSessionToken(loggedUser.cedula, token);
-
                 return res.json({
                     success: true,
                     user: userWithoutPassword,
                     token
                 });
+                
             } else {
                 return res.status(401).json({
                     success: false,

@@ -152,7 +152,12 @@ class DashboardModel {
                 WHERE ins.cedula_estudiante = ? AND r.activo = 1 AND er.id IS NULL AND e.fecha_evaluacion < CURDATE();
             `;
             const q4 = `
-                SELECT r.nombre_rubrica, m.nombre as materia, SUM(de.puntaje_obtenido) as puntaje_total, er.fecha_evaluado as fecha_evaluacion, tr.nombre AS tipo_evaluacion
+                SELECT 
+                    r.nombre_rubrica, 
+                    m.nombre as materia, 
+                    SUM(de.puntaje_obtenido) as puntaje_total, 
+                    er.fecha_evaluado as fecha_evaluacion, 
+                    tr.nombre AS tipo_evaluacion
                 FROM evaluacion e
                 INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
                 INNER JOIN rubrica_uso ru ON ru.id_eval = er.id_evaluacion
@@ -166,7 +171,12 @@ class DashboardModel {
                 GROUP BY e.id ORDER BY er.fecha_evaluado DESC LIMIT 3
             `;
             const q5 = `
-                SELECT r.nombre_rubrica, m.nombre as materia, e.fecha_evaluacion, tr.nombre as tipo_evaluacion, SUM(DISTINCT cr.puntaje_maximo) as porcentaje_evaluacion
+                SELECT 
+                    r.nombre_rubrica, 
+                    m.nombre as materia, 
+                    e.fecha_evaluacion, 
+                    tr.nombre as tipo_evaluacion, 
+                    SUM(DISTINCT cr.puntaje_maximo) as porcentaje_evaluacion
                 FROM evaluacion e
                 INNER JOIN seccion s ON s.id = e.id_seccion
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
@@ -212,7 +222,8 @@ class DashboardModel {
         return new Promise((resolve, reject) => {
             const q1 = `SELECT COUNT(*) as total FROM rubrica WHERE cedula_docente = ? AND activo = 1;`;
             const q2 = `
-                SELECT COUNT(u.cedula) as total
+                SELECT 
+                    COUNT(u.cedula) as total
                 FROM usuario u
                 INNER JOIN usuario_estudiante ue ON u.cedula = ue.cedula_usuario
                 INNER JOIN inscripcion_seccion ins ON ue.cedula_usuario = ins.cedula_estudiante
@@ -222,7 +233,8 @@ class DashboardModel {
                 WHERE pd.docente_cedula = ? AND u.activo = 1;
             `;
             const q3 = `
-                SELECT COUNT(*) as total
+                SELECT 
+                    COUNT(*) as total
                 FROM evaluacion_realizada er
                 INNER JOIN usuario_estudiante ue ON er.cedula_evaluado = ue.cedula_usuario
                 INNER JOIN evaluacion e ON er.id_evaluacion = e.id
@@ -313,7 +325,6 @@ class DashboardModelExtended extends DashboardModel {
         // Si roleId === 2 (Docente), devolvemos reporte filtrado por docente
         
         const isDocente = roleId === 2;
-        const filter = isDocente ? 'WHERE pd.docente_cedula = ?' : '';
         const params = isDocente ? [cedula] : [];
 
         return new Promise((resolve, reject) => {

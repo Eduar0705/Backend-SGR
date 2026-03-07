@@ -1,4 +1,4 @@
-const PermisosModel = require('../model/PermisosModel');
+const PermisosModel = require('../model/PeriodosModel');
 
 class PermisosController {
     async getPermisosByDocente(req, res) {

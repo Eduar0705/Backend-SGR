@@ -209,7 +209,8 @@ class UserModel {
                     `;
                     } else if (id_rol == 3) {
                         ultimoPeriodoUsuarioQuery = `
-                        SELECT DISTINCT pa.codigo
+                        SELECT 
+                            DISTINCT pa.codigo
                         FROM periodo_academico pa
                         INNER JOIN pensum_periodo pp ON pa.codigo = pp.codigo_periodo
                         INNER JOIN pensum p ON pp.id_pensum = p.id

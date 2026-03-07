@@ -7,6 +7,7 @@ let logger = require('morgan');
 let indexRouter = require('./routes/index');
 let usersRouter = require('./routes/users');
 let authRouter = require('./routes/auth');
+let periodosRouter = require('./routes/periodos');
 let dashboardRouter = require('./routes/dashboard');
 let cors = require('cors');
 
@@ -22,7 +23,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 // --- Rutas de la API ---
+
 app.use('/api/auth', authRouter);
+app.use('/api/periodos', periodosRouter)
 app.use('/api/dashboard', dashboardRouter);
 let notificacionesRouter = require('./routes/notificaciones');
 app.use('/api/notificaciones', notificacionesRouter);
@@ -63,6 +66,7 @@ app.use('/api/permisos', permisosRouter);
 
 // AcademicoRouter captura lo que queda bajo /api (incluyendo /api/evaluaciones)
 let academicoRouter = require('./routes/academico');
+const PeriodosController = require('./controllers/PeriodosController');
 app.use('/api', academicoRouter);
 
 // Manejador 404 para API (Retorna JSON, no HTML)

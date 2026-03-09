@@ -76,7 +76,7 @@ class RubricaModel {
         });
     }
 
-    async getSecciones(materia, carrera, periodo) { //CONDICIONAR POR PERIODO URGENTEMENTE
+    async getSecciones(materia, carrera, periodo) {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 

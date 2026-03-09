@@ -42,7 +42,8 @@ class RubricaController {
     async getSecciones(req, res) {
         try {
             const { materia, carrera } = req.params;
-            const secciones = await RubricaModel.getSecciones(materia, carrera);
+            const periodo = req.query.periodo;
+            const secciones = await RubricaModel.getSecciones(materia, carrera, periodo);
             res.json(secciones);
         } catch (error) {
             console.error('Error al obtener secciones:', error);

@@ -11,11 +11,11 @@ function query(sql, params = []) {
 }
 
 class TeacherEvaluacionesModel {
-    static async getTeacherEvaluaciones(docenteCedula, esAdmin) {
+    static async getTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
         let queryParams = [];
 
-        if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
+        if (esAdmin) {
             sqlQuery = `
                 SELECT
                     er.id,
@@ -67,9 +67,11 @@ class TeacherEvaluacionesModel {
                 LEFT JOIN usuario_estudiante ue ON er.cedula_evaluado = ue.cedula_usuario
                 LEFT JOIN usuario u ON ue.cedula_usuario = u.cedula
                 WHERE er.id IS NOT NULL
+                AND e.codigo_periodo = ?
                 GROUP BY er.id
                 ORDER BY er.fecha_evaluado DESC;
             `;
+            queryParams = [periodo];
         } else {
             sqlQuery = `
                 SELECT
@@ -124,10 +126,11 @@ class TeacherEvaluacionesModel {
                 LEFT JOIN usuario u ON ue.cedula_usuario = u.cedula
                 WHERE pd.docente_cedula = ?
                 AND er.id IS NOT NULL
+                AND e.codigo_periodo = ?
                 GROUP BY er.id
                 ORDER BY er.fecha_evaluado DESC;
             `;
-            queryParams = [docenteCedula];
+            queryParams = [docenteCedula, periodo];
         }
 
         const evaluaciones = await query(sqlQuery, queryParams);

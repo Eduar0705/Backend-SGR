@@ -5,7 +5,8 @@ class TeacherEvaluacionesController {
         try {
             const docenteCedula = req.user.cedula;
             const esAdmin = req.user.id_rol === 1;
-            const evaluaciones = await TeacherEvaluacionesModel.getTeacherEvaluaciones(docenteCedula, esAdmin);
+            const periodo = req.query.periodo;
+            const evaluaciones = await TeacherEvaluacionesModel.getTeacherEvaluaciones(docenteCedula, esAdmin, periodo);
             res.json({ success: true, evaluaciones });
         } catch (error) {
             console.error('Error al obtener evaluaciones (docente):', error);

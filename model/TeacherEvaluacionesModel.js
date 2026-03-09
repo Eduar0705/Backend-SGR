@@ -19,20 +19,21 @@ class TeacherEvaluacionesModel {
             sqlQuery = `
                 SELECT
                     er.id,
-                    er.id_evaluacion,
+                    s.id AS id_seccion,
+                    e.id AS id_evaluacion,
                     (SELECT COALESCE(SUM(de2.puntaje_obtenido), 0)
                     FROM detalle_evaluacion de2
                     WHERE de2.evaluacion_r_id = er.id) as puntaje_total,
                     er.fecha_evaluado as fecha_evaluacion,
                     er.observaciones,
-                    er.cedula_evaluado as estudiante_cedula,
+                    ins.cedula_estudiante as estudiante_cedula,
                     u.nombre AS estudiante_nombre,
                     u.apeliido AS estudiante_apellido,
-                    IFNULL(r.nombre_rubrica, 'Sin rúbrica') as nombre_rubrica,
-                    IFNULL(tr.nombre, 'Pendiente') as tipo_evaluacion,
-                    (SELECT SUM(cr2.puntaje_maximo)
-                    FROM  criterio_rubrica cr2
-                    WHERE cr2.rubrica_id = r.id) as porcentaje_evaluacion,
+                    r.nombre_rubrica as nombre_rubrica,
+                    tr.nombre as tipo_evaluacion,
+                    IFNULL((SELECT SUM(cr2.puntaje_maximo)
+                    FROM criterio_rubrica cr2
+                    WHERE cr2.rubrica_id = r.id), e.ponderacion) as porcentaje_evaluacion,
                     r.instrucciones,
                     e.competencias,
                     m.nombre as materia_nombre,
@@ -52,23 +53,20 @@ class TeacherEvaluacionesModel {
                         ELSE 'Pendiente'
                     END as estado
                 FROM evaluacion e 
-                LEFT JOIN rubrica_uso ru ON ru.id_eval = e.id
-                LEFT JOIN rubrica r ON r.id = ru.id_rubrica
-                LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
+                INNER JOIN rubrica r ON r.id = ru.id_rubrica
                 INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
-                INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
+                INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+                INNER JOIN usuario_estudiante ue ON ins.cedula_estudiante = ue.cedula_usuario
+                INNER JOIN usuario u ON ue.cedula_usuario = u.cedula
+                LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ue.cedula_usuario
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
-                LEFT JOIN usuario_estudiante ue ON er.cedula_evaluado = ue.cedula_usuario
-                LEFT JOIN usuario u ON ue.cedula_usuario = u.cedula
-                WHERE er.id IS NOT NULL
+                LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
                 AND e.codigo_periodo = ?
-                GROUP BY er.id
+                GROUP BY e.id, ins.cedula_estudiante
                 ORDER BY er.fecha_evaluado DESC;
             `;
             queryParams = [periodo];
@@ -77,20 +75,20 @@ class TeacherEvaluacionesModel {
                 SELECT
                     er.id,
                     s.id AS id_seccion,
-                    er.id_evaluacion,
+                    e.id AS id_evaluacion,
                     (SELECT COALESCE(SUM(de2.puntaje_obtenido), 0)
                     FROM detalle_evaluacion de2
                     WHERE de2.evaluacion_r_id = er.id) as puntaje_total,
                     er.fecha_evaluado as fecha_evaluacion,
                     er.observaciones,
-                    er.cedula_evaluado as estudiante_cedula,
+                    ins.cedula_estudiante as estudiante_cedula,
                     u.nombre AS estudiante_nombre,
                     u.apeliido AS estudiante_apellido,
-                    IFNULL(r.nombre_rubrica, 'Sin rúbrica') as nombre_rubrica,
-                    IFNULL(tr.nombre, 'Pendiente') as tipo_evaluacion,
-                    (SELECT SUM(cr2.puntaje_maximo)
+                    r.nombre_rubrica as nombre_rubrica,
+                    tr.nombre as tipo_evaluacion,
+                    IFNULL((SELECT SUM(cr2.puntaje_maximo)
                     FROM criterio_rubrica cr2
-                    WHERE cr2.rubrica_id = r.id) as porcentaje_evaluacion,
+                    WHERE cr2.rubrica_id = r.id), e.ponderacion) as porcentaje_evaluacion,
                     r.instrucciones,
                     e.competencias,
                     m.nombre as materia_nombre,
@@ -110,24 +108,22 @@ class TeacherEvaluacionesModel {
                         ELSE 'Pendiente'
                     END as estado
                 FROM evaluacion e 
-                LEFT JOIN rubrica_uso ru ON ru.id_eval = e.id
-                LEFT JOIN rubrica r ON r.id = ru.id_rubrica
-                LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
+                INNER JOIN rubrica r ON r.id = ru.id_rubrica
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
-                INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
+                INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+                INNER JOIN usuario_estudiante ue ON ins.cedula_estudiante = ue.cedula_usuario
+                INNER JOIN usuario u ON ue.cedula_usuario = u.cedula
+                LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ue.cedula_usuario
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
-                LEFT JOIN usuario_estudiante ue ON er.cedula_evaluado = ue.cedula_usuario
-                LEFT JOIN usuario u ON ue.cedula_usuario = u.cedula
+                LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
                 WHERE pd.docente_cedula = ?
-                AND er.id IS NOT NULL
                 AND e.codigo_periodo = ?
-                GROUP BY er.id
+                GROUP BY e.id, ins.cedula_estudiante
                 ORDER BY er.fecha_evaluado DESC;
             `;
             queryParams = [docenteCedula, periodo];
@@ -306,7 +302,7 @@ class TeacherEvaluacionesModel {
         const evalSQL = `
             SELECT
                 er.id,
-                er.id_evaluacion,
+                e.id AS id_evaluacion,
                 r.id as rubrica_id,
                 er.cedula_evaluado as estudiante_cedula,
                 er.observaciones,
@@ -326,15 +322,16 @@ class TeacherEvaluacionesModel {
             FROM evaluacion e
             INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
             INNER JOIN rubrica r ON r.id = ru.id_rubrica
-            INNER JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+            LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
             INNER JOIN seccion s ON e.id_seccion = s.id
+            INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
-            LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
+            LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND ins.cedula_estudiante = er.cedula_evaluado
             LEFT JOIN usuario ud ON ud.cedula = er.cedula_evaluador
             LEFT JOIN estrategia_empleada eemp ON er.id_evaluacion = eemp.id_eval
             LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
-            WHERE er.cedula_evaluado = ? AND er.id_evaluacion = ?
+            WHERE ins.cedula_estudiante = ? AND e.id = ?
             GROUP BY e.id
             ORDER BY er.fecha_evaluado DESC;
         `;

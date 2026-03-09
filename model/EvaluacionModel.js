@@ -110,7 +110,7 @@ class EvaluacionModel {
                     c.nombre, 
                     COUNT(DISTINCT mp.num_semestre) AS duracion_semestres
                 FROM carrera c
-                INNER JOIN materia_pensum pp ON c.codigo = mp.codigo_carrera
+                INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera
                 GROUP BY c.codigo
                 ORDER BY nombre
             `;
@@ -130,7 +130,7 @@ class EvaluacionModel {
                     mp.num_semestre AS semestre,
                     mp.unidades_credito AS creditos
                 FROM materia m
-                INNER JOIN materia_pensum pp ON m.codigo = mp.codigo_materia
+                INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 WHERE mp.codigo_carrera = ?
                 ORDER BY semestre, nombre
@@ -152,7 +152,7 @@ class EvaluacionModel {
                     s.capacidad_maxima,
                     COUNT(ins.cedula_estudiante) AS estudiantes_inscritos
                 FROM seccion s
-                INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                 LEFT JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 WHERE mp.codigo_materia = ? 
@@ -443,7 +443,7 @@ class EvaluacionModel {
                     pp.codigo_periodo AS periodo, pa.fecha_inicio, pa.fecha_fin
                 FROM seccion s
                 INNER JOIN horario_seccion hs ON s.id = hs.id_seccion
-                INNER JOIN materia_pensum pp ON s.id_materia_plan = mp.id
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
                 INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN periodo_academico pa ON pp.codigo_periodo = pa.codigo

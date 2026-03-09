@@ -26,15 +26,11 @@ class AuthController {
                 });
             }
 
-            // En este sistema las contraseñas están en texto plano según la migración de sistems-rubrica
-            // Primero intentamos login directo con password (esto verifica password en la DB)
             const loginResults = await userModel.login(cedula, password);
 
-            // 1) Verify existing session. Is user already logged in somewhere else?
             if (loginResults && loginResults.length > 0) {
                 const loggedUser = loginResults[0];
 
-                // Remover password de la respuesta
                 const { password: _, ...userWithoutPassword } = loggedUser;
 
                 //Obtener periodos y adjuntarlos en user
@@ -75,7 +71,7 @@ class AuthController {
             console.error('Error en login:', error);
             return res.status(500).json({
                 success: false,
-                message: 'Error interno del servidor'
+                message: 'Error interno del servidor. Por favor, pruebe de nuevo más tarde.'
             });
         }
     }

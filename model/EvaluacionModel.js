@@ -1,7 +1,7 @@
 const pool = require('./conexion');
 
 class EvaluacionModel {
-    static getAllEvaluaciones() {
+    static getAllEvaluaciones(periodo) {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT
@@ -81,11 +81,12 @@ class EvaluacionModel {
                     LEFT JOIN rubrica r ON ru.id_rubrica = r.id
                     LEFT JOIN horario_eval he ON e.id = he.id_eval
                     LEFT JOIN horario_eval_clandestina hec ON e.id = hec.id_eval
+                    WHERE e.codigo_periodo = ?
                     GROUP BY e.id
                 ) AS todo
                 ORDER BY fecha_evaluacion DESC;
             `;
-            pool.query(query, (error, results) => {
+            pool.query(query, [periodo], (error, results) => {
                 if (error) return reject(error);
                 resolve(results);
             });

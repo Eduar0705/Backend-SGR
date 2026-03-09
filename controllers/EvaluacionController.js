@@ -3,7 +3,8 @@ const EvaluacionModel = require('../model/EvaluacionModel');
 class EvaluacionController {
     async getAllEvaluaciones(req, res) {
         try {
-            const evaluaciones = await EvaluacionModel.getAllEvaluaciones();
+            const periodo = req.query.periodo;
+            const evaluaciones = await EvaluacionModel.getAllEvaluaciones(periodo);
             const evaluacionesFormateadas = evaluaciones.map(ev => ({
                 ...ev,
                 fecha_formateada: ev.fecha_evaluacion ? 

@@ -60,7 +60,8 @@ class DashboardController {
         try {
             const { cedula } = req.user;
             const { roleId } = req.query;
-            const stats = await dashboardModel.getAdvancedStats(cedula, parseInt(roleId));
+            const periodo = req.user.periodo_usuario;
+            const stats = await dashboardModel.getAdvancedStats(cedula, parseInt(roleId), periodo);
 
             return res.json({
                 success: true,

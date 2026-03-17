@@ -345,13 +345,13 @@ function calcularTiempoTranscurrido(fecha) {
 }
 
 class DashboardModelExtended extends DashboardModel {
-    async getAdvancedStats(cedula, roleId) {
+    async getAdvancedStats(cedula, roleId, periodo) {
         // Implementación de reportes avanzados combinando lógica de Admin y Docente
         // Si roleId === 1 (Admin), devolvemos reporte global
         // Si roleId === 2 (Docente), devolvemos reporte filtrado por docente
         
         const isDocente = roleId === 2;
-        const params = isDocente ? [cedula] : [];
+        const params = isDocente ? [periodo, cedula] : [periodo];
 
         return new Promise((resolve, reject) => {
             const queries = {
@@ -367,8 +367,10 @@ class DashboardModelExtended extends DashboardModel {
                     FROM (
                         SELECT er.id, SUM(de.puntaje_obtenido) as puntaje
                         FROM evaluacion_realizada er
+                        INNER JOIN evaluacion e ON er.id_evaluacion = e.id
                         INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                        ${isDocente ? 'WHERE er.cedula_evaluador = ?' : ''}
+                        WHERE e.codigo_periodo = ?
+                        ${isDocente ? 'AND er.cedula_evaluador = ?' : ''}
                         GROUP BY er.id
                     ) as notas
                     GROUP BY rango
@@ -382,7 +384,8 @@ class DashboardModelExtended extends DashboardModel {
                     INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
                     INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                     ${isDocente ? 'INNER JOIN permiso_docente pd ON s.id = pd.id_seccion' : ''}
-                    ${isDocente ? 'WHERE pd.docente_cedula = ?' : ''}
+                    WHERE e.codigo_periodo = ?
+                    ${isDocente ? 'AND pd.docente_cedula = ?' : ''}
                     GROUP BY m.codigo
                     ORDER BY promedio DESC
                 `

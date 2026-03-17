@@ -147,8 +147,8 @@ class TeacherEvaluacionesModel {
         });
     }
 
-    static async getCarreras(docenteCedula) {
-        // En el código original usa permisos. Como tenemos permiso_docente, ajustaremos la query a nuestro esquema
+    static async getCarreras(docenteCedula, periodo) {
+        console.log(periodo); periodo = "2025-1"
         const sqlQuery = `
             SELECT DISTINCT
                 c.codigo,
@@ -157,15 +157,19 @@ class TeacherEvaluacionesModel {
             FROM permiso_docente pd
             INNER JOIN seccion s ON pd.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
+            INNER JOIN pensum p ON mp.id_pensum = p.id
+            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             WHERE pd.docente_cedula = ?
+            AND pp.codigo_periodo = ?
             ORDER BY c.nombre
         `;
-        return query(sqlQuery, [docenteCedula]);
+        return query(sqlQuery, [docenteCedula, periodo]);
     }
 
-    static async getMaterias(carreraCodigo, docenteCedula) {
+    static async getMaterias(carreraCodigo, docenteCedula, periodo) {
+        console.log(periodo); periodo = "2025-1"
         const sqlQuery = `
             SELECT DISTINCT
                 m.codigo,
@@ -175,16 +179,20 @@ class TeacherEvaluacionesModel {
             FROM permiso_docente pd
             INNER JOIN seccion s ON pd.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
+            INNER JOIN pensum p ON mp.id_pensum = p.id
+            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             WHERE c.codigo = ?
               AND pd.docente_cedula = ?
+              AND pp.codigo_periodo = ?
             ORDER BY semestre, m.nombre
         `;
-        return query(sqlQuery, [carreraCodigo, docenteCedula]);
+        return query(sqlQuery, [carreraCodigo, docenteCedula, periodo]);
     }
 
-    static async getSecciones(materiaCodigo, docenteCedula) {
+    static async getSecciones(materiaCodigo, docenteCedula, periodo) {
+        console.log(periodo); periodo = "2025-1"
         const sqlQuery = `
             SELECT DISTINCT
                 s.id,
@@ -196,12 +204,15 @@ class TeacherEvaluacionesModel {
             FROM permiso_docente pd
             INNER JOIN seccion s ON pd.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
+            INNER JOIN pensum p ON mp.id_pensum = p.id
+            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             WHERE m.codigo = ?
               AND pd.docente_cedula = ?
+              AND pp.codigo_periodo = ?
             ORDER BY codigo
         `;
-        return query(sqlQuery, [materiaCodigo, docenteCedula]);
+        return query(sqlQuery, [materiaCodigo, docenteCedula, periodo]);
     }
 
     static async getEstudiantes(seccionId, docenteCedula) {

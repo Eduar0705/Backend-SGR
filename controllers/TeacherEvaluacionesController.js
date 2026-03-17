@@ -17,7 +17,8 @@ class TeacherEvaluacionesController {
     static async getCarreras(req, res) {
         try {
             const docenteCedula = req.user.cedula;
-            const carreras = await TeacherEvaluacionesModel.getCarreras(docenteCedula);
+            const periodo = req.user.periodo_usuario;
+            const carreras = await TeacherEvaluacionesModel.getCarreras(docenteCedula, periodo);
             res.json({ success: true, carreras });
         } catch (error) {
             console.error('Error:', error);
@@ -28,7 +29,8 @@ class TeacherEvaluacionesController {
     static async getMaterias(req, res) {
         try {
             const { carreraCodigo } = req.params;
-            const materias = await TeacherEvaluacionesModel.getMaterias(carreraCodigo, req.user.cedula);
+            const periodo = req.user.periodo_usuario;
+            const materias = await TeacherEvaluacionesModel.getMaterias(carreraCodigo, req.user.cedula, periodo);
             res.json({ success: true, materias });
         } catch (error) {
             console.error('Error:', error);
@@ -39,7 +41,8 @@ class TeacherEvaluacionesController {
     static async getSecciones(req, res) {
         try {
             const { materiaCodigo } = req.params;
-            const secciones = await TeacherEvaluacionesModel.getSecciones(materiaCodigo, req.user.cedula);
+            const periodo = req.user.periodo_usuario;
+            const secciones = await TeacherEvaluacionesModel.getSecciones(materiaCodigo, req.user.cedula, periodo);
             res.json({ success: true, secciones });
         } catch (error) {
             console.error('Error:', error);
@@ -50,7 +53,8 @@ class TeacherEvaluacionesController {
     static async getEstudiantes(req, res) {
         try {
             const { seccionId } = req.params;
-            const estudiantes = await TeacherEvaluacionesModel.getEstudiantes(seccionId, req.user.cedula);
+            const periodo = req.user.periodo_usuario;
+            const estudiantes = await TeacherEvaluacionesModel.getEstudiantes(seccionId, req.user.cedula, periodo);
             res.json({ success: true, estudiantes });
         } catch (error) {
             console.error('Error:', error);

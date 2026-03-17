@@ -40,7 +40,8 @@ class DashboardController {
     async getTeacherDashboardStats(req, res) {
         try {
             const { cedula } = req.user;
-            const stats = await dashboardModel.getTeacherStats(cedula);
+            const periodo = req.user.periodo_usuario;
+            const stats = await dashboardModel.getTeacherStats(cedula, periodo);
 
             return res.json({
                 success: true,

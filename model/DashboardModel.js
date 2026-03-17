@@ -236,7 +236,8 @@ class DashboardModel {
         });
     }
 
-    async getTeacherStats(cedula) {
+    async getTeacherStats(cedula, periodo) {
+        console.log(periodo)
         return new Promise((resolve, reject) => {
             const q1 = `SELECT COUNT(*) as total FROM rubrica WHERE cedula_docente = ? AND activo = 1;`;
             const q2 = `
@@ -247,16 +248,21 @@ class DashboardModel {
                 INNER JOIN inscripcion_seccion ins ON ue.cedula_usuario = ins.cedula_estudiante
                 INNER JOIN seccion s ON ins.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum p ON mp.id_pensum = p.id
+                INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                WHERE pd.docente_cedula = ? AND u.activo = 1;
+                WHERE pd.docente_cedula = ? AND u.activo = 1
+                AND pp.codigo_periodo = ?;
             `;
             const q3 = `
                 SELECT 
                     COUNT(*) as total
-                FROM evaluacion_realizada er
+                FROM
+                evaluacion_realizada er
                 INNER JOIN usuario_estudiante ue ON er.cedula_evaluado = ue.cedula_usuario
                 INNER JOIN evaluacion e ON er.id_evaluacion = e.id
-                WHERE er.cedula_evaluador = ?;
+                WHERE er.cedula_evaluador = ?
+                AND e.codigo_periodo = ?;
             `;
             const q4 = `
                 SELECT r.id, r.nombre_rubrica, e.fecha_evaluacion
@@ -264,6 +270,7 @@ class DashboardModel {
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                 INNER JOIN evaluacion e ON e.id = ru.id_eval
                 WHERE r.cedula_docente = ? AND r.activo = 1
+                AND e.codigo_periodo = ?
                 ORDER BY r.fecha_actualizacion DESC LIMIT 3;
             `;
             const q5 = `
@@ -285,19 +292,20 @@ class DashboardModel {
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 WHERE pd.docente_cedula = ? AND r.activo = 1 AND u.activo = 1 AND er.id IS NOT NULL
+                AND e.codigo_periodo = ?
                 GROUP BY er.id, er.fecha_evaluado, ins.cedula_estudiante, ins.id_seccion
                 ORDER BY fecha_evaluado DESC LIMIT 4;
             `;
 
             connection.query(q1, [cedula], (err, r1) => {
                 if (err) return reject(err);
-                connection.query(q2, [cedula], (err, r2) => {
+                connection.query(q2, [cedula, periodo], (err, r2) => {
                     if (err) return reject(err);
-                    connection.query(q3, [cedula], (err, r3) => {
+                    connection.query(q3, [cedula, periodo], (err, r3) => {
                         if (err) return reject(err);
-                        connection.query(q4, [cedula], (err, r4) => {
+                        connection.query(q4, [cedula, periodo], (err, r4) => {
                             if (err) return reject(err);
-                            connection.query(q5, [cedula], (err, r5) => {
+                            connection.query(q5, [cedula, periodo], (err, r5) => {
                                 if (err) return reject(err);
                                 resolve({
                                     totalRubricas: r1[0].total,

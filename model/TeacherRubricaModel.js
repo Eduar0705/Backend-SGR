@@ -2,18 +2,21 @@ const connection = require('./conexion');
 
 class TeacherRubricaModel {
     // Carreras donde el docente tiene permiso
-    async getCarrerasByDocente(cedula) {
+    async getCarrerasByDocente(cedula, periodo) {
         const query = `
             SELECT DISTINCT c.codigo, c.nombre
             FROM carrera c
             INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera
+            INNER JOIN pensum p ON mp.id_pensum = p.id
+            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE pd.docente_cedula = ?
+            AND pp.codigo_periodo = ?
             ORDER BY c.nombre
         `;
         return new Promise((resolve, reject) => {
-            connection.query(query, [cedula], (err, r) => err ? reject(err) : resolve(r));
+            connection.query(query, [cedula, periodo], (err, r) => err ? reject(err) : resolve(r));
         });
     }
 
@@ -26,39 +29,43 @@ class TeacherRubricaModel {
     }
 
     // Semestres por carrera (filtrado por permisos del docente)
-    async getSemestresByCarrera(carrera, cedula) {
+    async getSemestresByCarrera(carrera, cedula, periodo) {
         const query = `
             SELECT DISTINCT mp.num_semestre as semestre
             FROM materia_pensum mp
+            INNER JOIN pensum p ON mp.id_pensum = p.id
+            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_carrera = ? AND pd.docente_cedula = ?
+            AND pp.codigo_periodo = ?
             ORDER BY mp.num_semestre
         `;
         return new Promise((resolve, reject) => {
-            connection.query(query, [carrera, cedula], (err, r) => err ? reject(err) : resolve(r.map(x => x.semestre)));
+            connection.query(query, [carrera, cedula, periodo], (err, r) => err ? reject(err) : resolve(r.map(x => x.semestre)));
         });
     }
 
     // Materias por carrera y semestre
-    async getMateriasByCarreraSemestre(carrera, semestre, cedula) {
+    async getMateriasByCarreraSemestre(carrera, semestre, cedula, periodo) {
         const query = `
             SELECT DISTINCT m.codigo, m.nombre
             FROM materia m
             INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia AND mp.codigo_carrera = ?
+            INNER JOIN pensum p ON mp.id_pensum = p.id
+            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum AND pp.codigo_periodo = ?
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.num_semestre = ? AND pd.docente_cedula = ?
             ORDER BY m.nombre
         `;
         return new Promise((resolve, reject) => {
-            connection.query(query, [carrera, semestre, cedula], (err, r) => err ? reject(err) : resolve(r));
+            connection.query(query, [carrera, periodo, semestre, cedula], (err, r) => err ? reject(err) : resolve(r));
         });
     }
 
     // Secciones por materia (del docente en materia_pensum)
-    //CONDICIONAR POR PERIODO URGENTEMENTE
-    async getSeccionesByMateria(materia, cedula) {
+    async getSeccionesByMateria(materia, cedula, periodo) {
         const query = `
             SELECT DISTINCT s.id, s.letra, pp.codigo_periodo
             FROM seccion s
@@ -67,24 +74,26 @@ class TeacherRubricaModel {
             INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_materia = ? AND pd.docente_cedula = ?
+            AND pp.codigo_periodo = ?
             ORDER BY s.letra
         `;
         return new Promise((resolve, reject) => {
-            connection.query(query, [materia, cedula], (err, r) => err ? reject(err) : resolve(r));
+            connection.query(query, [materia, cedula, periodo], (err, r) => err ? reject(err) : resolve(r));
         });
     }
 
     // Evaluaciones de una sección (sin rúbrica asignada aún)
-    async getEvaluacionesBySeccion(seccionId) {
+    async getEvaluacionesBySeccion(seccionId, periodo) {
         const query = `
             SELECT e.id, e.competencias, e.ponderacion, e.fecha_evaluacion
             FROM evaluacion e
             LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
             WHERE e.id_seccion = ? AND ru.id_rubrica IS NULL
+            AND e.codigo_periodo = ?
             ORDER BY e.fecha_evaluacion
         `;
         return new Promise((resolve, reject) => {
-            connection.query(query, [seccionId], (err, r) => err ? reject(err) : resolve(r));
+            connection.query(query, [seccionId, periodo], (err, r) => err ? reject(err) : resolve(r));
         });
     }
 
@@ -183,6 +192,7 @@ class TeacherRubricaModel {
                 r.id,
                 r.nombre_rubrica,
                 e.fecha_evaluacion,
+                e.codigo_periodo,
                 r.fecha_creacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.ponderacion AS porcentaje_evaluacion,

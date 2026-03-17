@@ -10,9 +10,10 @@ function query(sql, params = []) {
 }
 
 class TeacherEstudiantesModel {
-    static async getEstudiantes(docenteCedula, esAdmin) {
+    static async getEstudiantes(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
         let queryParams = [];
+        //console.log(periodo); periodo = "2025-1"
 
         if (esAdmin) {
             // Admin puede ver todos los estudiantes
@@ -49,6 +50,8 @@ class TeacherEstudiantesModel {
                 FROM evaluacion e
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum p ON mp.id_pensum = p.id
+                INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 INNER JOIN usuario_estudiante ue ON ue.cedula_usuario = ins.cedula_estudiante
@@ -56,6 +59,7 @@ class TeacherEstudiantesModel {
                 INNER JOIN usuario u ON ue.cedula_usuario = u.cedula AND u.activo = 1
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                WHERE pp.codigo_periodo = ?
                 GROUP BY ins.cedula_estudiante, ins.id_seccion
                 ORDER BY promedio_puntaje DESC
     ) AS subquery;
@@ -95,6 +99,8 @@ class TeacherEstudiantesModel {
                 FROM evaluacion e
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum p ON mp.id_pensum = p.id
+                INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN inscripcion_seccion ins ON pd.id_seccion = ins.id_seccion
@@ -104,11 +110,12 @@ class TeacherEstudiantesModel {
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 WHERE pd.docente_cedula = ?
+                AND pp.codigo_periodo = ?
                 GROUP BY ins.cedula_estudiante, ins.id_seccion
                 ORDER BY promedio_puntaje DESC
      ) AS subquery;
             `;
-            queryParams = [docenteCedula];
+            queryParams = [docenteCedula, periodo];
         }
 
         return query(sqlQuery, queryParams);

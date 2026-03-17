@@ -4,8 +4,9 @@ class TeacherRubricaController {
     async getFormData(req, res) {
         try {
             const cedula = req.user.cedula;
+            const periodo = req.user.periodo_usuario;
             const [carreras, tipos, estrategias] = await Promise.all([
-                TeacherRubricaModel.getCarrerasByDocente(cedula),
+                TeacherRubricaModel.getCarrerasByDocente(cedula, periodo),
                 TeacherRubricaModel.getTiposRubrica(),
                 TeacherRubricaModel.getEstrategias()
             ]);
@@ -18,7 +19,8 @@ class TeacherRubricaController {
 
     async getSemestres(req, res) {
         try {
-            const semestres = await TeacherRubricaModel.getSemestresByCarrera(req.params.carrera, req.user.cedula);
+            const periodo = req.user.periodo_usuario;
+            const semestres = await TeacherRubricaModel.getSemestresByCarrera(req.params.carrera, req.user.cedula, periodo);
             res.json({ success: true, data: semestres });
         } catch (error) {
             console.error('Error getSemestres:', error);
@@ -28,7 +30,8 @@ class TeacherRubricaController {
 
     async getMaterias(req, res) {
         try {
-            const materias = await TeacherRubricaModel.getMateriasByCarreraSemestre(req.params.carrera, req.params.semestre, req.user.cedula);
+            const periodo = req.user.periodo_usuario;
+            const materias = await TeacherRubricaModel.getMateriasByCarreraSemestre(req.params.carrera, req.params.semestre, req.user.cedula, periodo);
             res.json({ success: true, data: materias });
         } catch (error) {
             console.error('Error getMaterias:', error);
@@ -38,7 +41,8 @@ class TeacherRubricaController {
 
     async getSecciones(req, res) {
         try {
-            const secciones = await TeacherRubricaModel.getSeccionesByMateria(req.params.materia, req.user.cedula);
+            const periodo = req.user.periodo_usuario;
+            const secciones = await TeacherRubricaModel.getSeccionesByMateria(req.params.materia, req.user.cedula, periodo);
             res.json({ success: true, data: secciones });
         } catch (error) {
             console.error('Error getSecciones:', error);
@@ -48,7 +52,8 @@ class TeacherRubricaController {
 
     async getEvaluaciones(req, res) {
         try {
-            const evaluaciones = await TeacherRubricaModel.getEvaluacionesBySeccion(req.params.seccionId);
+            const periodo = req.user.periodo_usuario;
+            const evaluaciones = await TeacherRubricaModel.getEvaluacionesBySeccion(req.params.seccionId, periodo);
             res.json({ success: true, evaluaciones });
         } catch (error) {
             console.error('Error getEvaluaciones:', error);

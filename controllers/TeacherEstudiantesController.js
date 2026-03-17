@@ -5,8 +5,9 @@ class TeacherEstudiantesController {
         try {
             const docenteCedula = req.user.cedula;
             const esAdmin = req.user.id_rol === 1;
+            const periodo = req.user.periodo_usuario;
 
-            const estudiantes = await TeacherEstudiantesModel.getEstudiantes(docenteCedula, esAdmin);
+            const estudiantes = await TeacherEstudiantesModel.getEstudiantes(docenteCedula, esAdmin, periodo);
 
             res.json({
                 success: true,

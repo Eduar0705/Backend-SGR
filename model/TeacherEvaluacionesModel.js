@@ -13,6 +13,7 @@ function query(sql, params = []) {
 class TeacherEvaluacionesModel {
     static async getTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
+        //console.log(periodo); periodo = "2025-1"
         let queryParams = [];
 
         if (esAdmin) {

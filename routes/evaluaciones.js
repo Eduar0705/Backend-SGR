@@ -1,12 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const EvaluacionController = require('../controllers/EvaluacionController');
+const authMiddleware = require('../middleware/auth.middleware');
+
+router.use(authMiddleware);
 
 // Listado principal
 router.get('/', EvaluacionController.getAllEvaluaciones);
 
 // Catálogos
 router.get('/estrategias', EvaluacionController.getEstrategias);
+router.get('/cortes', EvaluacionController.getCortes);
 router.get('/carreras', EvaluacionController.getCarreras);
 router.get('/rubricas-activas', EvaluacionController.getRubricasActivas);
 

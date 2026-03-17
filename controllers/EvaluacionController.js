@@ -40,6 +40,18 @@ class EvaluacionController {
         }
     }
 
+    async getCortes(req, res) {
+        try {
+            const periodo = req.user.periodo_usuario;
+            const cortes = await EvaluacionModel.getCortes(periodo);
+            console.log(cortes)
+            res.json({ success: true, cortes });
+        } catch (error) {
+            console.error('Error getCortes:', error);
+            res.status(500).json({ success: false, message: 'Error al obtener cortes' });
+        }
+    }
+
     async getMateriasByCarrera(req, res) {
         try {
             const { carreraCodigo } = req.params;

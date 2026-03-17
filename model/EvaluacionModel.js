@@ -103,6 +103,23 @@ class EvaluacionModel {
         });
     }
 
+    static getCortes(periodo) {
+        return new Promise((resolve, reject) => {
+            console.log(periodo); periodo = "2025-1"
+            const query = `
+                SELECT 
+                    *
+                FROM corte_periodo
+                WHERE codigo_periodo = ?
+                ORDER BY codigo_periodo
+            `;
+            pool.query(query, [periodo], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
+
     static getCarreras() {
         return new Promise((resolve, reject) => {
             const query = `

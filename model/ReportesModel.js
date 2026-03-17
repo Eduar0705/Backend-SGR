@@ -1,7 +1,7 @@
 const connection = require('./conexion');
 
 class ReportesModel {
-    async getAdminStats() {
+    async getAdminStats(periodo) {
         return new Promise((resolve, reject) => {
             const queries = {
                 // 1. Totales Generales

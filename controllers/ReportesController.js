@@ -3,8 +3,8 @@ const ReportesModel = require('../model/ReportesModel');
 class ReportesController {
     async getAdminStats(req, res) {
         try {
-            // Llamamos al modelo para obtener todas las estadísticas requeridas por el frontend
-            const stats = await ReportesModel.getAdminStats();
+            const periodo = req.query.periodo;
+            const stats = await ReportesModel.getAdminStats(periodo);
             
             res.json({
                 success: true,

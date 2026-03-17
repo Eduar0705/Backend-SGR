@@ -11,8 +11,8 @@ class DocenteController {
                     message: 'Acceso denegado.' 
                 });
             }
-
-            const docentes = await DocenteModel.getDocentes();
+            const periodo = req.query.periodo;
+            const docentes = await DocenteModel.getDocentes(periodo);
             res.json({ success: true, data: docentes });
         } catch (error) {
             console.error('Error getDocentes:', error);

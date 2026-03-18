@@ -12,7 +12,13 @@ class PeriodosModel {
     async getPeriodos() {
         return new Promise((resolve, reject) => {
             const query = `SELECT
-                        DISTINCT *
+                        DISTINCT pa.*,
+                        (CASE WHEN EXISTS (SELECT 1 
+                            FROM evaluacion e 
+                            WHERE e.codigo_periodo = pa.codigo) 
+                            THEN 1 
+                            ELSE 0 
+                        END) AS modificable
                     FROM periodo_academico pa 
                     ORDER BY pa.codigo DESC`
             connection.query(query, (err, results) => {
@@ -33,8 +39,14 @@ class PeriodosModel {
         return new Promise((resolve, reject) => {
             const query = `
             SELECT 
-                *
-            FROM corte_periodo
+                cp.*,
+                (CASE WHEN EXISTS (SELECT 1 
+                    FROM evaluacion e 
+                    WHERE e.codigo_periodo = cp.codigo_periodo) 
+                THEN 1 
+                ELSE 0 
+                END) AS modificable
+            FROM corte_periodo cp
             WHERE codigo_periodo = ?
             ORDER BY codigo_periodo
         `;

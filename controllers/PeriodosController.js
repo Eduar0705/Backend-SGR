@@ -64,6 +64,15 @@ class PeriodosController {
             res.status(500).json({ success: false, message: 'Error al eliminar cortes. Intente de nuevo mas tarde.' });
         }
     }
+     async getPensums(req, res) {
+        try {
+            const pensums = await PeriodosModel.getPensums();
+            res.json({ success: true, data: pensums });
+        } catch (error) {
+            console.error('Error getPensums:', error);
+            res.status(500).json({ success: false, message: 'Error en el servidor obteniendo los datos. Por favor, intente de nuevo más tarde.' });
+        }
+    }
 }
 
 module.exports = new PeriodosController();

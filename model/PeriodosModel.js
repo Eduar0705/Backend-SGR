@@ -162,5 +162,17 @@ class PeriodosModel {
             });
         });
     }
+    async getPensums() {
+        return new Promise((resolve, reject) => {
+            const query = `SELECT
+                        *
+                    FROM pensum
+                    ORDER BY id DESC`
+            connection.query(query, (err, results) => {
+                if (err) return reject(err);
+                resolve(results);
+            });
+        });
+    }
 }
 module.exports = new PeriodosModel();

@@ -35,6 +35,54 @@ class PeriodosModel {
         });
     }
 
+    async deletePeriodo(codigo_periodo) {
+        return new Promise((resolve, reject) => {
+            connection.getConnection((err, conn) => {
+                if (err) return reject(err);
+
+                conn.beginTransaction((err) => {
+                    if (err) {
+                        conn.release();
+                        return reject(err);
+                    }
+
+                    // 1. Eliminar pensum_periodo
+                    conn.query(
+                        `DELETE FROM pensum_periodo WHERE codigo_periodo = ?`,
+                        [codigo_periodo],
+                        (error) => {
+                            if (error) return conn.rollback(() => { conn.release(); reject(error); });
+
+                            // 2. Eliminar cortes
+                            conn.query(
+                                `DELETE FROM corte_periodo WHERE codigo_periodo = ?`,
+                                [codigo_periodo],
+                                (error) => {
+                                    if (error) return conn.rollback(() => { conn.release(); reject(error); });
+
+                                    // 3. Eliminar periodo
+                                    conn.query(
+                                        `DELETE FROM periodo_academico WHERE codigo = ?`,
+                                        [codigo_periodo],
+                                        (error, results) => {
+                                            if (error) return conn.rollback(() => { conn.release(); reject(error); });
+
+                                            conn.commit((err) => {
+                                                conn.release();
+                                                if (err) return reject(err);
+                                                resolve(results);
+                                            });
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                });
+            });
+        });
+    }
+
     async getCortes(periodo) {
         return new Promise((resolve, reject) => {
             const query = `

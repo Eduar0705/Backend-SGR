@@ -10,6 +10,16 @@ class PeriodosController {
             res.status(500).json({ success: false, message: 'Error en el servidor' });
         }
     }
+    async deletePeriodo(req, res) {
+        try {
+            const { codigo_periodo } = req.params;
+            await PeriodosModel.deletePeriodo(codigo_periodo);
+            res.json({ success: true, mensaje: "Se ha eliminado el periodo y sus datos asociados." });
+        } catch (error) {
+            console.error('Error deletePeriodos:', error);
+            res.status(500).json({ success: false, message: 'Error al eliminar los periodos. Pruebe de nuevo más tarde, por favor.' });
+        }
+    }
 
     async getCortes(req, res) {
         try {

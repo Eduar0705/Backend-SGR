@@ -35,6 +35,7 @@ class PeriodosController {
         try {
             const { fecha_inicio, fecha_fin, codigo_periodo, orden} = req.body;
             await PeriodosModel.createCorte(codigo_periodo, orden, fecha_inicio, fecha_fin);
+            await PeriodosModel.syncCortesEvaluaciones(codigo_periodo);
             res.json({ success: true, mensaje: "Se han creado los cortes correctamente." });
         } catch (error) {
             console.error('Error createCorte:', error);
@@ -46,6 +47,7 @@ class PeriodosController {
             const { codigo_periodo, orden } = req.params;
             const { fecha_inicio, fecha_fin} = req.body;
             await PeriodosModel.updateCorte(codigo_periodo, orden, fecha_inicio, fecha_fin);
+            await PeriodosModel.syncCortesEvaluaciones(codigo_periodo);
             res.json({ success: true, mensaje: "Se han actualizado los cortes correctamente." });
         } catch (error) {
             console.error('Error getCortes:', error);

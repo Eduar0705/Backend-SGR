@@ -147,5 +147,20 @@ class PeriodosModel {
             });
         });
     }
+    async syncCortesEvaluaciones(codigo_periodo) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                UPDATE evaluacion e
+                INNER JOIN corte_periodo cp ON e.codigo_periodo = cp.codigo_periodo
+                    SET e.corte_orden = cp.orden
+                WHERE e.fecha_evaluacion BETWEEN cp.fecha_inicio AND cp.fecha_fin
+                AND e.codigo_periodo = ?
+            `;
+            connection.query(query, [codigo_periodo], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
 }
 module.exports = new PeriodosModel();

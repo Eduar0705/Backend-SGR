@@ -50,6 +50,18 @@ class PeriodosModel {
             });
         });
     }
+    async createCorte(codigo_periodo, orden, fecha_inicio, fecha_fin) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO corte_periodo (codigo_periodo, orden, fecha_inicio, fecha_fin)
+                VALUES (?, ?, ?, ?);
+            `;
+            connection.query(query, [codigo_periodo, orden, fecha_inicio, fecha_fin], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
     async updateCorte(codigo_periodo, orden, fecha_inicio, fecha_fin) {
         return new Promise((resolve, reject) => {
             const query = `
@@ -58,6 +70,18 @@ class PeriodosModel {
                 WHERE codigo_periodo=? AND orden=?
             `;
             connection.query(query, [fecha_inicio, fecha_fin, codigo_periodo, orden], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
+    async deleteCorte(codigo_periodo, orden) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                DELETE FROM corte_periodo
+                WHERE codigo_periodo=? AND orden=?
+            `;
+            connection.query(query, [codigo_periodo, orden], (error, results) => {
                 if (error) return reject(error);
                 resolve(results);
             });

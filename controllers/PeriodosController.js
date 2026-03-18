@@ -21,6 +21,16 @@ class PeriodosController {
             res.status(500).json({ success: false, message: 'Error al obtener cortes' });
         }
     }
+    async createCorte(req, res) {
+        try {
+            const { fecha_inicio, fecha_fin, codigo_periodo, orden} = req.body;
+            await PeriodosModel.createCorte(codigo_periodo, orden, fecha_inicio, fecha_fin);
+            res.json({ success: true, mensaje: "Se han creado los cortes correctamente." });
+        } catch (error) {
+            console.error('Error createCorte:', error);
+            res.status(500).json({ success: false, message: 'Error al crear cortes. Intente de nuevo mas tarde.' });
+        }
+    }
     async updateCorte(req, res) {
         try {
             const { codigo_periodo, orden } = req.params;
@@ -30,6 +40,16 @@ class PeriodosController {
         } catch (error) {
             console.error('Error getCortes:', error);
             res.status(500).json({ success: false, message: 'Error al actualizar cortes. Intente de nuevo mas tarde.' });
+        }
+    }
+    async deleteCorte(req, res) {
+        try {
+            const { codigo_periodo, orden } = req.params;
+            await PeriodosModel.deleteCorte(codigo_periodo, orden);
+            res.json({ success: true, mensaje: "Se han eliminado los cortes correctamente." });
+        } catch (error) {
+            console.error('Error getCortes:', error);
+            res.status(500).json({ success: false, message: 'Error al eliminar cortes. Intente de nuevo mas tarde.' });
         }
     }
 }

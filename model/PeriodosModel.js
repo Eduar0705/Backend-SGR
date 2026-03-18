@@ -34,18 +34,26 @@ class PeriodosModel {
             });
         });
     }
-    async createPeriodo(codigo, fecha_inicio, fecha_fin, id_pensum) {
+    async createPeriodo(codigo, fecha_inicio, fecha_fin, id_pensum, dias_evaluacion) {
         return new Promise((resolve, reject) => {
             const query = `INSERT INTO periodo_academico
-                            (codigo, fecha_inicio, activo, fecha_fin, id_pensum)
-                            VALUES (?, ?, ?, ?, ?)`
-            connection.query(query, [codigo, fecha_inicio, 1, fecha_fin, id_pensum], (err, results) => {
+                            (codigo, fecha_inicio, activo, fecha_fin, id_pensum, dias_abierto)
+                            VALUES (?, ?, ?, ?, ?, ?)`
+            connection.query(query, [codigo, fecha_inicio, 1, fecha_fin, id_pensum, dias_evaluacion], (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
             });
         });
     }
-
+    async getPeriodoByCodigo(codigo) {
+        return new Promise((resolve, reject) => {
+            const query = `SELECT * FROM periodo_academico WHERE codigo = ?`
+            connection.query(query, [codigo], (err, results) => {
+                if (err) return reject(err);
+                resolve(results);
+            });
+        });
+    }
     async deletePeriodo(codigo_periodo) {
         return new Promise((resolve, reject) => {
             connection.getConnection((err, conn) => {

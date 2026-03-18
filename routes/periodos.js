@@ -7,6 +7,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 router.use(authMiddleware);
 
 router.get('/', PeriodosController.getPeriodos);
+router.get('/:codigo_periodo', PeriodosController.getPeriodoByCodigo);
 router.post('/crear', PeriodosController.createPeriodo);
 router.delete('/delete/:codigo_periodo', PeriodosController.deletePeriodo)
 

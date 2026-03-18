@@ -12,9 +12,9 @@ class DashboardModel {
                                 INNER JOIN seccion s ON pd.id_seccion = s.id
                                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                                 INNER JOIN pensum p ON mp.id_pensum = p.id
-                                INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+                                INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                                 WHERE u.activo = 1
-                                AND pp.codigo_periodo = ?`;
+                                AND pa.codigo = ?`;
             
             // 2. Contar las Rúbricas
             const countRubricas = ` SELECT 
@@ -249,10 +249,10 @@ class DashboardModel {
                 INNER JOIN seccion s ON ins.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum p ON mp.id_pensum = p.id
-                INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+                INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 WHERE pd.docente_cedula = ? AND u.activo = 1
-                AND pp.codigo_periodo = ?;
+                AND pa.codigo = ?;
             `;
             const q3 = `
                 SELECT 

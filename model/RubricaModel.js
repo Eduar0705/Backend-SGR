@@ -40,9 +40,9 @@ class RubricaModel {
                     DISTINCT mp.num_semestre AS semestre
                 FROM materia_pensum mp
                 INNER JOIN pensum p ON mp.id_pensum = p.id
-                INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+                INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                 WHERE mp.codigo_carrera = ?
-                AND pp.codigo_periodo = ?
+                AND pa.codigo = ?
                 ORDER BY semestre;
             `;
             connection.query(query, [carrera, periodo], (err, results) => {
@@ -63,10 +63,10 @@ class RubricaModel {
                 FROM materia m
                 INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
                 WHERE mp.codigo_carrera = ?
                 AND mp.num_semestre = ?
-                AND pp.codigo_periodo = ?
+                AND pa.codigo = ?
                 ORDER BY nombre;
             `;
             connection.query(query, [carrera, semestre, periodo], (err, results) => {
@@ -85,16 +85,16 @@ class RubricaModel {
                     IFNULL(GROUP_CONCAT(DISTINCT CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ' (', hs.aula, ')', ')') SEPARATOR ', '), 'No encontrado') AS horario,
                     s.capacidad_maxima,
                     COUNT(ins.cedula_estudiante) AS estudiantes_inscritos,
-                    pp.codigo_periodo AS lapse_academico
+                    pa.codigo AS lapse_academico
                 FROM seccion s
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                 LEFT JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 WHERE mp.codigo_materia = ? 
                 AND mp.codigo_carrera = ? 
-                AND pp.codigo_periodo = ?
+                AND pa.codigo = ?
                 GROUP BY s.id
                 ORDER BY codigo;
             `;
@@ -409,7 +409,6 @@ class RubricaModel {
                 INNER JOIN usuario u ON u.cedula = ud.cedula_usuario
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 LEFT JOIN usuario_docente ud2 ON ud2.cedula_usuario = r.cedula_docente
@@ -492,7 +491,6 @@ class RubricaModel {
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
@@ -557,7 +555,6 @@ class RubricaModel {
                             FROM seccion s 
                             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
                             INNER JOIN pensum p ON mp.id_pensum = p.id
-                            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
                             WHERE s.id = ?;`;
             connection.query(query, [idSecc], (err, results) => {
                 if (err) return reject(err);
@@ -578,8 +575,8 @@ class RubricaModel {
                             FROM carrera c 
                             INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera
                             INNER JOIN pensum p ON mp.id_pensum = p.id
-                            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
-                            WHERE pp.codigo_periodo = ?
+                            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
+                            WHERE pa.codigo = ?
                             GROUP BY c.codigo ORDER BY nombre;`;
             } else {
                 query = `   SELECT 
@@ -589,11 +586,11 @@ class RubricaModel {
                             FROM carrera c 
                             INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera 
                             INNER JOIN pensum p ON mp.id_pensum = p.id
-                            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+                            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                             INNER JOIN seccion s ON mp.id = s.id_materia_plan 
                             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                             WHERE pd.docente_cedula = ? 
-                            AND pp.codigo_periodo = ?
+                            AND pa.codigo = ?
                             GROUP BY c.codigo`;
                 params = [cedula, periodo];
             }
@@ -618,30 +615,30 @@ class RubricaModel {
                 if (err) return reject(err);
 
                 let querySecciones, paramsSecciones = [];
-                if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
+                if (esAdmin) {
                     querySecciones = `SELECT 
                                         s.id_materia_plan AS id, 
                                         s.letra, 
                                         CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo, 
                                         mp.codigo_materia AS materia_codigo,
-                                        pp.codigo_periodo AS lapse_academico 
+                                        pa.codigo AS lapse_academico 
                                     FROM seccion s 
                                     INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
                                     INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                                    INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                                    INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
                                     GROUP BY codigo, lapse_academico 
                                     ORDER BY codigo;`;
-                } else { //CONDICIONAR POR PERIODO URGENTEMENTE
+                } else {
                     querySecciones = `SELECT 
                                         s.id_materia_plan AS id, 
                                         s.letra, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo, 
                                         mp.codigo_materia AS materia_codigo, 
-                                        pp.codigo_periodo AS lapse_academico 
+                                        pa.codigo AS lapse_academico 
                                     FROM seccion s 
                                     INNER JOIN permiso_docente pd ON pd.id_seccion = s.id 
                                     INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
                                     INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                                    INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                                    INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
                                     WHERE pd.docente_cedula = ? 
                                     GROUP BY codigo, lapse_academico 
                                     ORDER BY codigo;`;
@@ -727,27 +724,27 @@ class RubricaModel {
     async getSemestresAdmin(carrera, cedula, esAdmin, periodo) {
         return new Promise((resolve, reject) => {
             let query, params = [];
-            if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
+            if (esAdmin) {
                 query = `SELECT 
                             DISTINCT mp.num_semestre AS semestre 
                         FROM materia_pensum mp 
                         INNER JOIN pensum p ON mp.id_pensum = p.id
-                        INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+                        INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                         WHERE mp.codigo_carrera = ? 
-                        AND pp.codigo_periodo = ?
+                        AND pa.codigo = ?
                         ORDER BY semestre;`;
                 params = [carrera, periodo];
-            } else { //CONDICIONAR POR PERIODO URGENTEMENTE
+            } else {
                 query = `SELECT 
                             DISTINCT mp.num_semestre AS semestre 
                         FROM materia_pensum mp 
                         INNER JOIN pensum p ON mp.id_pensum = p.id
-                        INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+                        INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                         INNER JOIN seccion s ON mp.id = s.id_materia_plan 
                         INNER JOIN permiso_docente pd ON s.id = pd.id_seccion 
                         WHERE mp.codigo_carrera = ? 
                         AND pd.docente_cedula = ? 
-                        AND pp.codigo_periodo = ?
+                        AND pa.codigo = ?
                         ORDER BY semestre;`;
                 params = [carrera, cedula, periodo];
             }
@@ -778,16 +775,16 @@ class RubricaModel {
     async getSeccionesAdmin(materia, carreraCodigo, cedula, esAdmin) {
         return new Promise((resolve, reject) => {
             let query, params = [];
-            if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
+            if (esAdmin) {
                 query = `
                     SELECT s.id_materia_plan AS id, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo,
-                    pp.codigo_periodo AS lapse_academico, s.letra,
+                    pa.codigo AS lapse_academico, s.letra,
                     IFNULL(GROUP_CONCAT(DISTINCT CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ' (', hs.aula, ')', ')') SEPARATOR ', '), 'No encontrado') AS horario,
                     hs.aula, s.capacidad_maxima, u.nombre AS docente_nombre, u.apeliido AS docente_apellido
                     FROM seccion s
                     INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                     INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                    INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                    INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
                     INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                     INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
                     INNER JOIN usuario u ON u.cedula = ud.cedula_usuario
@@ -801,7 +798,7 @@ class RubricaModel {
                     SELECT 
                         s.id_materia_plan AS id, 
                         CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo,
-                        pp.codigo_periodo AS lapse_academico, 
+                        pa.codigo AS lapse_academico, 
                         s.letra,
                         IFNULL(GROUP_CONCAT(CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ')') SEPARATOR ', '), 'No encontrado') AS horario,
                         hs.aula, 
@@ -811,7 +808,7 @@ class RubricaModel {
                     FROM seccion s
                     INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                     INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                    INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+                    INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
                     INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                     INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
                     INNER JOIN usuario u ON u.cedula = ud.cedula_usuario

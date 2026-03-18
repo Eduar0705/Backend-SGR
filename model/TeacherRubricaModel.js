@@ -8,11 +8,11 @@ class TeacherRubricaModel {
             FROM carrera c
             INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera
             INNER JOIN pensum p ON mp.id_pensum = p.id
-            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE pd.docente_cedula = ?
-            AND pp.codigo_periodo = ?
+            AND pa.codigo = ?
             ORDER BY c.nombre
         `;
         return new Promise((resolve, reject) => {
@@ -34,11 +34,11 @@ class TeacherRubricaModel {
             SELECT DISTINCT mp.num_semestre as semestre
             FROM materia_pensum mp
             INNER JOIN pensum p ON mp.id_pensum = p.id
-            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_carrera = ? AND pd.docente_cedula = ?
-            AND pp.codigo_periodo = ?
+            AND pa.codigo = ?
             ORDER BY mp.num_semestre
         `;
         return new Promise((resolve, reject) => {
@@ -53,7 +53,7 @@ class TeacherRubricaModel {
             FROM materia m
             INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia AND mp.codigo_carrera = ?
             INNER JOIN pensum p ON mp.id_pensum = p.id
-            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum AND pp.codigo_periodo = ?
+            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum AND pa.codigo = ?
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.num_semestre = ? AND pd.docente_cedula = ?
@@ -67,14 +67,14 @@ class TeacherRubricaModel {
     // Secciones por materia (del docente en materia_pensum)
     async getSeccionesByMateria(materia, cedula, periodo) {
         const query = `
-            SELECT DISTINCT s.id, s.letra, pp.codigo_periodo
+            SELECT DISTINCT s.id, s.letra, pa.codigo
             FROM seccion s
             INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
             INNER JOIN pensum pen ON mp.id_pensum = pen.id
-            INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+            INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_materia = ? AND pd.docente_cedula = ?
-            AND pp.codigo_periodo = ?
+            AND pa.codigo = ?
             ORDER BY s.letra
         `;
         return new Promise((resolve, reject) => {
@@ -242,7 +242,6 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON e.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
             INNER JOIN pensum pen ON mp.id_pensum = pen.id
-            INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
@@ -296,7 +295,7 @@ class TeacherRubricaModel {
                 u.cedula as docente_cedula, 
                 m.codigo AS materia_codigo, 
                 s.id AS seccion_id,
-                pp.codigo_periodo AS lapse_academico, 
+                pa.codigo AS lapse_academico, 
                 e.fecha_evaluacion,
                 (SELECT SUM(puntaje_maximo) 
                     FROM criterio_rubrica cr_sub 
@@ -324,7 +323,7 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON e.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
             INNER JOIN pensum pen ON mp.id_pensum = pen.id
-            INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
+            INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion

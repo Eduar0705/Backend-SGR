@@ -59,31 +59,33 @@ class NotificacionModel {
 
     async create({ usuario_destino, mensaje, id_rubrica = null }) {
         return new Promise((resolve, reject) => {
-            connection.beginTransaction(async (err) => {
-                if (err) return reject(err);
+            connection.getConnection((err, conn) => {
+                conn.beginTransaction(async (err) => {
+                    if (err) return reject(err);
 
-                try {
-                    const insertNotif = 'INSERT INTO notificacion (usuario_destino, mensaje, leido, fecha) VALUES (?, ?, 0, NOW())';
-                    const result = await new Promise((res, rej) => {
-                        connection.query(insertNotif, [usuario_destino, mensaje], (e, r) => e ? rej(e) : res(r));
-                    });
-
-                    const idNotif = result.insertId;
-
-                    if (id_rubrica) {
-                        const insertRel = 'INSERT INTO notificacion_rubrica (id_notif, id_rubrica) VALUES (?, ?)';
-                        await new Promise((res, rej) => {
-                            connection.query(insertRel, [idNotif, id_rubrica], (e, r) => e ? rej(e) : res(r));
+                    try {
+                        const insertNotif = 'INSERT INTO notificacion (usuario_destino, mensaje, leido, fecha) VALUES (?, ?, 0, NOW())';
+                        const result = await new Promise((res, rej) => {
+                            conn.query(insertNotif, [usuario_destino, mensaje], (e, r) => e ? rej(e) : res(r));
                         });
-                    }
 
-                    connection.commit((e) => {
-                        if (e) return connection.rollback(() => reject(e));
-                        resolve({ id: idNotif });
-                    });
-                } catch (error) {
-                    connection.rollback(() => reject(error));
-                }
+                        const idNotif = result.insertId;
+
+                        if (id_rubrica) {
+                            const insertRel = 'INSERT INTO notificacion_rubrica (id_notif, id_rubrica) VALUES (?, ?)';
+                            await new Promise((res, rej) => {
+                                conn.query(insertRel, [idNotif, id_rubrica], (e, r) => e ? rej(e) : res(r));
+                            });
+                        }
+
+                        conn.commit((e) => {
+                            if (e) return conn.rollback(() => reject(e));
+                            resolve({ id: idNotif });
+                        });
+                    } catch (error) {
+                        conn.rollback(() => reject(error));
+                    }
+                });
             });
         });
     }

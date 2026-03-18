@@ -160,11 +160,11 @@ class TeacherEvaluacionesModel {
             INNER JOIN seccion s ON pd.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
             INNER JOIN pensum p ON mp.id_pensum = p.id
-            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             WHERE pd.docente_cedula = ?
-            AND pp.codigo_periodo = ?
+            AND pa.codigo = ?
             ORDER BY c.nombre
         `;
         return query(sqlQuery, [docenteCedula, periodo]);
@@ -182,12 +182,12 @@ class TeacherEvaluacionesModel {
             INNER JOIN seccion s ON pd.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
             INNER JOIN pensum p ON mp.id_pensum = p.id
-            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             WHERE c.codigo = ?
               AND pd.docente_cedula = ?
-              AND pp.codigo_periodo = ?
+              AND pa.codigo = ?
             ORDER BY semestre, m.nombre
         `;
         return query(sqlQuery, [carreraCodigo, docenteCedula, periodo]);
@@ -207,11 +207,11 @@ class TeacherEvaluacionesModel {
             INNER JOIN seccion s ON pd.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
             INNER JOIN pensum p ON mp.id_pensum = p.id
-            INNER JOIN pensum_periodo pp ON p.id = pp.id_pensum
+            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             WHERE m.codigo = ?
               AND pd.docente_cedula = ?
-              AND pp.codigo_periodo = ?
+              AND pa.codigo = ?
             ORDER BY codigo
         `;
         return query(sqlQuery, [materiaCodigo, docenteCedula, periodo]);
@@ -443,25 +443,19 @@ class TeacherEvaluacionesModel {
     }
 
     static async saveEvaluacion(evaluacionId, estudianteCedula, payload) {
-        // En este paso de guardar validamos la evaluacion_realizada, la actualizamos y añadimos detalles
         const q_er = `SELECT id FROM evaluacion_realizada WHERE id_evaluacion = ? AND cedula_evaluado = ?`;
         const rows = await query(q_er, [evaluacionId, estudianteCedula]);
         if(rows.length === 0) throw new Error("No se encontró el registro de evaluación para calificar.");
         const er_id = rows[0].id;
         
-        // delete exist details 
         await query(`DELETE FROM detalle_evaluacion WHERE evaluacion_r_id = ?`, [er_id]);
 
-        // insert detail
         if (payload.detalles && payload.detalles.length > 0) {
             const values = payload.detalles.map(d => [er_id, d.criterio_id, d.nivel_id, d.puntaje_obtenido, null /* observaciones */]);
             await query(`INSERT INTO detalle_evaluacion (evaluacion_r_id, id_criterio_detalle, orden_detalle, puntaje_obtenido, observaciones) VALUES ?`, [values]);
         }
-
-        // update evaluacion_realizada fecha and observ
         await query(`UPDATE evaluacion_realizada SET fecha_evaluado = NOW(), observaciones = ? WHERE id = ?`, [payload.observaciones || '', er_id]);
 
-        // Notificar al estudiante que ha sido evaluado
         try {
             const [evalInfo] = await query(`
                 SELECT r.nombre_rubrica, m.nombre as materia_nombre

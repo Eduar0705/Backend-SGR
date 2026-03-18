@@ -197,8 +197,7 @@ class UserModel {
                         ultimoPeriodoUsuarioQuery = `
                         SELECT DISTINCT pa.codigo
                         FROM periodo_academico pa
-                        INNER JOIN pensum_periodo pp ON pa.codigo = pp.codigo_periodo
-                        INNER JOIN pensum p ON pp.id_pensum = p.id
+                        INNER JOIN pensum p ON pa.id_pensum = p.id
                         INNER JOIN materia_pensum mp ON p.id = mp.id_pensum
                         INNER JOIN seccion s ON mp.id = s.id_materia_plan
                         INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
@@ -212,8 +211,7 @@ class UserModel {
                         SELECT 
                             DISTINCT pa.codigo
                         FROM periodo_academico pa
-                        INNER JOIN pensum_periodo pp ON pa.codigo = pp.codigo_periodo
-                        INNER JOIN pensum p ON pp.id_pensum = p.id
+                        INNER JOIN pensum p ON pa.id_pensum = p.id
                         INNER JOIN materia_pensum mp ON p.id = mp.id_pensum
                         INNER JOIN seccion s ON mp.id = s.id_materia_plan
                         INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion

@@ -441,17 +441,16 @@ class EvaluacionModel {
     }
 
     static getHorarioBySeccion(seccionId) {
-        return new Promise((resolve, reject) => { //COLOCAR CONDICION DE PERIODO preferible mas no obligatoriamente
+        return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
                     hs.id, hs.dia, hs.dia_num, hs.aula, hs.hora_inicio, hs.hora_cierre,
-                    pp.codigo_periodo AS periodo, pa.fecha_inicio, pa.fecha_fin
+                    pa.codigo AS periodo, pa.fecha_inicio, pa.fecha_fin
                 FROM seccion s
                 INNER JOIN horario_seccion hs ON s.id = hs.id_seccion
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN pensum_periodo pp ON pen.id = pp.id_pensum
-                INNER JOIN periodo_academico pa ON pp.codigo_periodo = pa.codigo
+                INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
                 WHERE s.id = ?
             `;
             pool.query(query, [seccionId], (error, results) => {

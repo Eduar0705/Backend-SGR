@@ -44,7 +44,6 @@ class EvaluacionController {
         try {
             const periodo = req.user.periodo_usuario;
             const cortes = await EvaluacionModel.getCortes(periodo);
-            console.log(cortes)
             res.json({ success: true, cortes });
         } catch (error) {
             console.error('Error getCortes:', error);
@@ -97,10 +96,10 @@ class EvaluacionController {
 
     async crearEvaluacion(req, res) {
         try {
-            console.log('--- CREAR EVALUACION BODY ---', JSON.stringify(req.body, null, 2));
+            const periodo = req.query.periodo ? req.query.periodo : req.user.periodo_usuario;
             const { 
                 fecha_evaluacion, id_horario, id_seccion, cant_personas, 
-                contenido, competencias, instrumentos, porcentaje, estrategias_eval,
+                contenido, corte, competencias, instrumentos, porcentaje, estrategias_eval,
                 tipo_horario, hora_inicio, hora_fin
             } = req.body;
 
@@ -109,6 +108,7 @@ class EvaluacionController {
             if (!fecha_evaluacion) missingFields.push('fecha_evaluacion');
             if (!id_seccion) missingFields.push('id_seccion');
             if (!cant_personas) missingFields.push('cant_personas');
+            if (!corte) missingFields.push('corte');
             if (!contenido) missingFields.push('contenido');
             if (porcentaje == null) missingFields.push('porcentaje');
             if (!estrategias_eval || estrategias_eval.length === 0) missingFields.push('estrategias_eval');
@@ -126,7 +126,7 @@ class EvaluacionController {
                 const duplicados = await EvaluacionModel.checkDuplicadosHorario(fecha_evaluacion, id_horario);
                 if (duplicados.length > 0) return res.status(400).json({ success: false, message: 'Ya existe una evaluación registrada para esta sección en este horario.' });
                 
-                const evalData = { porcentaje, cant_personas, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion };
+                const evalData = { porcentaje, cant_personas, corte, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion, periodo };
                 const horarioData = { id_horario };
                 const id = await EvaluacionModel.createWithTransaction(evalData, estrategias_eval, horarioData, 'Sección');
                 res.json({ success: true, message: 'Evaluación agregada exitosamente', id });
@@ -134,7 +134,7 @@ class EvaluacionController {
                 const duplicados = await EvaluacionModel.checkDuplicadosFueraHorario(fecha_evaluacion, hora_inicio, hora_fin);
                 if (duplicados.length > 0) return res.status(400).json({ success: false, message: 'Ya existe una evaluación registrada en este horario (fuera de sección).' });
                 
-                const evalData = { porcentaje, cant_personas, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion };
+                const evalData = { porcentaje, cant_personas, corte, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion, periodo };
                 const horarioData = { hora_inicio, hora_cierre: hora_fin };
                 const id = await EvaluacionModel.createWithTransaction(evalData, estrategias_eval, horarioData, 'Otro');
                 res.json({ success: true, message: 'Evaluación agregada exitosamente', id });
@@ -160,13 +160,14 @@ class EvaluacionController {
     async updateEvaluacion(req, res) {
         try {
             const { id } = req.params;
+            //const periodo = req.query.periodo ? req.query.periodo : req.user.periodo_usuario; INNECESARIO PUES NO SE ACTUALIZA
             const { 
                 contenido, estrategias_eval, porcentaje, cant_personas, id_seccion,
                 fecha_evaluacion, tipo_horario, id_horario, hora_inicio, hora_fin,
-                competencias, instrumentos 
+                competencias, instrumentos, corte
             } = req.body;
 
-            const evalData = { contenido, porcentaje, cant_personas, competencias, instrumentos, fecha_evaluacion, id_seccion };
+            const evalData = { contenido, porcentaje, cant_personas, competencias, instrumentos, fecha_evaluacion, id_seccion, corte };
             const horarioData = tipo_horario === 'Sección' ? { id_horario } : { hora_inicio, hora_cierre: hora_fin };
 
             await EvaluacionModel.updateWithTransaction(id, evalData, estrategias_eval, horarioData, tipo_horario);

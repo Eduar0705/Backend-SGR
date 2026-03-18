@@ -302,10 +302,11 @@ class EvaluacionModel {
                 conn.beginTransaction(err => {
                     if (err) { conn.release(); return reject(err); }
 
-                    const insertEval = `INSERT INTO evaluacion (ponderacion, cantidad_personas, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                    const insertEval = `INSERT INTO evaluacion (ponderacion, cantidad_personas, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion, codigo_periodo, corte_orden) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
                     conn.query(insertEval, [
                         evalData.porcentaje, evalData.cant_personas, evalData.contenido, 
-                        evalData.competencias, evalData.instrumentos, evalData.fecha_evaluacion, evalData.id_seccion
+                        evalData.competencias, evalData.instrumentos, evalData.fecha_evaluacion, evalData.id_seccion,
+                        evalData.periodo, evalData.corte
                     ], (err, result) => {
                         if (err) return conn.rollback(() => { conn.release(); reject(err); });
 
@@ -400,16 +401,17 @@ class EvaluacionModel {
 
                     const updateEval = `
                         UPDATE evaluacion 
-                        SET contenido = ?, ponderacion = ?, cantidad_personas = ?, competencias = ?, instrumentos = ?, fecha_evaluacion = ?, id_seccion = ?
+                        SET contenido = ?, ponderacion = ?, cantidad_personas = ?, competencias = ?,
+                        instrumentos = ?, fecha_evaluacion = ?, id_seccion = ?, corte_orden = ?
                         WHERE id = ?
                     `;
                     conn.query(updateEval, [
                         evalData.contenido, evalData.porcentaje, evalData.cant_personas, 
-                        evalData.competencias, evalData.instrumentos, evalData.fecha_evaluacion, evalData.id_seccion, id
+                        evalData.competencias, evalData.instrumentos, evalData.fecha_evaluacion, evalData.id_seccion,
+                        evalData.corte, id
                     ], err => {
                         if (err) return conn.rollback(() => { conn.release(); reject(err); });
 
-                        // Limpiar horarios anteriores
                         conn.query(`DELETE FROM horario_eval WHERE id_eval = ?`, [id], err => {
                             if (err) return conn.rollback(() => { conn.release(); reject(err); });
                             conn.query(`DELETE FROM horario_eval_clandestina WHERE id_eval = ?`, [id], err => {

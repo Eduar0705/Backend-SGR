@@ -21,6 +21,17 @@ class PeriodosController {
             res.status(500).json({ success: false, message: 'Error al obtener cortes' });
         }
     }
+    async updateCorte(req, res) {
+        try {
+            const { codigo_periodo, orden } = req.params;
+            const { fecha_inicio, fecha_fin} = req.body;
+            await PeriodosModel.updateCorte(codigo_periodo, orden, fecha_inicio, fecha_fin);
+            res.json({ success: true, mensaje: "Se han actualizado los cortes correctamente." });
+        } catch (error) {
+            console.error('Error getCortes:', error);
+            res.status(500).json({ success: false, message: 'Error al actualizar cortes. Intente de nuevo mas tarde.' });
+        }
+    }
 }
 
 module.exports = new PeriodosController();

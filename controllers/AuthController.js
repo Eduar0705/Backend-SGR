@@ -51,7 +51,7 @@ class AuthController {
                         periodo_actual: periodosSolic.periodo_general,
                         periodo_usuario: periodosSolic.periodo_usuario ? periodosSolic.periodo_usuario : periodosSolic.periodo_general },
                     process.env.JWT_SECRET,
-                    { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
+                    { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
                 );
                 // Guardar la nueva sesion en la BD
                 await userModel.updateSessionToken(loggedUser.cedula, token);

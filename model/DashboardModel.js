@@ -154,7 +154,7 @@ class DashboardModel {
                 FROM evaluacion e 
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
-                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval AND ru.estado = 'Aprobado'
+                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
                 WHERE ins.cedula_estudiante = ? AND r.activo = 1;
             `;
@@ -164,7 +164,7 @@ class DashboardModel {
                 FROM evaluacion e 
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
-                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval AND ru.estado = 'Aprobado'
+                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
                 WHERE ins.cedula_estudiante = ? AND r.activo = 1 AND er.id IS NULL AND e.fecha_evaluacion < CURDATE();

@@ -10,6 +10,16 @@ class PeriodosController {
             res.status(500).json({ success: false, message: 'Error en el servidor' });
         }
     }
+    async createPeriodo(req, res) {
+        try {
+            const { codigo, fecha_inicio, fecha_fin, id_pensum } = req.body;
+            await PeriodosModel.createPeriodo(codigo, fecha_inicio, fecha_fin, id_pensum);
+            res.json({ success: true, message: "Periodo agregado exitosamente" });
+        } catch (error) {
+            console.error('Error getPensums:', error);
+            res.status(500).json({ success: false, message: 'Error en el servidor obteniendo los datos. Por favor, intente de nuevo más tarde.' });
+        }
+    }
     async deletePeriodo(req, res) {
         try {
             const { codigo_periodo } = req.params;

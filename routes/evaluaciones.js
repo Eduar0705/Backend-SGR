@@ -10,7 +10,6 @@ router.get('/', EvaluacionController.getAllEvaluaciones);
 
 // Catálogos
 router.get('/estrategias', EvaluacionController.getEstrategias);
-router.get('/cortes', EvaluacionController.getCortes);
 router.get('/carreras', EvaluacionController.getCarreras);
 router.get('/rubricas-activas', EvaluacionController.getRubricasActivas);
 

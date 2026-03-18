@@ -7,5 +7,6 @@ const authMiddleware = require('../middleware/auth.middleware');
 router.use(authMiddleware);
 //Para obtener todos los periodos
 router.get('/', PeriodosController.getPeriodos);
+router.get('/cortes', PeriodosController.getCortes);
 
 module.exports = router;

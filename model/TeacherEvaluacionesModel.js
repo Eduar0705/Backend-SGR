@@ -13,7 +13,7 @@ function query(sql, params = []) {
 class TeacherEvaluacionesModel {
     static async getTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
-        //console.log(periodo); periodo = "2025-1"
+        console.log(periodo); periodo = "2025-1"
         let queryParams = [];
 
         if (esAdmin) {
@@ -22,6 +22,7 @@ class TeacherEvaluacionesModel {
                     er.id,
                     s.id AS id_seccion,
                     e.id AS id_evaluacion,
+                    e.contenido,
                     (SELECT COALESCE(SUM(de2.puntaje_obtenido), 0)
                     FROM detalle_evaluacion de2
                     WHERE de2.evaluacion_r_id = er.id) as puntaje_total,
@@ -77,6 +78,7 @@ class TeacherEvaluacionesModel {
                     er.id,
                     s.id AS id_seccion,
                     e.id AS id_evaluacion,
+                    e.contenido,
                     (SELECT COALESCE(SUM(de2.puntaje_obtenido), 0)
                     FROM detalle_evaluacion de2
                     WHERE de2.evaluacion_r_id = er.id) as puntaje_total,

@@ -5,6 +5,7 @@ class StudentEvaluacionesModel {
         const query = `
             SELECT
                 e.id as evaluacion_id,
+                e.contenido,
                 IFNULL(r.nombre_rubrica, 'Rubrica por crear...') AS nombre_rubrica,
                 m.nombre as materia,
                 COALESCE(SUM(DISTINCT de.puntaje_obtenido), 0) as puntaje_total,

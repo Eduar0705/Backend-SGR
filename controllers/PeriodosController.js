@@ -10,20 +10,10 @@ class PeriodosController {
             res.status(500).json({ success: false, message: 'Error en el servidor' });
         }
     }
-    async getPeriodoByCodigo(req, res) {
-        try {
-            const {codigo_periodo} = req.params;
-            const periodo = await PeriodosModel.getPeriodoByCodigo(codigo_periodo);
-            res.json({ success: true, data: periodo });
-        } catch (error) {
-            console.error('Error getPeriodos:', error);
-            res.status(500).json({ success: false, message: 'Error en el servidor' });
-        }
-    }
     async createPeriodo(req, res) {
         try {
-            const { codigo, fecha_inicio, fecha_fin, id_pensum, dias } = req.body;
-            await PeriodosModel.createPeriodo(codigo, fecha_inicio, fecha_fin, id_pensum, dias);
+            const { codigo, fecha_inicio, fecha_fin, id_pensum } = req.body;
+            await PeriodosModel.createPeriodo(codigo, fecha_inicio, fecha_fin, id_pensum);
             res.json({ success: true, message: "Periodo agregado exitosamente" });
         } catch (error) {
             console.error('Error getPensums:', error);
@@ -44,7 +34,6 @@ class PeriodosController {
     async getCortes(req, res) {
         try {
             const periodo = req.query.periodo ? req.query.periodo : req.user.periodo_usuario;
-            console.log('aSADADASDSAD', periodo);
             const cortes = await PeriodosModel.getCortes(periodo);
             res.json({ success: true, cortes });
         } catch (error) {
@@ -71,7 +60,7 @@ class PeriodosController {
             await PeriodosModel.syncCortesEvaluaciones(codigo_periodo);
             res.json({ success: true, mensaje: "Se han actualizado los cortes correctamente." });
         } catch (error) {
-            console.error('Error updateCortes:', error);
+            console.error('Error getCortes:', error);
             res.status(500).json({ success: false, message: 'Error al actualizar cortes. Intente de nuevo mas tarde.' });
         }
     }
@@ -81,7 +70,7 @@ class PeriodosController {
             await PeriodosModel.deleteCorte(codigo_periodo, orden);
             res.json({ success: true, mensaje: "Se han eliminado los cortes correctamente." });
         } catch (error) {
-            console.error('Error deleteCortes:', error);
+            console.error('Error getCortes:', error);
             res.status(500).json({ success: false, message: 'Error al eliminar cortes. Intente de nuevo mas tarde.' });
         }
     }

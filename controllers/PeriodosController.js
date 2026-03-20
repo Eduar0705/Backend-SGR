@@ -74,6 +74,47 @@ class PeriodosController {
             res.status(500).json({ success: false, message: 'Error al eliminar cortes. Intente de nuevo mas tarde.' });
         }
     }
+    async getLapsos(req, res) {
+        try {
+            const periodo = req.query.periodo ? req.query.periodo : req.user.periodo_usuario;
+            const lapsos = await PeriodosModel.getLapsos(periodo);
+            res.json({ success: true, lapsos });
+        } catch (error) {
+            console.error('Error getLapsos:', error);
+            res.status(500).json({ success: false, message: 'Error al obtener lapsos de correciones. Por favor, intente de nuevo más tarde.' });
+        }
+    }
+    async createLapso(req, res) {
+        try {
+            const { fecha_inicio, fecha_fin, codigo_periodo} = req.body;
+            await PeriodosModel.createLapso(codigo_periodo, fecha_inicio, fecha_fin);
+            res.json({ success: true, mensaje: "Se han creado los lapsos correctamente." });
+        } catch (error) {
+            console.error('Error createLapso:', error);
+            res.status(500).json({ success: false, message: 'Error al crear lapsos. Intente de nuevo mas tarde.' });
+        }
+    }
+    async updateLapso(req, res) {
+        try {
+            const { id } = req.params;
+            const { fecha_inicio, fecha_fin} = req.body;
+            await PeriodosModel.updateLapso(id, fecha_inicio, fecha_fin);
+            res.json({ success: true, mensaje: "Se han actualizado los lapsos correctamente." });
+        } catch (error) {
+            console.error('Error updateLapso:', error);
+            res.status(500).json({ success: false, message: 'Error al actualizar lapsos. Por favor, intente de nuevo mas tarde.' });
+        }
+    }
+    async deleteLapso(req, res) {
+        try {
+            const { id } = req.params;
+            await PeriodosModel.deleteLapso(id);
+            res.json({ success: true, mensaje: "Se han eliminado los lapsos correctamente." });
+        } catch (error) {
+            console.error('Error deleteLapso:', error);
+            res.status(500).json({ success: false, message: 'Error al eliminar lapsos. Por favor, intente de nuevo mas tarde.' });
+        }
+    }
      async getPensums(req, res) {
         try {
             const pensums = await PeriodosModel.getPensums();

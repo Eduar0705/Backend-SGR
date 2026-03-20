@@ -15,6 +15,11 @@ router.post('/crearcorte', PeriodosController.createCorte);
 router.delete('/deletecorte/:codigo_periodo/:orden', PeriodosController.deleteCorte);
 router.put('/updcortes/:codigo_periodo/:orden', PeriodosController.updateCorte);
 
+router.get('/lapsos', PeriodosController.getLapsos);
+router.post('/lapsos/crear', PeriodosController.createLapso);
+router.put('/lapsos/update/:id', PeriodosController.updateLapso);
+router.delete('/lapsos/delete/:id', PeriodosController.deleteLapso);
+
 router.get('/pensums', PeriodosController.getPensums)
 
 module.exports = router;

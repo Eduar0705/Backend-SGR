@@ -163,6 +163,58 @@ class PeriodosModel {
             });
         });
     }
+    async getLapsos(periodo) {
+        return new Promise((resolve, reject) => {
+            const query = `SELECT
+                        *
+                    FROM lapso_correcciones
+                    WHERE codigo_periodo = ?
+                    ORDER BY fecha_inicio ASC`
+            connection.query(query, [periodo],(err, results) => {
+                if (err) return reject(err);
+                resolve(results);
+            });
+        });
+    }
+    async createLapso(codigo_periodo, fecha_inicio, fecha_fin) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO lapso_correcciones (codigo_periodo, fecha_inicio, fecha_fin)
+                VALUES (?, ?, ?);
+            `;
+            connection.query(query, [codigo_periodo, fecha_inicio, fecha_fin], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
+    async updateLapso(id, fecha_inicio, fecha_fin) {
+        return new Promise((resolve, reject) => {
+            console.log(id, fecha_inicio, fecha_fin)
+            const query = `
+                UPDATE lapso_correcciones
+                SET fecha_inicio=?, fecha_fin=?
+                WHERE id=?
+            `;
+            connection.query(query, [fecha_inicio, fecha_fin, id], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
+    async deleteLapso(id)
+    {
+        return new Promise((resolve, reject) => {
+            const query = `
+                DELETE FROM lapso_correcciones
+                WHERE id=?
+            `;
+            connection.query(query, [id], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
     async getPensums() {
         return new Promise((resolve, reject) => {
             const query = `SELECT

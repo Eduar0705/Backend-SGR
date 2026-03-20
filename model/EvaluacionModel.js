@@ -452,6 +452,7 @@ class EvaluacionModel {
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
                 INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
                 WHERE s.id = ?
+                GROUP BY hs.id;
             `;
             pool.query(query, [seccionId], (error, results) => {
                 if (error) return reject(error);

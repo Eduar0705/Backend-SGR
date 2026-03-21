@@ -1,7 +1,19 @@
 const TeacherEvaluacionesModel = require('../model/TeacherEvaluacionesModel');
 
 class TeacherEvaluacionesController {
-    static async getEvaluaciones(req, res) {
+    static async getAllTeacherEvaluaciones(req, res) {
+        try {
+            const docenteCedula = req.user.cedula;
+            const esAdmin = req.user.id_rol === 1;
+            const periodo = req.user.periodo_usuario;
+            const evaluaciones = await TeacherEvaluacionesModel.getAllTeacherEvaluaciones(docenteCedula, esAdmin, periodo);
+            res.json({ success: true, evaluaciones });
+        } catch (error) {
+            console.error('getAllTeacherEvaluaciones: Error al obtener evaluaciones (docente):', error);
+            res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+        }
+    }
+    static async getTeacherEvaluaciones(req, res) {
         try {
             const docenteCedula = req.user.cedula;
             const esAdmin = req.user.id_rol === 1;
@@ -9,7 +21,17 @@ class TeacherEvaluacionesController {
             const evaluaciones = await TeacherEvaluacionesModel.getTeacherEvaluaciones(docenteCedula, esAdmin, periodo);
             res.json({ success: true, evaluaciones });
         } catch (error) {
-            console.error('Error al obtener evaluaciones (docente):', error);
+            console.error('getTeacherEvaluaciones: Error al obtener evaluaciones (docente):', error);
+            res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+        }
+    }
+    static async getEvaluadasByEval(req, res) {
+        try {
+            const {id_eval} = req.params
+            const evaluaciones = await TeacherEvaluacionesModel.getEvaluadasByEval(id_eval);
+            res.json({ success: true, evaluaciones });
+        } catch (error) {
+            console.error('getEvaluadasByEval: Error al obtener evaluaciones (docente):', error);
             res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
         }
     }

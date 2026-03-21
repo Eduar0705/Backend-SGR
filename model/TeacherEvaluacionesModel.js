@@ -11,7 +11,7 @@ function query(sql, params = []) {
 }
 
 class TeacherEvaluacionesModel {
-    static async getTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
+    static async getAllTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
         console.log(periodo); periodo = "2025-1"
         let queryParams = [];
@@ -145,12 +145,158 @@ class TeacherEvaluacionesModel {
                 iniciales,
                 fecha_formateada: fecha ? new Date(fecha).toLocaleDateString('es-ES') : 'Pendiente',
                 calificacion: ev.puntaje_total ?
-                    `${parseFloat(ev.puntaje_total).toFixed(1)}/${ev.porcentaje_evaluacion} (${(parseFloat(ev.puntaje_total) / 5).toFixed(1)}/${ev.porcentaje_evaluacion/5})` :
+                    `${parseFloat(ev.puntaje_total).toFixed(1)}/${ev.porcentaje_evaluacion} (${(parseFloat(ev.puntaje_total) / 5).toFixed(1)}/${ev.porcentaje_evaluacion / 5})` :
                     '-/-'
             };
         });
     }
+    static async getTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
+        let sqlQuery;
+        console.log(periodo); periodo = "2025-1"
+        let queryParams = [];
 
+        if (esAdmin) {
+            sqlQuery = `
+                SELECT
+                    s.id AS id_seccion,
+                    e.id AS id_evaluacion,
+                    e.contenido,
+                    e.fecha_evaluacion AS fecha_fija,
+                    IFNULL(r.nombre_rubrica, 'Sin Rúbrica') as nombre_rubrica,
+                    tr.nombre AS tipo_evaluacion,
+                    e.ponderacion AS porcentaje_evaluacion,
+                    r.instrucciones,
+                    e.competencias,
+                    m.nombre as materia_nombre,
+                    m.codigo as materia_codigo,
+                    c.nombre AS carrera_nombre,
+                    mp.num_semestre AS materia_semestre,
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT(hs2.dia, ' (', hs2.hora_inicio, '-', hs2.hora_cierre, ')') SEPARATOR ', ')
+                    FROM horario_seccion hs2
+                    WHERE hs2.id_seccion = s.id) AS seccion_horario,
+                    hs.aula AS seccion_aula
+                FROM evaluacion e 
+                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
+                INNER JOIN rubrica r ON r.id = ru.id_rubrica
+                INNER JOIN seccion s ON e.id_seccion = s.id
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+                LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
+                LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+                AND e.codigo_periodo = ?
+                GROUP BY e.id
+                ORDER BY fecha_fija DESC;
+            `;
+            queryParams = [periodo];
+        } else {
+            sqlQuery = `
+                SELECT
+                    s.id AS id_seccion,
+                    e.id AS id_evaluacion,
+                    e.contenido,
+                    e.fecha_evaluacion AS fecha_fija,
+                    IFNULL(r.nombre_rubrica, 'Sin Rúbrica') as nombre_rubrica,
+                    tr.nombre AS tipo_evaluacion,
+                    e.ponderacion AS porcentaje_evaluacion,
+                    r.instrucciones,
+                    e.competencias,
+                    m.nombre as materia_nombre,
+                    m.codigo as materia_codigo,
+                    c.nombre AS carrera_nombre,
+                    mp.num_semestre AS materia_semestre,
+                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT(hs2.dia, ' (', hs2.hora_inicio, '-', hs2.hora_cierre, ')') SEPARATOR ', ')
+                    FROM horario_seccion hs2
+                    WHERE hs2.id_seccion = s.id) AS seccion_horario,
+                    hs.aula AS seccion_aula
+                FROM evaluacion e 
+                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
+                INNER JOIN rubrica r ON r.id = ru.id_rubrica
+                INNER JOIN seccion s ON e.id_seccion = s.id
+                INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+                LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
+                LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+                WHERE pd.docente_cedula = ?
+                AND e.codigo_periodo = ?
+                GROUP BY e.id
+                ORDER BY fecha_fija DESC;
+            `;
+            queryParams = [docenteCedula, periodo];
+        }
+
+        const evaluaciones = await query(sqlQuery, queryParams);
+        return evaluaciones.map(ev => {
+            const fecha = ev.fecha_fija ?
+                new Date(ev.fecha_fija).toISOString() : null;
+
+            return {
+                ...ev,
+                fecha_formateada: fecha ? new Date(fecha).toLocaleDateString('es-ES') : 'Pendiente',
+            };
+        });
+    }
+    static async getEvaluadasByEval(idEval) {
+        let sqlQuery = `
+                SELECT
+                    er.id,
+                    e.id AS id_evaluacion,
+                    (SELECT COALESCE(SUM(de2.puntaje_obtenido), 0)
+                    FROM detalle_evaluacion de2
+                    WHERE de2.evaluacion_r_id = er.id) as puntaje_total,
+                    e.fecha_evaluacion AS fecha_fija,
+                    er.fecha_evaluado as fecha_evaluacion,
+                    er.observaciones,
+                    ins.cedula_estudiante as estudiante_cedula,
+                    u.nombre AS estudiante_nombre,
+                    u.apeliido AS estudiante_apellido,
+                    r.nombre_rubrica as nombre_rubrica,
+                    tr.nombre as tipo_evaluacion,
+                    IFNULL((SELECT SUM(cr2.puntaje_maximo)
+                    FROM criterio_rubrica cr2
+                    WHERE cr2.rubrica_id = r.id), e.ponderacion) as porcentaje_evaluacion,
+                    r.instrucciones,
+                    CASE
+                        WHEN er.id IS NOT NULL AND EXISTS (
+                            SELECT 1 FROM detalle_evaluacion de3 
+                            WHERE de3.evaluacion_r_id = er.id LIMIT 1
+                        ) THEN 'Completada'
+                        ELSE 'Pendiente'
+                    END as estado
+                FROM evaluacion e 
+                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
+                INNER JOIN rubrica r ON r.id = ru.id_rubrica
+                INNER JOIN seccion s ON e.id_seccion = s.id
+                INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+                INNER JOIN usuario_estudiante ue ON ins.cedula_estudiante = ue.cedula_usuario
+                INNER JOIN usuario u ON ue.cedula_usuario = u.cedula
+                LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ue.cedula_usuario
+                LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+                WHERE e.id = ?
+                GROUP BY e.id, ins.cedula_estudiante
+                ORDER BY er.fecha_evaluado DESC;
+            `;
+
+        const evaluaciones = await query(sqlQuery, [idEval]);
+        return evaluaciones.map(ev => {
+            const iniciales = (ev.estudiante_nombre.charAt(0) + ev.estudiante_apellido.charAt(0)).toUpperCase();
+            const fecha = ev.fecha_evaluacion ?
+                new Date(ev.fecha_evaluacion).toISOString() : null;
+
+            return {
+                ...ev,
+                iniciales,
+                fecha_formateada: fecha ? new Date(fecha).toLocaleDateString('es-ES') : 'Pendiente',
+                calificacion: ev.puntaje_total ?
+                    `${parseFloat(ev.puntaje_total).toFixed(1)}/${ev.porcentaje_evaluacion} (${(parseFloat(ev.puntaje_total) / 5).toFixed(1)}/${ev.porcentaje_evaluacion / 5})` :
+                    '-/-'
+            };
+        });
+    }
     static async getCarreras(docenteCedula, periodo) {
         console.log(periodo); periodo = "2025-1"
         const sqlQuery = `
@@ -447,9 +593,9 @@ class TeacherEvaluacionesModel {
     static async saveEvaluacion(evaluacionId, estudianteCedula, payload) {
         const q_er = `SELECT id FROM evaluacion_realizada WHERE id_evaluacion = ? AND cedula_evaluado = ?`;
         const rows = await query(q_er, [evaluacionId, estudianteCedula]);
-        if(rows.length === 0) throw new Error("No se encontró el registro de evaluación para calificar.");
+        if (rows.length === 0) throw new Error("No se encontró el registro de evaluación para calificar.");
         const er_id = rows[0].id;
-        
+
         await query(`DELETE FROM detalle_evaluacion WHERE evaluacion_r_id = ?`, [er_id]);
 
         if (payload.detalles && payload.detalles.length > 0) {

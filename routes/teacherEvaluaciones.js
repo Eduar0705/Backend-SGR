@@ -7,13 +7,11 @@ const authMiddleware = require('../middleware/auth.middleware');
 router.use(authMiddleware);
 
 // Listar evaluaciones del docente (o todas si es admin)
-router.get('/', TeacherEvaluacionesController.getEvaluaciones);
+router.get('/', TeacherEvaluacionesController.getTeacherEvaluaciones);
+router.get('/evaluadas/:id_eval', TeacherEvaluacionesController.getEvaluadasByEval);
 
 // Opciones en cascada y datos
 router.get('/carreras', TeacherEvaluacionesController.getCarreras);
-router.get('/carrera/:carreraCodigo/materias', TeacherEvaluacionesController.getMaterias);
-router.get('/materia/:materiaCodigo/secciones', TeacherEvaluacionesController.getSecciones);
-router.get('/seccion/:seccionId/estudiantes', TeacherEvaluacionesController.getEstudiantes);
 router.get('/rubricas/activas', TeacherEvaluacionesController.getRubricasActivas);
 
 // Crear nuevas evaluaciones
@@ -24,5 +22,10 @@ router.get('/:evaluacionId/:estudianteCedula/detalles', TeacherEvaluacionesContr
 
 // Guardar evaluación (Calificar / Reprobar)
 router.post('/:evaluacionId/:estudianteCedula/guardar', TeacherEvaluacionesController.saveEvaluacion);
+
+//Carga jerarquica
+router.get('/carrera/:carreraCodigo/materias', TeacherEvaluacionesController.getMaterias);
+router.get('/materia/:materiaCodigo/secciones', TeacherEvaluacionesController.getSecciones);
+router.get('/seccion/:seccionId/estudiantes', TeacherEvaluacionesController.getEstudiantes);
 
 module.exports = router;

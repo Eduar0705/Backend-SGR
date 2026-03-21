@@ -13,7 +13,7 @@ function query(sql, params = []) {
 class TeacherEvaluacionesModel {
     static async getTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
-        //console.log(periodo); periodo = "2025-1"
+        console.log(periodo); periodo = "2025-1"
         let queryParams = [];
 
         if (esAdmin) {
@@ -41,7 +41,7 @@ class TeacherEvaluacionesModel {
                     m.nombre as materia_nombre,
                     m.codigo as materia_codigo,
                     c.nombre AS carrera_nombre,
-                    e.codigo_periodo AS materia_semestre,
+                    mp.num_semestre AS materia_semestre,
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(hs2.dia, ' (', hs2.hora_inicio, '-', hs2.hora_cierre, ')') SEPARATOR ', ')
                     FROM horario_seccion hs2
@@ -97,7 +97,7 @@ class TeacherEvaluacionesModel {
                     m.nombre as materia_nombre,
                     m.codigo as materia_codigo,
                     c.nombre AS carrera_nombre,
-                    e.codigo_periodo AS materia_semestre,
+                    mp.num_semestre AS materia_semestre,
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(hs2.dia, ' (', hs2.hora_inicio, '-', hs2.hora_cierre, ')') SEPARATOR ', ')
                     FROM horario_seccion hs2

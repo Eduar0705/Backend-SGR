@@ -16,6 +16,7 @@ class AcademicoController {
         try {
             const { carreraCodigo } = req.params;
             const periodo = req.query.periodo
+            console.log(carreraCodigo, periodo)
             const semestres = await RubricaModel.getSemestres(carreraCodigo, periodo);
             res.json(semestres);
         } catch (error) {

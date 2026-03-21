@@ -1,8 +1,8 @@
 const connection = require('./conexion');
 
 class PermisosModel {
-    async getPermisosByDocente(cedula) {
-        return new Promise((resolve, reject) => { //CONDICIONAR POR PERIODO URGENTEMENTE
+    async getPermisosByDocente(cedula, periodo) {
+        return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
                     pd.id,
@@ -22,9 +22,11 @@ class PermisosModel {
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 WHERE pd.docente_cedula = ? AND pd.activo = 1
+                AND pa.codigo = ?
+                GROUP BY pd.id
                 ORDER BY carrera_nombre, semestre, materia_nombre, seccion_codigo;
             `;
-            connection.query(query, [cedula], (err, results) => {
+            connection.query(query, [cedula, periodo], (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
             });

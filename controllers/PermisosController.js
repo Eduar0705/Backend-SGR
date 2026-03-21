@@ -1,4 +1,4 @@
-const PermisosModel = require('../model/PeriodosModel');
+const PermisosModel = require('../model/PermisosModel');
 
 class PermisosController {
     async getPermisosByDocente(req, res) {
@@ -7,7 +7,8 @@ class PermisosController {
                 return res.status(403).json({ success: false, message: 'Acceso denegado.' });
             }
             const { cedula } = req.params;
-            const permisos = await PermisosModel.getPermisosByDocente(cedula);
+            const periodo = req.query.periodo;
+            const permisos = await PermisosModel.getPermisosByDocente(cedula, periodo);
             res.json({ success: true, data: permisos });
         } catch (error) {
             console.error('Error getPermisosByDocente:', error);

@@ -26,6 +26,7 @@ class TeacherEvaluacionesModel {
                     (SELECT COALESCE(SUM(de2.puntaje_obtenido), 0)
                     FROM detalle_evaluacion de2
                     WHERE de2.evaluacion_r_id = er.id) as puntaje_total,
+                    e.fecha_evaluacion AS fecha_fija,
                     er.fecha_evaluado as fecha_evaluacion,
                     er.observaciones,
                     ins.cedula_estudiante as estudiante_cedula,
@@ -82,6 +83,7 @@ class TeacherEvaluacionesModel {
                     (SELECT COALESCE(SUM(de2.puntaje_obtenido), 0)
                     FROM detalle_evaluacion de2
                     WHERE de2.evaluacion_r_id = er.id) as puntaje_total,
+                    e.fecha_evaluacion AS fecha_fija,
                     er.fecha_evaluado as fecha_evaluacion,
                     er.observaciones,
                     ins.cedula_estudiante as estudiante_cedula,

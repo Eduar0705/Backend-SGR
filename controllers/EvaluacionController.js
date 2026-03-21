@@ -29,6 +29,25 @@ class EvaluacionController {
             res.status(500).json({ success: false, message: 'Error al obtener evaluaciones' });
         }
     }
+    async getEvaluacionesFromSeccion(req, res) {
+        try {
+            const periodo = req.query.periodo;
+            const { id_seccion } = req.params;
+            const evaluaciones = await EvaluacionModel.getEvaluacionesFromSeccion(periodo, id_seccion);
+            const evaluacionesFormateadas = evaluaciones.map(ev => ({
+                ...ev,
+                fecha_formateada: ev.fecha_evaluacion ? 
+                    new Date(ev.fecha_evaluacion).toLocaleDateString('es-ES', {
+                        day: '2-digit', month: '2-digit', year: 'numeric'
+                    }) : 'Sin fecha',
+                estado_formateado: ev.estado
+            }));
+            res.json({ success: true, evaluaciones: evaluacionesFormateadas });
+        } catch (error) {
+            console.error('Error getEvaluacionesBySeccion:', error);
+            res.status(500).json({ success: false, message: 'Error al obtener evaluaciones' });
+        }
+    }
 
     async getEstrategias(req, res) {
         try {

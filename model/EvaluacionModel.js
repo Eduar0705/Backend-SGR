@@ -150,7 +150,7 @@ class EvaluacionModel {
             });
         });
     }
-    static getEvaluacionesBySeccion(periodo) {
+    static getEvaluacionesFromSeccion(periodo, id_seccion) {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT
@@ -238,7 +238,7 @@ class EvaluacionModel {
                 ) AS todo
                 ORDER BY fecha_evaluacion DESC;
             `;
-            pool.query(query, [periodo], (error, results) => {
+            pool.query(query, [periodo, id_seccion], (error, results) => {
                 if (error) return reject(error);
                 resolve(results);
             });
@@ -613,7 +613,7 @@ class EvaluacionModel {
         });
     }
 
-    static getEvaluacionesBySeccion(seccionId) {
+    static getEvaluacionesBySeccion(periodo, seccionId) {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 

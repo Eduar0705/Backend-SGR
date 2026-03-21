@@ -94,6 +94,156 @@ class EvaluacionModel {
             });
         });
     }
+    static getAllSecciones(periodo) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT
+                    id_seccion,
+                    semestre,
+                    docente_cedula,
+                    docente_nombre,
+                    docente_apellido,
+                    materia_nombre,
+                    carrera_nombre,
+                    seccion_codigo,
+                    id_horario,
+                    total_evaluaciones
+                FROM
+                (
+                    SELECT 
+                        mp.num_semestre AS semestre,
+                        u.cedula as docente_cedula,
+                        u.nombre as docente_nombre,
+                        u.apeliido as docente_apellido,
+                        m.nombre as materia_nombre,
+                        c.nombre as carrera_nombre,
+                        COALESCE(estud_sec.cantidad_en_seccion,0) AS estudiantes_seccion, 
+                        CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                        hs.id AS id_horario, 
+                        COUNT(e.id) AS total_evaluaciones,
+                        s.id AS id_seccion
+                    FROM seccion s
+                    INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                    INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                    INNER JOIN pensum p ON mp.id_pensum = p.id
+                    INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
+                    INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+                    INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                    INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
+                    INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+                    LEFT JOIN (
+                        SELECT 
+                            COUNT(DISTINCT ins.cedula_estudiante) AS cantidad_en_seccion, 
+                            ins.id_seccion
+                        FROM inscripcion_seccion ins
+                        GROUP BY ins.id_seccion
+                    ) AS estud_sec ON s.id = estud_sec.id_seccion
+                    LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
+                    LEFT JOIN evaluacion e ON s.id = e.id_seccion
+                    WHERE e.codigo_periodo = ?
+                    GROUP BY s.id
+                ) AS todo;
+            `;
+            pool.query(query, [periodo], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
+    static getEvaluacionesBySeccion(periodo) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT
+                    evaluacion_id,
+                    id_seccion,
+                    contenido_evaluacion,
+                    semestre,
+                    rubrica_id,
+                    nombre_rubrica,
+                    valor,
+                    docente_cedula,
+                    docente_nombre,
+                    docente_apellido,
+                    materia_nombre,
+                    carrera_nombre,
+                    total_evaluaciones,
+                    seccion_codigo,
+                    completadas,
+                    total_evaluaciones - completadas AS pendientes,
+                    fecha_evaluacion,
+                    id_horario,
+                    tipo_horario,
+                    CASE
+                        WHEN rubrica_id IS NULL OR completadas=0 THEN 'Pendiente'
+                        WHEN rubrica_id IS NOT NULL AND total_evaluaciones = completadas THEN 'Completada'
+                        ELSE 'En Progreso'
+                    END as estado
+                FROM
+                (
+                    SELECT 
+                        e.id AS evaluacion_id,
+                        e.contenido AS contenido_evaluacion,
+                        r.id AS rubrica_id,
+                        mp.num_semestre AS semestre,
+                        IFNULL(r.nombre_rubrica, 'Sin rubrica') AS nombre_rubrica,
+                        e.ponderacion as valor,
+                        u.cedula as docente_cedula,
+                        u.nombre as docente_nombre,
+                        u.apeliido as docente_apellido,
+                        m.nombre as materia_nombre,
+                        c.nombre as carrera_nombre,
+                        COALESCE(estud_sec.cantidad_en_seccion,0) AS total_evaluaciones, 
+                        CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                        (SELECT COALESCE(COUNT(DISTINCT er.id),0) FROM evaluacion_realizada er
+                        INNER JOIN evaluacion ON er.id_evaluacion = e.id) AS completadas,
+                        e.fecha_evaluacion,
+                        IFNULL(he.id_horario, hec.id) AS id_horario, 
+                        CASE 
+                            WHEN he.id_horario IS NOT NULL THEN 'Sección'
+                            WHEN hec.id IS NOT NULL THEN 'Otro'
+                            ELSE 'Sin horario'
+                        END AS tipo_horario,
+                        s.id AS id_seccion
+                    FROM evaluacion e
+                    INNER JOIN seccion s ON e.id_seccion = s.id
+                    INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                    INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                    INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+                    INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                    INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
+                    INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+                    LEFT JOIN (
+                        SELECT 
+                            COUNT(DISTINCT ins.cedula_estudiante) AS cantidad_en_seccion, 
+                            ins.id_seccion
+                        FROM inscripcion_seccion ins
+                        GROUP BY ins.id_seccion
+                    ) AS estud_sec ON s.id = estud_sec.id_seccion
+                    LEFT JOIN (
+                        SELECT 
+                            er.id,
+                            er.id_evaluacion,
+                            SUM(de.puntaje_obtenido) AS puntaje_eval
+                        FROM evaluacion_realizada er 
+                        INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                        GROUP BY er.id, er.id_evaluacion
+                    ) AS eval_est ON eval_est.id_evaluacion = e.id
+                    LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
+                    LEFT JOIN rubrica r ON ru.id_rubrica = r.id
+                    LEFT JOIN horario_eval he ON e.id = he.id_eval
+                    LEFT JOIN horario_eval_clandestina hec ON e.id = hec.id_eval
+                    WHERE e.codigo_periodo = ?
+                    AND s.id = ?
+                    GROUP BY e.id
+                ) AS todo
+                ORDER BY fecha_evaluacion DESC;
+            `;
+            pool.query(query, [periodo], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
 
     static getEstrategias() {
         return new Promise((resolve, reject) => {

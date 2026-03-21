@@ -1,6 +1,16 @@
 const EvaluacionModel = require('../model/EvaluacionModel');
 
 class EvaluacionController {
+    async getAllSecciones(req, res) {
+        try {
+            const periodo = req.query.periodo;
+            const secciones = await EvaluacionModel.getAllSecciones(periodo);
+            res.json({ success: true, secciones: secciones });
+        } catch (error) {
+            console.error('Error getAllSecciones:', error);
+            res.status(500).json({ success: false, message: 'Error al obtener secciones. Por favor, intente de nuevo más tarde' });
+        }
+    }
     async getAllEvaluaciones(req, res) {
         try {
             const periodo = req.query.periodo;

@@ -165,9 +165,12 @@ class TeacherEvaluacionesModel {
                     IFNULL(r.nombre_rubrica, 'Sin Rúbrica') as nombre_rubrica,
                     tr.nombre AS tipo_evaluacion,
                     e.ponderacion AS porcentaje_evaluacion,
+                    e.corte_orden AS corte,
                     r.instrucciones,
                     r.id AS rubrica_id,
                     e.competencias,
+                    EXISTS(SELECT 1 FROM evaluacion_realizada er 
+                    WHERE er.id_evaluacion = e.id) AS existe_evaluado,
                     m.nombre as materia_nombre,
                     m.codigo as materia_codigo,
                     c.nombre AS carrera_nombre,
@@ -202,6 +205,8 @@ class TeacherEvaluacionesModel {
                     tr.nombre AS tipo_evaluacion,
                     e.ponderacion AS porcentaje_evaluacion,
                     r.instrucciones,
+                    EXISTS(SELECT 1 FROM evaluacion_realizada er 
+                    WHERE er.id_evaluacion = e.id) AS existe_evaluado,
                     r.id AS rubrica_id,
                     e.competencias,
                     m.nombre as materia_nombre,
@@ -235,7 +240,6 @@ class TeacherEvaluacionesModel {
         return evaluaciones.map(ev => {
             const fecha = ev.fecha_fija ?
                 new Date(ev.fecha_fija).toISOString() : null;
-
             return {
                 ...ev,
                 fecha_formateada: fecha ? new Date(fecha).toLocaleDateString('es-ES') : 'Pendiente',

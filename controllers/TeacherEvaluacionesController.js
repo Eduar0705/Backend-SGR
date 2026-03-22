@@ -123,7 +123,8 @@ class TeacherEvaluacionesController {
         try {
             const { evaluacionId, estudianteCedula } = req.params;
             const payload = req.body;
-            await TeacherEvaluacionesModel.saveEvaluacion(evaluacionId, estudianteCedula, payload);
+            const cedula_evaluador = req.user.cedula
+            await TeacherEvaluacionesModel.saveEvaluacion(evaluacionId, estudianteCedula, cedula_evaluador, payload);
             res.json({ success: true, message: 'Evaluación guardada con éxito' });
         } catch (error) {
             console.error('Error al guardar:', error);

@@ -591,22 +591,83 @@ class TeacherEvaluacionesModel {
         };
     }
 
-    static async saveEvaluacion(evaluacionId, estudianteCedula, payload) {
-        const q_er = `SELECT id FROM evaluacion_realizada WHERE id_evaluacion = ? AND cedula_evaluado = ?`;
-        const rows = await query(q_er, [evaluacionId, estudianteCedula]);
-        if (rows.length === 0) throw new Error("No se encontró el registro de evaluación para calificar.");
-        const er_id = rows[0].id;
+    static async saveEvaluacion(evaluacionId, estudianteCedula, evaluadorCedula, payload) {
+        const pool = conexion
 
-        await query(`DELETE FROM detalle_evaluacion WHERE evaluacion_r_id = ?`, [er_id]);
+        const connection = await new Promise((resolve, reject) => {
+            pool.getConnection((err, conn) => err ? reject(err) : resolve(conn));
+        });
 
-        if (payload.detalles && payload.detalles.length > 0) {
-            const values = payload.detalles.map(d => [er_id, d.criterio_id, d.nivel_id, d.puntaje_obtenido, null /* observaciones */]);
-            await query(`INSERT INTO detalle_evaluacion (evaluacion_r_id, id_criterio_detalle, orden_detalle, puntaje_obtenido, observaciones) VALUES ?`, [values]);
-        }
-        await query(`UPDATE evaluacion_realizada SET fecha_evaluado = NOW(), observaciones = ? WHERE id = ?`, [payload.observaciones || '', er_id]);
+        const query = (sql, params) => new Promise((resolve, reject) => {
+            connection.query(sql, params, (err, results) => err ? reject(err) : resolve(results));
+        });
+
+        const beginTransaction = () => new Promise((resolve, reject) => {
+            connection.beginTransaction(err => err ? reject(err) : resolve());
+        });
+
+        const commit = () => new Promise((resolve, reject) => {
+            connection.commit(err => err ? reject(err) : resolve());
+        });
+
+        const rollback = () => new Promise((resolve, reject) => {
+            connection.rollback(() => resolve()); // rollback siempre resuelve
+        });
+
+        await beginTransaction();
+
+        let er_id;
 
         try {
-            const [evalInfo] = await query(`
+            const rows = await query(
+                `SELECT id FROM evaluacion_realizada WHERE id_evaluacion = ? AND cedula_evaluado = ?`,
+                [evaluacionId, estudianteCedula]
+            );
+
+            if (rows.length === 0) {
+                const result_insert = await query(
+                    `INSERT INTO evaluacion_realizada (id_evaluacion, cedula_evaluado, cedula_evaluador, observaciones)
+                 VALUES (?, ?, ?, ?)`,
+                    [evaluacionId, estudianteCedula, evaluadorCedula, payload.observaciones]
+                );
+                er_id = result_insert.insertId;
+            } else {
+                er_id = rows[0].id;
+                await query(
+                    `DELETE FROM detalle_evaluacion WHERE evaluacion_r_id = ?`,
+                    [er_id]
+                );
+            }
+
+            if (payload.detalles && payload.detalles.length > 0) {
+                const values = payload.detalles.map(d => [
+                    er_id, d.criterio_id, d.nivel_id, d.puntaje_obtenido, null
+                ]);
+                await query(
+                    `INSERT INTO detalle_evaluacion (evaluacion_r_id, id_criterio_detalle, orden_detalle, puntaje_obtenido, observaciones)
+                 VALUES ?`,
+                    [values]
+                );
+            }
+
+            await query(
+                `UPDATE evaluacion_realizada SET fecha_evaluado = NOW(), observaciones = ? WHERE id = ?`,
+                [payload.observaciones || '', er_id]
+            );
+
+            await commit();
+
+        } catch (err) {
+            await rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
+
+        // Notificación fuera de la transacción (fallo no crítico)
+        try {
+            const rows = await new Promise((resolve, reject) => {
+                pool.query(`
                 SELECT r.nombre_rubrica, m.nombre as materia_nombre
                 FROM evaluacion_realizada er
                 INNER JOIN evaluacion e ON er.id_evaluacion = e.id
@@ -616,13 +677,15 @@ class TeacherEvaluacionesModel {
                 INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
                 WHERE er.id = ?
-            `, [er_id]);
+            `, [er_id], (err, results) => err ? reject(err) : resolve(results));
+            });
 
+            const evalInfo = rows[0];
             if (evalInfo) {
                 await NotificacionModel.create({
                     usuario_destino: estudianteCedula,
                     mensaje: `Tu evaluación en la materia "${evalInfo.materia_nombre}" ha sido corregida (Rúbrica: ${evalInfo.nombre_rubrica}).`,
-                    id_rubrica: null // Opcional: podrías pasar el ID de la rúbrica si quieres linkear
+                    id_rubrica: null
                 });
             }
         } catch (notifErr) {

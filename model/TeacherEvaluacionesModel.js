@@ -205,6 +205,7 @@ class TeacherEvaluacionesModel {
                     tr.nombre AS tipo_evaluacion,
                     e.ponderacion AS porcentaje_evaluacion,
                     r.instrucciones,
+                    e.corte_orden AS corte,
                     EXISTS(SELECT 1 FROM evaluacion_realizada er 
                     WHERE er.id_evaluacion = e.id) AS existe_evaluado,
                     r.id AS rubrica_id,

@@ -268,10 +268,7 @@ class TeacherEvaluacionesModel {
                     WHERE cr2.rubrica_id = r.id), e.ponderacion) as porcentaje_evaluacion,
                     r.instrucciones,
                     CASE
-                        WHEN er.id IS NOT NULL AND EXISTS (
-                            SELECT 1 FROM detalle_evaluacion de3 
-                            WHERE de3.evaluacion_r_id = er.id LIMIT 1
-                        ) THEN 'Completada'
+                        WHEN er.id IS NOT NULL THEN 'Completada'
                         ELSE 'Pendiente'
                     END as estado
                 FROM evaluacion e 

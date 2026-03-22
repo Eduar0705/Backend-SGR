@@ -68,8 +68,16 @@ class EvaluacionController {
             res.status(500).json({ success: false, message: 'Error al obtener carreras' });
         }
     }
-
-    
+    async deleteEvaluacion(req, res) {
+        try {
+            const {id} = req.params
+            await EvaluacionModel.deleteEvaluacion(id);
+            res.json({ success: true, message: "Se ha eliminado la evaluación solicitada." });
+        } catch (error) {
+            console.error('Error deleteEvaluacion:', error);
+            res.status(500).json({ success: false, message: 'Error al eliminar evaluaciones' });
+        }
+    }
 
     async getMateriasByCarrera(req, res) {
         try {

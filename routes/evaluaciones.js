@@ -25,5 +25,6 @@ router.get('/seccion/:seccionId/horario', EvaluacionController.getHorarioBySecci
 
 router.get('/detalle/:id', EvaluacionController.getEvaluacionById);
 router.put('/update/:id', EvaluacionController.updateEvaluacion);
+router.delete('/delete/:id', EvaluacionController.deleteEvaluacion);
 
 module.exports = router;

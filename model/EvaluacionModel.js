@@ -244,6 +244,17 @@ class EvaluacionModel {
             });
         });
     }
+    static deleteEvaluacion(eval_id) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                DELETE FROM evaluacion WHERE id = ?
+            `;
+            pool.query(query, [eval_id], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+    }
 
     static getEstrategias() {
         return new Promise((resolve, reject) => {

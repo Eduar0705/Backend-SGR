@@ -166,6 +166,7 @@ class TeacherEvaluacionesModel {
                     tr.nombre AS tipo_evaluacion,
                     e.ponderacion AS porcentaje_evaluacion,
                     r.instrucciones,
+                    r.id AS rubrica_id,
                     e.competencias,
                     m.nombre as materia_nombre,
                     m.codigo as materia_codigo,
@@ -177,15 +178,15 @@ class TeacherEvaluacionesModel {
                     WHERE hs2.id_seccion = s.id) AS seccion_horario,
                     hs.aula AS seccion_aula
                 FROM evaluacion e 
-                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
-                INNER JOIN rubrica r ON r.id = ru.id_rubrica
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
+                LEFT JOIN rubrica_uso ru ON ru.id_eval = e.id
+                LEFT JOIN rubrica r ON r.id = ru.id_rubrica
                 LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
-                AND e.codigo_periodo = ?
+                WHERE e.codigo_periodo = ?
                 GROUP BY e.id
                 ORDER BY fecha_fija DESC;
             `;
@@ -201,6 +202,7 @@ class TeacherEvaluacionesModel {
                     tr.nombre AS tipo_evaluacion,
                     e.ponderacion AS porcentaje_evaluacion,
                     r.instrucciones,
+                    r.id AS rubrica_id,
                     e.competencias,
                     m.nombre as materia_nombre,
                     m.codigo as materia_codigo,
@@ -212,14 +214,14 @@ class TeacherEvaluacionesModel {
                     WHERE hs2.id_seccion = s.id) AS seccion_horario,
                     hs.aula AS seccion_aula
                 FROM evaluacion e 
-                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
-                INNER JOIN rubrica r ON r.id = ru.id_rubrica
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
+                LEFT JOIN rubrica_uso ru ON ru.id_eval = e.id
+                LEFT JOIN rubrica r ON r.id = ru.id_rubrica
                 LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
                 WHERE pd.docente_cedula = ?
                 AND e.codigo_periodo = ?
@@ -415,7 +417,6 @@ class TeacherEvaluacionesModel {
     }
 
     static async createEvaluaciones(rubrica_id, estudiantes, observaciones, docenteCedula) {
-        // Verificar si la rubrica pertenece a un seccion vinculada al docente
         const verifyQ = `
             SELECT ru.id_eval
             FROM rubrica r

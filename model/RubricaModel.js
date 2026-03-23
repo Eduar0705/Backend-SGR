@@ -333,6 +333,12 @@ class RubricaModel {
             throw error;
         }
     }
+    async deleteRubrica(rubrica_id) {
+        const query = 'UPDATE rubrica SET activo = 0 WHERE id = ?';
+        return new Promise((resolve, reject) => {
+            connection.query(query, [rubrica_id], (err, r) => err ? reject(err) : resolve(r));
+        });
+    }
 
     // ============================================================
     // GESTIÓN DE RÚBRICAS

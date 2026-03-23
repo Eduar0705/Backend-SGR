@@ -63,7 +63,7 @@ router.get("/admin/rubricas/detalle/:id", async function(req, res) {
 
 // Actualizar rúbrica
 router.post('/rubrica/actualizar/:id', RubricaController.updateRubrica);
-
+router.delete('/admin/rubricas/delete/:id', RubricaController.deleteRubrica);
 // Obtener datos para editar rúbrica
 router.get('/admin/rubricas/editar/:id', async (req, res) => {
     try {

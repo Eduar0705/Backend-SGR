@@ -30,6 +30,6 @@ router.get('/editar/:id', TeacherRubricaController.getRubricaForEdit);
 router.put('/:id', TeacherRubricaController.updateRubrica);
 
 // DELETE /api/teacher/rubricas/:id → Eliminar rúbrica
-router.delete('/:id', TeacherRubricaController.deleteRubrica);
+router.delete('/delete/:id', TeacherRubricaController.deleteRubrica);
 
 module.exports = router;

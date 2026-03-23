@@ -1,4 +1,5 @@
 const TeacherRubricaModel = require('../model/TeacherRubricaModel');
+const RubricaModel = require('../model/RubricaModel');
 
 class TeacherRubricaController {
     async getFormData(req, res) {
@@ -116,7 +117,10 @@ class TeacherRubricaController {
 
     async deleteRubrica(req, res) {
         try {
-            const result = await TeacherRubricaModel.deleteRubrica(req.params.id, req.user.cedula);
+            let result;
+            const {id} = req.params;
+            if(req.user.id_rol == 1) result = await RubricaModel.deleteRubrica(id);
+            else result = await TeacherRubricaModel.deleteRubrica(id, req.user.cedula);
             res.json({ success: true, message: result.message });
         } catch (error) {
             console.error('Error deleteRubrica:', error);

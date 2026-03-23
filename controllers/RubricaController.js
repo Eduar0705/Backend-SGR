@@ -109,6 +109,16 @@ class RubricaController {
             res.status(500).json({ success: false, message: error.message || 'Error interno del servidor' });
         }
     }
+    async deleteRubrica(req, res) {
+        try {
+            const { id } = req.params;
+            await RubricaModel.deleteRubrica(id);
+            res.json({success: true, message: "Se ha eliminado la rubrica exitosamente."});
+        } catch (error) {
+            console.error('Error al eliminar rubrica:', error);
+            res.status(500).json({ error: 'Error al eliminar rubrica. Por favor, intente de nuevo mas tarde.' });
+        }
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // FIX PRINCIPAL: updateRubrica reescrito usando async/await con Promises

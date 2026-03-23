@@ -127,7 +127,7 @@ class EvaluacionModel {
                     INNER JOIN pensum p ON mp.id_pensum = p.id
                     INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                     INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                    INNER JOIN evaluacion e ON s.id = e.id_seccion
+                    LEFT JOIN evaluacion e ON s.id = e.id_seccion
                     LEFT JOIN permiso_docente pd ON s.id = pd.id_seccion
                     LEFT JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
                     LEFT JOIN usuario u ON ud.cedula_usuario = u.cedula

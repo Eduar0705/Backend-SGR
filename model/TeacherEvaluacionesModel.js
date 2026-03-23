@@ -219,18 +219,20 @@ class TeacherEvaluacionesModel {
                     FROM horario_seccion hs2
                     WHERE hs2.id_seccion = s.id) AS seccion_horario,
                     hs.aula AS seccion_aula
-                FROM evaluacion e 
-                INNER JOIN seccion s ON e.id_seccion = s.id
+                FROM seccion s 
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                INNER JOIN pensum p ON mp.id_pensum = p.id
+                INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+                LEFT JOIN evaluacion e ON s.id = e.id_seccion
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                 LEFT JOIN rubrica_uso ru ON ru.id_eval = e.id
                 LEFT JOIN rubrica r ON r.id = ru.id_rubrica
                 LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
                 WHERE pd.docente_cedula = ?
-                AND e.codigo_periodo = ?
+                AND pa.codigo = ?
                 GROUP BY e.id
                 ORDER BY fecha_fija DESC;
             `;

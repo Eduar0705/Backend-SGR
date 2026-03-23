@@ -83,7 +83,7 @@ class TeacherRubricaModel {
     }
 
     // Evaluaciones de una sección (sin rúbrica asignada aún)
-    async getEvaluacionesBySeccion(seccionId, periodo) {
+    async getEvaluacionesBySeccion(seccionId) {
         const query = `
             SELECT e.id, e.competencias, e.ponderacion, e.fecha_evaluacion
             FROM evaluacion e
@@ -93,7 +93,7 @@ class TeacherRubricaModel {
             ORDER BY e.fecha_evaluacion
         `;
         return new Promise((resolve, reject) => {
-            connection.query(query, [seccionId, periodo], (err, r) => err ? reject(err) : resolve(r));
+            connection.query(query, [seccionId], (err, r) => err ? reject(err) : resolve(r));
         });
     }
 

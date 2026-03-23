@@ -106,7 +106,6 @@ class EvaluacionModel {
                     materia_nombre,
                     carrera_nombre,
                     seccion_codigo,
-                    id_horario,
                     total_evaluaciones
                 FROM
                 (
@@ -119,18 +118,19 @@ class EvaluacionModel {
                         c.nombre as carrera_nombre,
                         COALESCE(estud_sec.cantidad_en_seccion,0) AS estudiantes_seccion, 
                         CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                        hs.id AS id_horario, 
-                        COUNT(e.id) AS total_evaluaciones,
-                        s.id AS id_seccion
+                        IFNULL(GROUP_CONCAT(DISTINCT CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ' (', hs.aula, ')', ')') SEPARATOR ', '), 'Horario no encontrado') AS horario,
+                        s.id AS id_seccion,
+                        COUNT(e.id) AS total_evaluaciones
                     FROM seccion s
                     INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                     INNER JOIN materia m ON mp.codigo_materia = m.codigo
                     INNER JOIN pensum p ON mp.id_pensum = p.id
                     INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                     INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                    INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                    INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
-                    INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+                    INNER JOIN evaluacion e ON s.id = e.id_seccion
+                    LEFT JOIN permiso_docente pd ON s.id = pd.id_seccion
+                    LEFT JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
+                    LEFT JOIN usuario u ON ud.cedula_usuario = u.cedula
                     LEFT JOIN (
                         SELECT 
                             COUNT(DISTINCT ins.cedula_estudiante) AS cantidad_en_seccion, 
@@ -139,8 +139,7 @@ class EvaluacionModel {
                         GROUP BY ins.id_seccion
                     ) AS estud_sec ON s.id = estud_sec.id_seccion
                     LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
-                    LEFT JOIN evaluacion e ON s.id = e.id_seccion
-                    WHERE e.codigo_periodo = ?
+                    WHERE pa.codigo = ?
                     GROUP BY s.id
                 ) AS todo;
             `;
@@ -616,26 +615,6 @@ class EvaluacionModel {
                 INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
                 WHERE s.id = ?
                 GROUP BY hs.id;
-            `;
-            pool.query(query, [seccionId], (error, results) => {
-                if (error) return reject(error);
-                resolve(results);
-            });
-        });
-    }
-
-    static getEvaluacionesBySeccion(periodo, seccionId) {
-        return new Promise((resolve, reject) => {
-            const query = `
-                SELECT 
-                    e.id, e.contenido, e.ponderacion, e.fecha_evaluacion,
-                    CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END as tiene_rubrica,
-                    r.id as rubrica_id, r.nombre_rubrica
-                FROM evaluacion e
-                LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
-                LEFT JOIN rubrica r ON ru.id_rubrica = r.id
-                WHERE e.id_seccion = ?
-                ORDER BY e.fecha_evaluacion DESC
             `;
             pool.query(query, [seccionId], (error, results) => {
                 if (error) return reject(error);

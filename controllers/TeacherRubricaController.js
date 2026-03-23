@@ -52,8 +52,7 @@ class TeacherRubricaController {
 
     async getEvaluaciones(req, res) {
         try {
-            const periodo = req.user.periodo_usuario;
-            const evaluaciones = await TeacherRubricaModel.getEvaluacionesBySeccion(req.params.seccionId, periodo);
+            const evaluaciones = await TeacherRubricaModel.getEvaluacionesBySeccion(req.params.seccionId);
             res.json({ success: true, evaluaciones });
         } catch (error) {
             console.error('Error getEvaluaciones:', error);

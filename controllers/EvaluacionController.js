@@ -44,7 +44,7 @@ class EvaluacionController {
             }));
             res.json({ success: true, evaluaciones: evaluacionesFormateadas });
         } catch (error) {
-            console.error('Error getEvaluacionesBySeccion:', error);
+            console.error('Error getEvaluacionesFromSeccion:', error);
             res.status(500).json({ success: false, message: 'Error al obtener evaluaciones' });
         }
     }
@@ -124,13 +124,14 @@ class EvaluacionController {
 
     async crearEvaluacion(req, res) {
         try {
-            const periodo = req.query.periodo ? req.query.periodo : req.user.periodo_usuario;
+            let periodo;
+            if(req.body.periodo) periodo = req.body.periodo
+            else periodo = req.user.periodo_usuario
             const { 
                 fecha_evaluacion, id_horario, id_seccion, cant_personas, 
                 contenido, corte, competencias, instrumentos, porcentaje, estrategias_eval,
                 tipo_horario, hora_inicio, hora_fin
             } = req.body;
-
             // Validaciones básicas
             const missingFields = [];
             if (!fecha_evaluacion) missingFields.push('fecha_evaluacion');
@@ -188,7 +189,6 @@ class EvaluacionController {
     async updateEvaluacion(req, res) {
         try {
             const { id } = req.params;
-            //const periodo = req.query.periodo ? req.query.periodo : req.user.periodo_usuario; INNECESARIO PUES NO SE ACTUALIZA
             const { 
                 contenido, estrategias_eval, porcentaje, cant_personas, id_seccion,
                 fecha_evaluacion, tipo_horario, id_horario, hora_inicio, hora_fin,

@@ -31,9 +31,8 @@ class EvaluacionController {
     }
     async getEvaluacionesFromSeccion(req, res) {
         try {
-            const periodo = req.query.periodo;
             const { id_seccion } = req.params;
-            const evaluaciones = await EvaluacionModel.getEvaluacionesFromSeccion(periodo, id_seccion);
+            const evaluaciones = await EvaluacionModel.getEvaluacionesFromSeccion(id_seccion);
             const evaluacionesFormateadas = evaluaciones.map(ev => ({
                 ...ev,
                 fecha_formateada: ev.fecha_evaluacion ? 

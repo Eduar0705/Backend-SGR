@@ -174,6 +174,7 @@ class TeacherEvaluacionesModel {
                     m.nombre as materia_nombre,
                     m.codigo as materia_codigo,
                     c.nombre AS carrera_nombre,
+                    c.codigo AS carrera_codigo,
                     mp.num_semestre AS materia_semestre,
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(hs2.dia, ' (', hs2.hora_inicio, '-', hs2.hora_cierre, ')') SEPARATOR ', ')
@@ -213,6 +214,7 @@ class TeacherEvaluacionesModel {
                     m.nombre as materia_nombre,
                     m.codigo as materia_codigo,
                     c.nombre AS carrera_nombre,
+                    c.codigo AS carrera_codigo,
                     mp.num_semestre AS materia_semestre,
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(hs2.dia, ' (', hs2.hora_inicio, '-', hs2.hora_cierre, ')') SEPARATOR ', ')

@@ -104,7 +104,9 @@ class EvaluacionModel {
                     docente_nombre,
                     docente_apellido,
                     materia_nombre,
+                    materia_codigo,
                     carrera_nombre,
+                    carrera_codigo,
                     seccion_codigo,
                     total_evaluaciones
                 FROM
@@ -115,7 +117,9 @@ class EvaluacionModel {
                         u.nombre as docente_nombre,
                         u.apeliido as docente_apellido,
                         m.nombre as materia_nombre,
+                        m.codigo AS materia_codigo,
                         c.nombre as carrera_nombre,
+                        c.codigo AS carrera_codigo,
                         COALESCE(estud_sec.cantidad_en_seccion,0) AS estudiantes_seccion, 
                         CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                         IFNULL(GROUP_CONCAT(DISTINCT CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ' (', hs.aula, ')', ')') SEPARATOR ', '), 'Horario no encontrado') AS horario,
@@ -149,7 +153,7 @@ class EvaluacionModel {
             });
         });
     }
-    static getEvaluacionesFromSeccion(periodo, id_seccion) {
+    static getEvaluacionesFromSeccion(id_seccion) {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT
@@ -166,6 +170,7 @@ class EvaluacionModel {
                     materia_nombre,
                     carrera_nombre,
                     total_evaluaciones,
+                    seccion_id,
                     seccion_codigo,
                     completadas,
                     total_evaluaciones - completadas AS pendientes,
@@ -193,6 +198,7 @@ class EvaluacionModel {
                         c.nombre as carrera_nombre,
                         COALESCE(estud_sec.cantidad_en_seccion,0) AS total_evaluaciones, 
                         CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                        s.id AS seccion_id,
                         (SELECT COALESCE(COUNT(DISTINCT er.id),0) FROM evaluacion_realizada er
                         INNER JOIN evaluacion ON er.id_evaluacion = e.id) AS completadas,
                         e.fecha_evaluacion,
@@ -208,9 +214,9 @@ class EvaluacionModel {
                     INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                     INNER JOIN materia m ON mp.codigo_materia = m.codigo
                     INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                    INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                    INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
-                    INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+                    LEFT JOIN permiso_docente pd ON s.id = pd.id_seccion
+                    LEFT JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
+                    LEFT JOIN usuario u ON ud.cedula_usuario = u.cedula
                     LEFT JOIN (
                         SELECT 
                             COUNT(DISTINCT ins.cedula_estudiante) AS cantidad_en_seccion, 
@@ -231,13 +237,12 @@ class EvaluacionModel {
                     LEFT JOIN rubrica r ON ru.id_rubrica = r.id
                     LEFT JOIN horario_eval he ON e.id = he.id_eval
                     LEFT JOIN horario_eval_clandestina hec ON e.id = hec.id_eval
-                    WHERE e.codigo_periodo = ?
-                    AND s.id = ?
+                    WHERE s.id = ?
                     GROUP BY e.id
                 ) AS todo
                 ORDER BY fecha_evaluacion DESC;
             `;
-            pool.query(query, [periodo, id_seccion], (error, results) => {
+            pool.query(query, [id_seccion], (error, results) => {
                 if (error) return reject(error);
                 resolve(results);
             });

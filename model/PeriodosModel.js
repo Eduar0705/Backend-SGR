@@ -15,7 +15,8 @@ class PeriodosModel {
                         DISTINCT pa.*,
                         (CASE WHEN EXISTS (SELECT 1 
                             FROM evaluacion e 
-                            WHERE e.codigo_periodo = pa.codigo) 
+                            INNER JOIN seccion s ON e.id_seccion = s.id
+                            WHERE s.codigo_periodo = pa.codigo) 
                             THEN 1 
                             ELSE 0 
                         END) AS modificable
@@ -91,7 +92,8 @@ class PeriodosModel {
                 cp.*,
                 (CASE WHEN EXISTS (SELECT 1 
                     FROM evaluacion e 
-                    WHERE e.codigo_periodo = cp.codigo_periodo) 
+                    INNER JOIN seccion s ON e.id_seccion = s.id
+                    WHERE s.codigo_periodo = cp.codigo_periodo) 
                 THEN 1 
                 ELSE 0 
                 END) AS modificable
@@ -152,10 +154,11 @@ class PeriodosModel {
         return new Promise((resolve, reject) => {
             const query = `
                 UPDATE evaluacion e
-                INNER JOIN corte_periodo cp ON e.codigo_periodo = cp.codigo_periodo
+                INNER JOIN seccion s ON e.id_seccion = s.id
+                INNER JOIN corte_periodo cp ON s.codigo_periodo = cp.codigo_periodo
                     SET e.corte_orden = cp.orden
                 WHERE e.fecha_evaluacion BETWEEN cp.fecha_inicio AND cp.fecha_fin
-                AND e.codigo_periodo = ?
+                AND s.codigo_periodo = ?
             `;
             connection.query(query, [codigo_periodo], (error, results) => {
                 if (error) return reject(error);

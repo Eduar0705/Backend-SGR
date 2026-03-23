@@ -89,7 +89,6 @@ class TeacherRubricaModel {
             FROM evaluacion e
             LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
             WHERE e.id_seccion = ? AND ru.id_rubrica IS NULL
-            AND e.codigo_periodo = ?
             ORDER BY e.fecha_evaluacion
         `;
         return new Promise((resolve, reject) => {
@@ -192,7 +191,7 @@ class TeacherRubricaModel {
                 r.id,
                 r.nombre_rubrica,
                 e.fecha_evaluacion,
-                e.codigo_periodo,
+                s.codigo_periodo,
                 r.fecha_creacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.ponderacion AS porcentaje_evaluacion,
@@ -227,7 +226,7 @@ class TeacherRubricaModel {
         const queryRubrica = `
             SELECT
                 r.id, r.nombre_rubrica, r.cedula_docente AS docente_cedula,
-                m.codigo AS materia_id, s.letra AS seccion_id, e.codigo_periodo AS lapso_academico,
+                m.codigo AS materia_id, s.letra AS seccion_id, s.codigo_periodo AS lapso_academico,
                 e.fecha_evaluacion,
                 (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,

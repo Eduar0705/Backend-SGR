@@ -83,7 +83,7 @@ class EvaluacionModel {
                     LEFT JOIN rubrica r ON ru.id_rubrica = r.id
                     LEFT JOIN horario_eval he ON e.id = he.id_eval
                     LEFT JOIN horario_eval_clandestina hec ON e.id = hec.id_eval
-                    WHERE e.codigo_periodo = ?
+                    WHERE s.codigo_periodo = ?
                     GROUP BY e.id
                 ) AS todo
                 ORDER BY fecha_evaluacion DESC;
@@ -381,7 +381,7 @@ class EvaluacionModel {
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     IFNULL(GROUP_CONCAT(CONCAT(hs.dia, ' (', hs.hora_inicio, '-', hs.hora_cierre, ')') SEPARATOR ', '), 'No encontrado') AS seccion_horario,
                     hs.aula AS seccion_aula,
-                    e.codigo_periodo AS seccion_lapso,
+                    s.codigo_periodo AS seccion_lapso,
                     u.cedula AS docente_cedula,
                     u.nombre as docente_nombre,
                     u.apeliido as docente_apellido
@@ -452,11 +452,11 @@ class EvaluacionModel {
                 conn.beginTransaction(err => {
                     if (err) { conn.release(); return reject(err); }
 
-                    const insertEval = `INSERT INTO evaluacion (ponderacion, cantidad_personas, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion, codigo_periodo, corte_orden) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                    const insertEval = `INSERT INTO evaluacion (ponderacion, cantidad_personas, contenido, competencias, instrumentos, fecha_evaluacion, id_seccion, corte_orden) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
                     conn.query(insertEval, [
                         evalData.porcentaje, evalData.cant_personas, evalData.contenido, 
                         evalData.competencias, evalData.instrumentos, evalData.fecha_evaluacion, evalData.id_seccion,
-                        evalData.periodo, evalData.corte
+                        evalData.corte
                     ], (err, result) => {
                         if (err) return conn.rollback(() => { conn.release(); reject(err); });
 

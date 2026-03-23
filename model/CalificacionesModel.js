@@ -7,7 +7,7 @@ class CalificacionesModel {
                 m.nombre AS materia_nombre,
                 m.codigo AS materia_codigo,
                 CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                e.codigo_periodo AS lapso_academico,
+                s.codigo_periodo AS lapso_academico,
                 r.id AS rubrica_id,
                 r.nombre_rubrica,
                 e.ponderacion AS porcentaje_evaluacion,
@@ -27,7 +27,7 @@ class CalificacionesModel {
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
             WHERE ins.cedula_estudiante = ?
             GROUP BY
-                m.codigo, r.id, e.codigo_periodo, s.letra, er.id
+                m.codigo, r.id, s.codigo_periodo, s.letra, er.id
             ORDER BY 
                 lapso_academico DESC, m.nombre, er.id
         `;

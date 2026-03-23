@@ -22,7 +22,8 @@ class DashboardModel {
                                     FROM rubrica r
                                     INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                                     INNER JOIN evaluacion e ON ru.id_eval = e.id
-                                    WHERE e.codigo_periodo = ?`;
+                                    INNER JOIN seccion s ON e.id_seccion = s.id
+                                    WHERE s.codigo_periodo = ?`;
 
             // 3. Contar evaluaciones pendientes (Lucha de titanes SQL)
             const countEvaluacionesPendientes = `
@@ -49,7 +50,7 @@ class DashboardModel {
                     INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                     GROUP BY er.id
                 ) AS eval_est ON eval_est.id_evaluacion = e.id
-                WHERE e.codigo_periodo = ?;
+                WHERE s.codigo_periodo = ?;
             `;
 
             // 4. Rúbricas recientes
@@ -67,7 +68,7 @@ class DashboardModel {
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                 LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
                 WHERE r.activo = 1
-                AND e.codigo_periodo = ?
+                AND s.codigo_periodo = ?
                 GROUP BY r.id
                 ORDER BY r.fecha_actualizacion DESC LIMIT 4;
             `;
@@ -95,7 +96,7 @@ class DashboardModel {
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 WHERE r.activo = 1 AND u.activo = 1 AND er.id IS NOT NULL
-                AND e.codigo_periodo = ?
+                AND s.codigo_periodo = ?
                 GROUP BY er.id, er.fecha_evaluado, ins.cedula_estudiante, ins.id_seccion
                 ORDER BY fecha_evaluado DESC LIMIT 4;
             `;
@@ -262,7 +263,7 @@ class DashboardModel {
                 INNER JOIN usuario_estudiante ue ON er.cedula_evaluado = ue.cedula_usuario
                 INNER JOIN evaluacion e ON er.id_evaluacion = e.id
                 WHERE er.cedula_evaluador = ?
-                AND e.codigo_periodo = ?;
+                AND s.codigo_periodo = ?;
             `;
             const q4 = `
                 SELECT r.id, r.nombre_rubrica, e.fecha_evaluacion
@@ -270,7 +271,7 @@ class DashboardModel {
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                 INNER JOIN evaluacion e ON e.id = ru.id_eval
                 WHERE r.cedula_docente = ? AND r.activo = 1
-                AND e.codigo_periodo = ?
+                AND s.codigo_periodo = ?
                 ORDER BY r.fecha_actualizacion DESC LIMIT 3;
             `;
             const q5 = `
@@ -292,7 +293,7 @@ class DashboardModel {
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 WHERE pd.docente_cedula = ? AND r.activo = 1 AND u.activo = 1 AND er.id IS NOT NULL
-                AND e.codigo_periodo = ?
+                AND s.codigo_periodo = ?
                 GROUP BY er.id, er.fecha_evaluado, ins.cedula_estudiante, ins.id_seccion
                 ORDER BY fecha_evaluado DESC LIMIT 4;
             `;
@@ -369,7 +370,7 @@ class DashboardModelExtended extends DashboardModel {
                         FROM evaluacion_realizada er
                         INNER JOIN evaluacion e ON er.id_evaluacion = e.id
                         INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                        WHERE e.codigo_periodo = ?
+                        WHERE s.codigo_periodo = ?
                         ${isDocente ? 'AND er.cedula_evaluador = ?' : ''}
                         GROUP BY er.id
                     ) as notas
@@ -384,7 +385,7 @@ class DashboardModelExtended extends DashboardModel {
                     INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
                     INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                     ${isDocente ? 'INNER JOIN permiso_docente pd ON s.id = pd.id_seccion' : ''}
-                    WHERE e.codigo_periodo = ?
+                    WHERE s.codigo_periodo = ?
                     ${isDocente ? 'AND pd.docente_cedula = ?' : ''}
                     GROUP BY m.codigo
                     ORDER BY promedio DESC

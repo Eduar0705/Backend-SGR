@@ -68,7 +68,7 @@ class TeacherEvaluacionesModel {
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ue.cedula_usuario
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                 LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
-                AND e.codigo_periodo = ?
+                AND s.codigo_periodo = ?
                 GROUP BY e.id, ins.cedula_estudiante
                 ORDER BY er.fecha_evaluado DESC;
             `;
@@ -127,7 +127,7 @@ class TeacherEvaluacionesModel {
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                 LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
                 WHERE pd.docente_cedula = ?
-                AND e.codigo_periodo = ?
+                AND s.codigo_periodo = ?
                 GROUP BY e.id, ins.cedula_estudiante
                 ORDER BY er.fecha_evaluado DESC;
             `;
@@ -190,7 +190,7 @@ class TeacherEvaluacionesModel {
                 LEFT JOIN rubrica_uso ru ON ru.id_eval = e.id
                 LEFT JOIN rubrica r ON r.id = ru.id_rubrica
                 LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
-                WHERE e.codigo_periodo = ?
+                WHERE s.codigo_periodo = ?
                 GROUP BY e.id
                 ORDER BY fecha_fija DESC;
             `;

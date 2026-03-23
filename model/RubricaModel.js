@@ -365,7 +365,7 @@ class RubricaModel {
                 INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
                 INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
                 WHERE r.activo = 1 AND u.activo = 1
-                AND e.codigo_periodo = ?
+                AND s.codigo_periodo = ?
                 GROUP BY r.id
                 ORDER BY fecha_creacion DESC;
             `;
@@ -385,7 +385,7 @@ class RubricaModel {
                     r.cedula_docente AS docente_cedula,
                     m.codigo AS materia_id,
                     s.letra AS seccion_id,
-                    e.codigo_periodo AS lapse_academico,
+                    s.codigo_periodo AS lapse_academico,
                     e.fecha_evaluacion,
                     (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
                     GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
@@ -463,7 +463,7 @@ class RubricaModel {
                     u.cedula as docente_cedula, 
                     m.codigo AS materia_codigo, 
                     s.id AS seccion_id,
-                    e.codigo_periodo AS lapse_academico, 
+                    s.codigo_periodo AS lapse_academico, 
                     e.fecha_evaluacion,
                     (   SELECT SUM(puntaje_maximo) 
                         FROM criterio_rubrica cr_sub 

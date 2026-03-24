@@ -172,8 +172,9 @@ router.get("/api/admin/semestres/:carrera", async (req, res) => {
 router.get("/api/admin/materias/:carrera/:semestre", async (req, res) => {
     try {
         const { carrera, semestre } = req.params;
+        const periodo = req.query.periodo;
         const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getMateriasAdmin(carrera, semestre, req.user.cedula, esAdmin);
+        const resultado = await RubricaModel.getMateriasAdmin(carrera, semestre, req.user.cedula, esAdmin, periodo);
         res.json(resultado);
     } catch (error) {
         console.error('Error al obtener materias:', error);
@@ -185,8 +186,9 @@ router.get("/api/admin/materias/:carrera/:semestre", async (req, res) => {
 router.get("/api/admin/secciones/:materia/:carreraCodigo", async (req, res) => {
     try {
         const { materia, carreraCodigo } = req.params;
+        const periodo = req.query.periodo;
         const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getSeccionesAdmin(materia, carreraCodigo, req.user.cedula, esAdmin);
+        const resultado = await RubricaModel.getSeccionesAdmin(materia, carreraCodigo, req.user.cedula, esAdmin, periodo);
         res.json(resultado);
     } catch (error) {
         console.error('Error al obtener secciones:', error);

@@ -60,7 +60,8 @@ class EvaluacionController {
 
     async getCarreras(req, res) {
         try {
-            const carreras = await EvaluacionModel.getCarreras();
+            const periodo = req.query.periodo
+            const carreras = await EvaluacionModel.getCarreras(periodo);
             res.json({ success: true, carreras });
         } catch (error) {
             console.error('Error getCarreras:', error);
@@ -81,7 +82,8 @@ class EvaluacionController {
     async getMateriasByCarrera(req, res) {
         try {
             const { carreraCodigo } = req.params;
-            const materias = await EvaluacionModel.getMateriasByCarrera(carreraCodigo);
+            const periodo = req.query.periodo
+            const materias = await EvaluacionModel.getMateriasByCarrera(carreraCodigo, periodo);
             res.json({ success: true, materias });
         } catch (error) {
             console.error('Error getMateriasByCarrera:', error);
@@ -92,7 +94,8 @@ class EvaluacionController {
     async getSecciones(req, res) {
         try {
             const { materiaCodigo, carreraCodigo } = req.params;
-            const secciones = await EvaluacionModel.getSecciones(materiaCodigo, carreraCodigo);
+            const periodo = req.query.periodo
+            const secciones = await EvaluacionModel.getSecciones(materiaCodigo, carreraCodigo, periodo);
             res.json({ success: true, secciones });
         } catch (error) {
             console.error('Error getSecciones:', error);

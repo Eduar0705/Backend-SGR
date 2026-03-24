@@ -143,7 +143,7 @@ class EvaluacionModel {
                         GROUP BY ins.id_seccion
                     ) AS estud_sec ON s.id = estud_sec.id_seccion
                     LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
-                    WHERE pa.codigo = ?
+                    WHERE s.codigo_periodo = ?
                     GROUP BY s.id
                 ) AS todo;
             `;
@@ -270,7 +270,7 @@ class EvaluacionModel {
         });
     }
 
-    static getCarreras() {
+    static getCarreras(periodo) {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
@@ -279,17 +279,19 @@ class EvaluacionModel {
                     COUNT(DISTINCT mp.num_semestre) AS duracion_semestres
                 FROM carrera c
                 INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera
+                INNER JOIN seccion s ON mp.id = s.id_materia_plan
+                WHERE s.codigo_periodo = ?
                 GROUP BY c.codigo
                 ORDER BY nombre
             `;
-            pool.query(query, (error, results) => {
+            pool.query(query, [periodo], (error, results) => {
                 if (error) return reject(error);
                 resolve(results);
             });
         });
     }
 
-    static getMateriasByCarrera(carreraCodigo) {
+    static getMateriasByCarrera(carreraCodigo, periodo) {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
@@ -299,18 +301,20 @@ class EvaluacionModel {
                     mp.unidades_credito AS creditos
                 FROM materia m
                 INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia
+                INNER JOIN seccion s ON s.id_materia_plan = mp.id
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                WHERE mp.codigo_carrera = ?
+                GROUP BY m.codigo
+                WHERE mp.codigo_carrera = ? AND s.codigo_periodo = ? 
                 ORDER BY semestre, nombre
             `;
-            pool.query(query, [carreraCodigo], (error, results) => {
+            pool.query(query, [carreraCodigo, periodo], (error, results) => {
                 if (error) return reject(error);
                 resolve(results);
             });
         });
     }
 
-    static getSecciones(materiaCodigo, carreraCodigo) {
+    static getSecciones(materiaCodigo, carreraCodigo, periodo) {
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
@@ -325,10 +329,11 @@ class EvaluacionModel {
                 LEFT JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 WHERE mp.codigo_materia = ? 
                 AND mp.codigo_carrera = ? 
+                AND s.codigo_periodo = ?
                 GROUP BY s.id
                 ORDER BY codigo;
             `;
-            pool.query(query, [materiaCodigo, carreraCodigo], (error, results) => {
+            pool.query(query, [materiaCodigo, carreraCodigo, periodo], (error, results) => {
                 if (error) return reject(error);
                 resolve(results);
             });

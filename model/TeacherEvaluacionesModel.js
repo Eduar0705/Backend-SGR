@@ -320,7 +320,7 @@ class TeacherEvaluacionesModel {
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             WHERE pd.docente_cedula = ?
-            AND pa.codigo = ?
+            AND s.codigo_periodo = ?
             ORDER BY c.nombre
         `;
         return query(sqlQuery, [docenteCedula, periodo]);
@@ -343,7 +343,7 @@ class TeacherEvaluacionesModel {
             INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             WHERE c.codigo = ?
               AND pd.docente_cedula = ?
-              AND pa.codigo = ?
+              AND s.codigo_periodo = ?
             ORDER BY semestre, m.nombre
         `;
         return query(sqlQuery, [carreraCodigo, docenteCedula, periodo]);
@@ -367,7 +367,7 @@ class TeacherEvaluacionesModel {
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             WHERE m.codigo = ?
               AND pd.docente_cedula = ?
-              AND pa.codigo = ?
+              AND s.codigo_periodo = ?
             ORDER BY codigo
         `;
         return query(sqlQuery, [materiaCodigo, docenteCedula, periodo]);

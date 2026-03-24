@@ -12,7 +12,7 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE pd.docente_cedula = ?
-            AND pa.codigo = ?
+            AND s.codigo_periodo = ?
             ORDER BY c.nombre
         `;
         return new Promise((resolve, reject) => {
@@ -38,7 +38,7 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_carrera = ? AND pd.docente_cedula = ?
-            AND pa.codigo = ?
+            AND s.codigo_periodo = ?
             ORDER BY mp.num_semestre
         `;
         return new Promise((resolve, reject) => {
@@ -53,8 +53,8 @@ class TeacherRubricaModel {
             FROM materia m
             INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia AND mp.codigo_carrera = ?
             INNER JOIN pensum p ON mp.id_pensum = p.id
-            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum AND pa.codigo = ?
-            INNER JOIN seccion s ON mp.id = s.id_materia_plan
+            INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
+            INNER JOIN seccion s ON mp.id = s.id_materia_plan AND s.codigo_periodo = ?
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.num_semestre = ? AND pd.docente_cedula = ?
             ORDER BY m.nombre
@@ -74,7 +74,7 @@ class TeacherRubricaModel {
             INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_materia = ? AND pd.docente_cedula = ?
-            AND pa.codigo = ?
+            AND s.codigo_periodo = ?
             ORDER BY s.letra
         `;
         return new Promise((resolve, reject) => {

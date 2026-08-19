@@ -26,9 +26,10 @@ class AuthController {
                 });
             }
 
-            const loginResults = await userModel.login(cedula, password);
-
-            if (loginResults && loginResults.length > 0) {
+            const loginResults = await userModel.login(cedula);
+            if (loginResults && loginResults.length > 0 
+                && (loginResults[0].password.startsWith('$2a$') || loginResults[0].password.startsWith('$2b$'))
+                ? await bcrypt.compare(password, loginResults[0].password) : password==loginResuts[0].password) {
                 const loggedUser = loginResults[0];
 
                 const { password: _, ...userWithoutPassword } = loggedUser;
@@ -42,7 +43,7 @@ class AuthController {
                 else {
                     return res.status(401).json({
                         success: false,
-                        message: 'Contraseña incorrecta'
+                        message: 'Errorde conexión. Vuelva a intentarlo, por favor'
                     });
                 }
                 // Generar token JWT

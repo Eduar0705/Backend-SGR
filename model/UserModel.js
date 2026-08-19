@@ -1,10 +1,11 @@
 const connection = require('./conexion');
+const bcrypt = require('bcryptjs');
 
 class UserModel {
-    async login(cedula, password) {
-        const query = 'SELECT * FROM usuario WHERE cedula = ? AND password = ?';
+    async login(cedula) {
+        const query = 'SELECT * FROM usuario WHERE cedula = ?';
         return new Promise((resolve, reject) => {
-            connection.query(query, [cedula, password], (err, results) => {
+            connection.query(query, [cedula], (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
             });
@@ -27,9 +28,10 @@ class UserModel {
     }
 
     async changePassword(cedula, newPassword) {
+        const passwordHash = await bcrypt.hash(newPassword, 10);
         const query = 'UPDATE usuario SET password = ? WHERE cedula = ?';
         return new Promise((resolve, reject) => {
-            connection.query(query, [newPassword, cedula], (err, result) => {
+            connection.query(query, [passwordHash, cedula], (err, result) => {
                 if (err) return reject(err);
                 if (result.affectedRows === 0) return resolve({ status: 'error', mensaje: 'Usuario no encontrado' });
                 resolve({ status: 'ok', mensaje: 'Contraseña actualizada correctamente' });
@@ -48,21 +50,19 @@ class UserModel {
     }
 
     async create({ cedula, nombre, apellido, email, password, rol }) {
+        const passwordHash = await bcrypt.hash(password, 10);
         return new Promise((resolve, reject) => {
-            // Verificar si ya existe
             const checkQuery = 'SELECT * FROM usuario WHERE cedula = ? OR email = ?';
             connection.query(checkQuery, [cedula, email], (err, results) => {
                 if (err) return reject(err);
-
                 if (results.length > 0) {
                     let campo = 'datos';
                     if (results[0].cedula == cedula) campo = 'cédula';
                     else if (results[0].email === email) campo = 'correo electrónico';
                     return resolve({ status: 'error', mensaje: `Ya existe un usuario con ese ${campo}` });
                 }
-
                 const insertQuery = `INSERT INTO usuario (cedula, nombre, apeliido, password, email, id_rol, activo) VALUES (?, ?, ?, ?, ?, ?, 1)`;
-                connection.query(insertQuery, [cedula, nombre, apellido || '', password, email, rol], (err) => {
+                connection.query(insertQuery, [cedula, nombre, apellido || '', passwordHash, email, rol], (err) => {
                     if (err) return reject(err);
                     resolve({ status: 'ok', mensaje: 'Usuario agregado exitosamente' });
                 });
@@ -71,10 +71,15 @@ class UserModel {
     }
 
     async update(cedulaOriginal, { cedula, nombre, apellido, email, password, rol }) {
+        // Si viene contraseña, la hasheamos antes de la promesa; si no, dejamos null
+        let passwordHash = null;
+        if (password && password.trim() !== '') {
+            passwordHash = await bcrypt.hash(password, 10);
+        }
         return new Promise((resolve, reject) => {
-            if (password && password.trim() !== '') {
+            if (passwordHash) {
                 const query = `UPDATE usuario SET cedula = ?, nombre = ?, apeliido = ?, password = ?, email = ?, id_rol = ? WHERE cedula = ?`;
-                connection.query(query, [cedula, nombre, apellido || '', password, email, rol, cedulaOriginal], (err, result) => {
+                connection.query(query, [cedula, nombre, apellido || '', passwordHash, email, rol, cedulaOriginal], (err, result) => {
                     if (err) return reject(err);
                     if (result.affectedRows === 0) return resolve({ status: 'error', mensaje: 'Usuario no encontrado' });
                     resolve({ status: 'ok', mensaje: 'Usuario actualizado correctamente' });

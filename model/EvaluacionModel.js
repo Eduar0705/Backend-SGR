@@ -303,8 +303,8 @@ class EvaluacionModel {
                 INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia
                 INNER JOIN seccion s ON s.id_materia_plan = mp.id
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                GROUP BY m.codigo
                 WHERE mp.codigo_carrera = ? AND s.codigo_periodo = ? 
+                GROUP BY m.codigo
                 ORDER BY semestre, nombre
             `;
             pool.query(query, [carreraCodigo, periodo], (error, results) => {

@@ -1,9 +1,15 @@
 var express = require('express');
+const rateLimit = require('express-rate-limit');
 var router = express.Router();
 const authController = require('../controllers/AuthController');
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5,
+    message: { success: false, message: 'Demasiados intentos. Intente en 15 minutos.' }
+});
 
 /* POST login */
-router.post('/login', authController.login.bind(authController));
+router.post('/login', loginLimiter, authController.login.bind(authController));
 
 /* POST logout */
 router.post('/logout', authController.logout.bind(authController));

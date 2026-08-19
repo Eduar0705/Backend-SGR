@@ -1,6 +1,7 @@
 const userModel = require('../model/UserModel');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const bcrypt = require('bcryptjs');
 
 class AuthController {
     async login(req, res) {

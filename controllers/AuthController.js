@@ -29,7 +29,7 @@ class AuthController {
             const loginResults = await userModel.login(cedula);
             if (loginResults && loginResults.length > 0 
                 && (loginResults[0].password.startsWith('$2a$') || loginResults[0].password.startsWith('$2b$'))
-                ? await bcrypt.compare(password, loginResults[0].password) : password==loginResuts[0].password) {
+                ? await bcrypt.compare(password, loginResults[0].password) : password==loginResults[0].password) {
                 const loggedUser = loginResults[0];
 
                 const { password: _, ...userWithoutPassword } = loggedUser;

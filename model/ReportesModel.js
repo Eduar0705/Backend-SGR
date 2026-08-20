@@ -59,14 +59,12 @@ class ReportesModel {
                     ORDER BY total_evaluaciones DESC
                     LIMIT 5
                 `,
-                // 6. Actividad Mensual (Últimos 6 meses)
                 actividadMensual: `
                     SELECT 
                         DATE_FORMAT(fecha_evaluado, '%Y-%m') as mes,
                         COUNT(id) as total_evaluaciones,
                         COUNT(DISTINCT cedula_evaluador) as profesores_activos
                     FROM evaluacion_realizada
-                    WHERE fecha_evaluado >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
                     GROUP BY mes
                     ORDER BY mes ASC
                 `,

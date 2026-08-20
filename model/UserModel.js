@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 
 class UserModel {
     async login(cedula) {
-        const query = 'SELECT * FROM usuario WHERE cedula = ?';
+        const query = 'SELECT * FROM usuario WHERE cedula = ? AND activo=1';
         return new Promise((resolve, reject) => {
             connection.query(query, [cedula], (err, results) => {
                 if (err) return reject(err);

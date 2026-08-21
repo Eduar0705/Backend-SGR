@@ -25,32 +25,20 @@ class DashboardModel {
                                     INNER JOIN seccion s ON e.id_seccion = s.id
                                     WHERE s.codigo_periodo = ?`;
 
-            // 3. Contar evaluaciones pendientes (Lucha de titanes SQL)
+            // 3. Contar evaluaciones pendientes
             const countEvaluacionesPendientes = `
-                SELECT 
-                    SUM(CASE WHEN eval_est.id IS NULL THEN 1 ELSE 0 END) AS total
-                FROM evaluacion e
-                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
-                INNER JOIN rubrica r ON ru.id_rubrica = r.id
-                INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
-                INNER JOIN materia m ON mp.codigo_materia = m.codigo
-                INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                INNER JOIN (
-                    SELECT COUNT(DISTINCT ins.cedula_estudiante) AS cantidad_en_seccion, ins.id_seccion
-                    FROM inscripcion_seccion ins
-                    GROUP BY ins.id_seccion
-                ) AS estud_sec ON s.id = estud_sec.id_seccion
-                INNER JOIN permiso_docente pd ON estud_sec.id_seccion = pd.id_seccion
-                INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
-                INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
-                LEFT JOIN (
-                    SELECT er.id, er.id_evaluacion, SUM(de.puntaje_obtenido) AS puntaje_eval
-                    FROM evaluacion_realizada er 
-                    INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                    GROUP BY er.id
-                ) AS eval_est ON eval_est.id_evaluacion = e.id
-                WHERE s.codigo_periodo = ?;
+                SELECT COUNT(*) AS total
+                FROM (
+                    SELECT e.id
+                    FROM evaluacion e 
+                    INNER JOIN seccion s ON e.id_seccion = s.id 
+                    INNER JOIN inscripcion_seccion ins ON ins.id_seccion = s.id 
+                    LEFT JOIN evaluacion_realizada er 
+                        ON e.id = er.id_evaluacion AND ins.cedula_estudiante = er.cedula_evaluado 
+                    WHERE s.codigo_periodo = ?
+                    GROUP BY e.id
+                    HAVING COUNT(er.id) = 0
+                ) AS evaluaciones_sin_corregir
             `;
 
             // 4. Rúbricas recientes
@@ -68,7 +56,7 @@ class DashboardModel {
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                 LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
                 WHERE r.activo = 1
-                AND s.codigo_periodo = ?
+                AND s.codigo_periodo = ? 
                 GROUP BY r.id
                 ORDER BY r.fecha_actualizacion DESC LIMIT 4;
             `;
@@ -96,7 +84,7 @@ class DashboardModel {
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 WHERE r.activo = 1 AND u.activo = 1 AND er.id IS NOT NULL
-                AND s.codigo_periodo = ?
+                AND s.codigo_periodo = ? 
                 GROUP BY er.id, er.fecha_evaluado, ins.cedula_estudiante, ins.id_seccion
                 ORDER BY fecha_evaluado DESC LIMIT 4;
             `;
@@ -161,30 +149,39 @@ class DashboardModel {
             `;
             const q2 = `SELECT COUNT(DISTINCT er.id) as total FROM evaluacion_realizada er WHERE er.cedula_evaluado = ?;`;
             const q3 = `
-                SELECT COUNT(DISTINCT e.id) AS total
-                FROM evaluacion e 
-                INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
-                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
-                INNER JOIN rubrica r ON ru.id_rubrica = r.id
-                LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
-                WHERE ins.cedula_estudiante = ? AND r.activo = 1 AND er.id IS NULL AND e.fecha_evaluacion < CURDATE();
+                SELECT COUNT(*) AS total
+                FROM (
+                    SELECT e.id
+                    FROM evaluacion e 
+                    INNER JOIN seccion s ON e.id_seccion = s.id 
+                    INNER JOIN inscripcion_seccion ins ON ins.id_seccion = s.id 
+                    LEFT JOIN evaluacion_realizada er 
+                        ON e.id = er.id_evaluacion AND ins.cedula_estudiante = er.cedula_evaluado 
+                    WHERE ins.cedula_estudiante = ?
+                    GROUP BY e.id
+                    HAVING COUNT(er.id) = 0
+                ) AS evaluaciones_sin_evaluarse
             `;
+            //QUEDA   P E N D I E N T E    IMPLEMENTAR PONDERACION EN EL FRONTEND
             const q4 = `
                 SELECT 
                     r.nombre_rubrica, 
                     m.nombre as materia, 
-                    SUM(de.puntaje_obtenido) as puntaje_total, 
+                	SUM(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion /1000000) AS puntaje_total,
+                    e.ponderacion,
                     er.fecha_evaluado as fecha_evaluacion, 
                     tr.nombre AS tipo_evaluacion
                 FROM evaluacion e
                 INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
                 INNER JOIN rubrica_uso ru ON ru.id_eval = er.id_evaluacion
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
+                INNER JOIN criterio_rubrica cr ON r.id = cr.rubrica_id                 
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 
+                AND cr.id = nd.criterio_id 
                 INNER JOIN tipo_rubrica tr ON tr.id = r.id_tipo
                 WHERE er.cedula_evaluado = ?
                 GROUP BY e.id ORDER BY er.fecha_evaluado DESC LIMIT 3
@@ -245,12 +242,9 @@ class DashboardModel {
                 SELECT 
                     COUNT(u.cedula) as total
                 FROM usuario u
-                INNER JOIN usuario_estudiante ue ON u.cedula = ue.cedula_usuario
-                INNER JOIN inscripcion_seccion ins ON ue.cedula_usuario = ins.cedula_estudiante
+                INNER JOIN inscripcion_seccion ins ON u.cedula = ins.cedula_estudiante
                 INNER JOIN seccion s ON ins.id_seccion = s.id
-                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
-                INNER JOIN pensum p ON mp.id_pensum = p.id
-                INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
+                INNER JOIN periodo_academico pa ON s.codigo_periodo = pa.codigo
                 INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                 WHERE pd.docente_cedula = ? AND u.activo = 1
                 AND pa.codigo = ?;
@@ -260,18 +254,20 @@ class DashboardModel {
                     COUNT(*) as total
                 FROM
                 evaluacion_realizada er
-                INNER JOIN usuario_estudiante ue ON er.cedula_evaluado = ue.cedula_usuario
                 INNER JOIN evaluacion e ON er.id_evaluacion = e.id
-                WHERE er.cedula_evaluador = ?
-                AND s.codigo_periodo = ?;
+                INNER JOIN seccion s ON e.id_seccion = s.id
+                WHERE er.cedula_evaluador = ? 
+                AND s.codigo_periodo = ?
             `;
             const q4 = `
                 SELECT r.id, r.nombre_rubrica, e.fecha_evaluacion
                 FROM rubrica r
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                 INNER JOIN evaluacion e ON e.id = ru.id_eval
-                WHERE r.cedula_docente = ? AND r.activo = 1
+                INNER JOIN seccion s ON e.id_seccion = s.id
+                WHERE r.cedula_docente = ? AND r.activo = 1 
                 AND s.codigo_periodo = ?
+                GROUP BY r.id
                 ORDER BY r.fecha_actualizacion DESC LIMIT 3;
             `;
             const q5 = `
@@ -279,9 +275,10 @@ class DashboardModel {
                     er.id, er.fecha_evaluado AS fecha_evaluacion,
                     u.nombre AS estudiante_nombre, u.apeliido AS estudiante_apellido,
                     r.nombre_rubrica, m.nombre AS materia_nombre,
-                    ROUND(AVG(COALESCE(de.puntaje_obtenido,0))/5,2) AS puntaje_total
+                    ROUND(SUM(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion /1000000), 2) AS puntaje_total
                 FROM rubrica r
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+                INNER JOIN criterio_rubrica cr ON r.id = cr.rubrica_id 
                 INNER JOIN evaluacion e ON ru.id_eval = e.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
@@ -290,10 +287,12 @@ class DashboardModel {
                 INNER JOIN inscripcion_seccion ins ON pd.id_seccion = ins.id_seccion
                 INNER JOIN usuario_estudiante ue ON ue.cedula_usuario = ins.cedula_estudiante
                 INNER JOIN usuario u ON ue.cedula_usuario = u.cedula
-                LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
+                INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                WHERE pd.docente_cedula = ? AND r.activo = 1 AND u.activo = 1 AND er.id IS NOT NULL
-                AND s.codigo_periodo = ?
+                LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 
+                	AND cr.id = nd.criterio_id 
+                WHERE pd.docente_cedula = ? AND r.activo = 1 AND u.activo = 1 
+                AND s.codigo_periodo = '2025-1'
                 GROUP BY er.id, er.fecha_evaluado, ins.cedula_estudiante, ins.id_seccion
                 ORDER BY fecha_evaluado DESC LIMIT 4;
             `;
@@ -346,14 +345,12 @@ function calcularTiempoTranscurrido(fecha) {
 }
 
 class DashboardModelExtended extends DashboardModel {
+    //P E N D I E N T E   AMBAS
     async getAdvancedStats(cedula, roleId, periodo) {
-        // Implementación de reportes avanzados combinando lógica de Admin y Docente
-        // Si roleId === 1 (Admin), devolvemos reporte global
-        // Si roleId === 2 (Docente), devolvemos reporte filtrado por docente
         
         const isDocente = roleId === 2;
         const params = isDocente ? [periodo, cedula] : [periodo];
-
+        
         return new Promise((resolve, reject) => {
             const queries = {
                 distribucionNotas: `
@@ -364,15 +361,16 @@ class DashboardModelExtended extends DashboardModel {
                             WHEN puntaje / 5 >= 10 THEN 'Aprobado'
                             ELSE 'Reprobado'
                         END as rango,
+                        puntaje,
                         COUNT(*) as cantidad
                     FROM (
                         SELECT er.id, SUM(de.puntaje_obtenido) as puntaje
                         FROM evaluacion_realizada er
                         INNER JOIN evaluacion e ON er.id_evaluacion = e.id
+                        INNER JOIN seccion s ON e.id_seccion = s.id
                         INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                        WHERE s.codigo_periodo = ?
-                        ${isDocente ? 'AND er.cedula_evaluador = ?' : ''}
-                        GROUP BY er.id
+                        WHERE s.codigo_periodo = '2025-1'
+                        GROUP BY er.cedula_evaluado 
                     ) as notas
                     GROUP BY rango
                 `,

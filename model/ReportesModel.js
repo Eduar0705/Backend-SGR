@@ -84,20 +84,46 @@ class ReportesModel {
                 `,
                 // 8. Distribución de Calificaciones
                 distribucionNotas: `
-                    SELECT 
+                    SELECT
                         CASE 
-                            WHEN promedio >= 18 THEN 'Sobresaliente (18-20)'
-                            WHEN promedio >= 15 THEN 'Notable (15-17)'
-                            WHEN promedio >= 10 THEN 'Aprobado (10-14)'
+                            WHEN puntaje >= 90 THEN 'Sobresaliente (18-20)'
+                            WHEN puntaje >= 75 THEN 'Notable (15-17)'
+                            WHEN puntaje >= 50 THEN 'Aprobado (10-14)'
                             ELSE 'Reprobado (0-9)'
                         END as rango,
+                        puntaje,
                         COUNT(*) as cantidad
-                    FROM (
-                        SELECT er.id, SUM(de.puntaje_obtenido) / 5 as promedio
-                        FROM evaluacion_realizada er
-                        INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                        GROUP BY er.id
-                    ) as notas
+                    FROM
+                    (
+                        SELECT 
+                            codigo,
+                            nombre,
+                            avg(promedio_eval) AS puntaje
+                        FROM 
+                        (
+                            SELECT
+                                ins.cedula_estudiante,
+                                m.codigo,
+                                m.nombre,
+                                SUM(COALESCE(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion,0) /1000000) AS promedio_eval
+                            FROM
+                            evaluacion e 
+                            INNER JOIN rubrica_uso ru ON e.id =ru.id_eval 
+                            INNER JOIN rubrica r ON ru.id_rubrica = r.id 
+                            INNER JOIN criterio_rubrica cr ON cr.rubrica_id = r.id 
+                            INNER JOIN seccion s ON e.id_seccion = s.id 
+                            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion 
+                            INNER JOIN materia_pensum mp  ON s.id_materia_plan = mp.id 
+                            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                            INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion 
+                            LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante 
+                            LEFT JOIN detalle_evaluacion de ON er.id  = de.evaluacion_r_id 
+                            LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND nd.orden = de.orden_detalle 
+                                AND nd.criterio_id = cr.id
+                            GROUP BY ins.cedula_estudiante, e.id
+                        ) AS evaluaciones_x_estudiante
+                        GROUP BY evaluaciones_x_estudiante.cedula_estudiante 
+                    ) AS promedios_x_estudiante
                     GROUP BY rango
                 `,
                 // 9. Tasa de Completitud por Profesor
@@ -118,15 +144,37 @@ class ReportesModel {
                 `,
                 // 10. Rendimiento por Carrera
                 rendimientoCarrera: `
-                    SELECT c.nombre, AVG(de.puntaje_obtenido / 5) as promedio
-                    FROM carrera c
-                    INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera
-                    INNER JOIN seccion s ON mp.id = s.id_materia_plan
-                    INNER JOIN evaluacion e ON s.id = e.id_seccion
-                    INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
-                    INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                    GROUP BY c.codigo
-                    ORDER BY promedio DESC
+                    SELECT 
+                        c.nombre,
+                        c.codigo,
+                        CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                        s.codigo_periodo AS lapso_academico,
+                        r.id AS rubrica_id,
+                        e.contenido AS nombre_rubrica,
+                        r.nombre_rubrica AS nombre_real_rubrica,
+                        e.ponderacion AS porcentaje_evaluacion,
+                        SUM(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion /1000000) AS puntaje_total,
+                        er.observaciones,
+                        er.id,
+                        er.fecha_evaluado AS fecha_evaluacion,
+                        e.ponderacion AS puntaje_maximo_rubrica
+                    FROM 
+                        evaluacion e 
+                        INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
+                        INNER JOIN rubrica r ON ru.id_rubrica = r.id
+                        INNER JOIN criterio_rubrica cr ON r.id = cr.rubrica_id 
+                        INNER JOIN seccion s ON e.id_seccion = s.id
+                        INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
+                        INNER JOIN carrera c ON mp.codigo_carrera = c.codigo 
+                        INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+                        LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante
+                        LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                        LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 
+                                AND cr.id = nd.criterio_id 
+                    GROUP BY
+                        c.codigo
+                    ORDER BY 
+                        lapso_academico DESC, c.nombre, er.id
                 `
             };
         } else {
@@ -254,24 +302,64 @@ class ReportesModel {
                     `,
                     // 8. Distribución de Calificaciones
                     distribucionNotas: `
+                        SELECT
+                        CASE 
+                            WHEN puntaje >= 90 THEN 'Sobresaliente (18-20)'
+                            WHEN puntaje >= 75 THEN 'Notable (15-17)'
+                            WHEN puntaje >= 50 THEN 'Aprobado (10-14)'
+                            ELSE 'Reprobado (0-9)'
+                        END as rango,
+                        puntaje,
+                        COUNT(*) as cantidad
+                    FROM
+                    (
                         SELECT 
-                            CASE 
-                                WHEN promedio >= 18 THEN 'Sobresaliente (18-20)'
-                                WHEN promedio >= 15 THEN 'Notable (15-17)'
-                                WHEN promedio >= 10 THEN 'Aprobado (10-14)'
-                                ELSE 'Reprobado (0-9)'
-                            END as rango,
-                            COUNT(*) as cantidad
-                        FROM (
-                            SELECT er.id, SUM(de.puntaje_obtenido) / 5 as promedio
-                            FROM evaluacion_realizada er
-                            INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                            INNER JOIN evaluacion e ON er.id_evaluacion = e.id 
+                            codigo,
+                            nombre,
+                            avg(promedio_eval) AS puntaje
+                        FROM 
+                        (
+                            SELECT
+                                ins.cedula_estudiante,
+                                m.codigo,
+                                m.nombre,
+                                SUM(COALESCE(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion,0) /1000000) AS promedio_eval
+                            FROM
+                            evaluacion e 
+                            INNER JOIN rubrica_uso ru ON e.id =ru.id_eval 
+                            INNER JOIN rubrica r ON ru.id_rubrica = r.id 
+                            INNER JOIN criterio_rubrica cr ON cr.rubrica_id = r.id 
                             INNER JOIN seccion s ON e.id_seccion = s.id 
+                            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion 
+                            INNER JOIN materia_pensum mp  ON s.id_materia_plan = mp.id 
+                            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                            INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion 
+                            LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante 
+                            LEFT JOIN detalle_evaluacion de ON er.id  = de.evaluacion_r_id 
+                            LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND nd.orden = de.orden_detalle 
+                                AND nd.criterio_id = cr.id
                             WHERE s.codigo_periodo = '${periodo}'
-                            GROUP BY er.id
-                        ) as notas
-                        GROUP BY rango
+                            GROUP BY ins.cedula_estudiante, e.id
+                        ) AS evaluaciones_x_estudiante
+                        GROUP BY evaluaciones_x_estudiante.cedula_estudiante 
+                    ) AS promedios_x_estudiante
+                    GROUP BY rango
+                `,
+                // 9. Tasa de Completitud por Profesor
+                tasaCompletitudPorProfesor: `
+                    SELECT 
+                        CONCAT(u.nombre, ' ', u.apeliido) as nombre_completo,
+                        COUNT(DISTINCT e.id) as total_asignadas,
+                        COUNT(DISTINCT er.id) as completadas,
+                        ROUND((COUNT(DISTINCT er.id) / COUNT(DISTINCT e.id)) * 100, 2) as porcentaje_completitud
+                    FROM usuario_docente ud
+                    INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+                    INNER JOIN permiso_docente pd ON ud.cedula_usuario = pd.docente_cedula
+                    INNER JOIN evaluacion e ON pd.id_seccion = e.id_seccion
+                    LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND ud.cedula_usuario = er.cedula_evaluador
+                    WHERE u.activo = 1
+                    GROUP BY ud.cedula_usuario
+                    LIMIT 10
                     `,
                     // 9. Tasa de Completitud por Profesor
                     tasaCompletitudPorProfesor: `
@@ -293,16 +381,38 @@ class ReportesModel {
                     `,
                     // 10. Rendimiento por Carrera
                     rendimientoCarrera: `
-                        SELECT c.nombre, AVG(de.puntaje_obtenido / 5) as promedio
-                        FROM carrera c
-                        INNER JOIN materia_pensum mp ON c.codigo = mp.codigo_carrera
-                        INNER JOIN seccion s ON mp.id = s.id_materia_plan
-                        INNER JOIN evaluacion e ON s.id = e.id_seccion
-                        INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
-                        INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                        SELECT 
+                        c.nombre,
+                        c.codigo,
+                        CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                        s.codigo_periodo AS lapso_academico,
+                        r.id AS rubrica_id,
+                        e.contenido AS nombre_rubrica,
+                        r.nombre_rubrica AS nombre_real_rubrica,
+                        e.ponderacion AS porcentaje_evaluacion,
+                        SUM(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion /1000000) AS puntaje_total,
+                        er.observaciones,
+                        er.id,
+                        er.fecha_evaluado AS fecha_evaluacion,
+                        e.ponderacion AS puntaje_maximo_rubrica
+                    FROM 
+                        evaluacion e 
+                        INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
+                        INNER JOIN rubrica r ON ru.id_rubrica = r.id
+                        INNER JOIN criterio_rubrica cr ON r.id = cr.rubrica_id 
+                        INNER JOIN seccion s ON e.id_seccion = s.id
+                        INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
+                        INNER JOIN carrera c ON mp.codigo_carrera = c.codigo 
+                        INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+                        LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante
+                        LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                        LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 
+                                AND cr.id = nd.criterio_id 
                         WHERE s.codigo_periodo = '${periodo}'
-                        GROUP BY c.codigo
-                        ORDER BY promedio DESC  `
+                    GROUP BY
+                        c.codigo
+                    ORDER BY 
+                        lapso_academico DESC, c.nombre, er.id  `
                 };
         }
             const results = {};

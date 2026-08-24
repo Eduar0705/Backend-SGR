@@ -673,7 +673,8 @@ class RubricaModel {
                     evaluacion_id, id_seccion, contenido_evaluacion, tipo_evaluacion,
                     rubrica_id, nombre_rubrica, valor, docente_cedula, docente_nombre,
                     docente_apellido, materia_nombre, carrera_nombre, total_evaluaciones,
-                    seccion_codigo, completadas, total_evaluaciones - completadas AS pendientes,
+                    seccion_codigo, completadas, 
+                    total_evaluaciones - completadas AS pendientes,
                     fecha_evaluacion,
                     CASE 
                         WHEN rubrica_id IS NULL THEN 'Pendiente' 
@@ -708,8 +709,21 @@ class RubricaModel {
                     INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
                     LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
                     LEFT JOIN rubrica r ON ru.id_rubrica = r.id
-                    LEFT JOIN (SELECT COUNT(DISTINCT ins.cedula_estudiante) AS cantidad_en_seccion, ins.id_seccion FROM inscripcion_seccion ins GROUP BY ins.id_seccion) AS estud_sec ON s.id = estud_sec.id_seccion
-                    LEFT JOIN (SELECT er.id, er.id_evaluacion, SUM(de.puntaje_obtenido) AS puntaje_eval FROM evaluacion_realizada er INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id GROUP BY er.id, er.id_evaluacion) AS eval_est ON eval_est.id_evaluacion = e.id
+                    LEFT JOIN 
+                    	(SELECT 
+                    		COUNT(DISTINCT ins.cedula_estudiante) AS cantidad_en_seccion, 
+                    		ins.id_seccion FROM inscripcion_seccion ins 
+                    	GROUP BY ins.id_seccion) 
+                    AS estud_sec ON s.id = estud_sec.id_seccion
+                    LEFT JOIN 
+                    	(SELECT 
+                    		er.id, 
+                    		er.id_evaluacion, 
+                    	FROM evaluacion_realizada er 
+                    	INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id 
+                    	GROUP BY er.id, er.id_evaluacion
+                    	) 
+                    AS eval_est ON eval_est.id_evaluacion = e.id 
                     LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                     LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
                     GROUP BY e.id

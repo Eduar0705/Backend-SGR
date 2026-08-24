@@ -547,10 +547,17 @@ class TeacherEvaluacionesModel {
         }
 
         const detallesSQL = `
-            SELECT de.id_criterio_detalle, de.orden_detalle AS nivel_seleccionado, de.puntaje_obtenido
-            FROM detalle_evaluacion de 
-            INNER JOIN evaluacion_realizada er ON de.evaluacion_r_id = er.id
-            WHERE er.id = ? 
+            SELECT 
+            de.id_criterio_detalle, 
+            de.orden_detalle AS nivel_seleccionado, 
+            (de.puntaje_obtenido * nd.puntaje_maximo * cr.puntaje_maximo * e.ponderacion / 1000000) AS puntaje_obtenido
+                    FROM detalle_evaluacion de 
+                    INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND de.orden_detalle = nd.orden 
+                    INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id 
+                    INNER JOIN evaluacion_realizada er ON de.evaluacion_r_id = er.id
+                    INNER JOIN evaluacion e ON er.id_evaluacion = e.id
+                    WHERE er.id = ?
+                    GROUP BY de.id_criterio_detalle, de.orden_detalle 
         `;
         const detallesData = await query(detallesSQL, [evaluacion.id]);
         const detallesMap = {};

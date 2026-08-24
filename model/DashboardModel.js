@@ -353,45 +353,89 @@ class DashboardModelExtended extends DashboardModel {
         return new Promise((resolve, reject) => {
             const queries = {
                 distribucionNotas: `
-                    SELECT 
+                    SELECT
                         CASE 
-                            WHEN puntaje / 5 >= 18 THEN 'Sobresaliente'
-                            WHEN puntaje / 5 >= 15 THEN 'Notable'
-                            WHEN puntaje / 5 >= 10 THEN 'Aprobado'
+                            WHEN puntaje >= 90 THEN 'Sobresaliente'
+                            WHEN puntaje >= 75 THEN 'Notable'
+                            WHEN puntaje >= 50 THEN 'Aprobado'
                             ELSE 'Reprobado'
                         END as rango,
                         puntaje,
                         COUNT(*) as cantidad
-                    FROM (
-                        SELECT er.id, SUM(de.puntaje_obtenido) as puntaje
-                        FROM evaluacion_realizada er
-                        INNER JOIN evaluacion e ON er.id_evaluacion = e.id
-                        INNER JOIN seccion s ON e.id_seccion = s.id
-                        INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                        WHERE s.codigo_periodo = '2025-1'
-                        GROUP BY er.cedula_evaluado 
-                    ) as notas
+                    FROM
+                    (
+                        SELECT 
+                            codigo,
+                            nombre,
+                            avg(promedio_eval) AS puntaje
+                        FROM 
+                        (
+                            SELECT
+                                ins.cedula_estudiante,
+                                m.codigo,
+                                m.nombre,
+                                SUM(COALESCE(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion,0) /1000000) AS promedio_eval
+                            FROM
+                            evaluacion e 
+                            INNER JOIN rubrica_uso ru ON e.id =ru.id_eval 
+                            INNER JOIN rubrica r ON ru.id_rubrica = r.id 
+                            INNER JOIN criterio_rubrica cr ON cr.rubrica_id = r.id 
+                            INNER JOIN seccion s ON e.id_seccion = s.id 
+                            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion 
+                            INNER JOIN materia_pensum mp  ON s.id_materia_plan = mp.id 
+                            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                            INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion 
+                            LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante 
+                            LEFT JOIN detalle_evaluacion de ON er.id  = de.evaluacion_r_id 
+                            LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND nd.orden = de.orden_detalle 
+                                AND nd.criterio_id = cr.id
+                            WHERE pd.docente_cedula = ?
+                            AND s.codigo_periodo = ?
+                            GROUP BY ins.cedula_estudiante, e.id
+                        ) AS evaluaciones_x_estudiante
+                        GROUP BY evaluaciones_x_estudiante.cedula_estudiante 
+                    ) AS promedios_x_estudiante
                     GROUP BY rango
                 `,
                 rendimientoMateria: `
-                    SELECT 
-                        m.nombre,
-                        AVG(COALESCE(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion /1000000, 0)) AS promedio
-                    FROM evaluacion e 
-                    INNER JOIN rubrica_uso ru ON e.id =ru.id_eval 
-                    INNER JOIN rubrica r ON ru.id_rubrica = r.id 
-                    INNER JOIN criterio_rubrica cr ON cr.rubrica_id = r.id 
-                    INNER JOIN seccion s ON e.id_seccion = s.id 
-                    INNER JOIN materia_pensum mp  ON s.id_materia_plan = mp.id 
-                    INNER JOIN materia m ON mp.codigo_materia = m.codigo
-                    INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion 
-                    LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante 
-                    LEFT JOIN detalle_evaluacion de ON er.id  = de.evaluacion_r_id 
-                    LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND nd.orden = de.orden_detalle 
-                        AND nd.criterio_id = cr.id
-                    WHERE pd.docente_cedula = ?
-                    AND s.codigo_periodo = ?
-                    GROUP BY m.codigo
+                    SELECT
+                        codigo,
+                        nombre,
+                        AVG(promedio) AS promedio
+                    FROM
+                    (
+                        SELECT 
+                            codigo,
+                            nombre,
+                            avg(promedio_eval) AS promedio
+                        FROM 
+                        (
+                            SELECT
+                                ins.cedula_estudiante,
+                                m.codigo,
+                                m.nombre,
+                                SUM(COALESCE(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion,0) /1000000) AS promedio_eval
+                            FROM
+                            evaluacion e 
+                            INNER JOIN rubrica_uso ru ON e.id =ru.id_eval 
+                            INNER JOIN rubrica r ON ru.id_rubrica = r.id 
+                            INNER JOIN criterio_rubrica cr ON cr.rubrica_id = r.id 
+                            INNER JOIN seccion s ON e.id_seccion = s.id 
+                            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion 
+                            INNER JOIN materia_pensum mp  ON s.id_materia_plan = mp.id 
+                            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                            INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion 
+                            LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante 
+                            LEFT JOIN detalle_evaluacion de ON er.id  = de.evaluacion_r_id 
+                            LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND nd.orden = de.orden_detalle 
+                                AND nd.criterio_id = cr.id
+                            WHERE pd.docente_cedula = ?
+                            AND s.codigo_periodo = ?
+                            GROUP BY ins.cedula_estudiante, e.id
+                        ) AS evaluaciones_x_estudiante
+                        GROUP BY evaluaciones_x_estudiante.cedula_estudiante 
+                    ) AS promedios_x_estudiante
+                    GROUP BY codigo
                 `
             };
 

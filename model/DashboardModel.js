@@ -345,7 +345,6 @@ function calcularTiempoTranscurrido(fecha) {
 }
 
 class DashboardModelExtended extends DashboardModel {
-    //P E N D I E N T E   distribucionNotas
     async getAdvancedStats(cedula, roleId, periodo) {
         
         const params = [cedula, periodo]

@@ -1,5 +1,5 @@
 const connection = require('./conexion');
-
+// R E V I S A R
 class StudentEvaluacionesModel {
     async getEvaluacionesByEstudiante(cedula) {
         const query = `
@@ -55,45 +55,45 @@ class StudentEvaluacionesModel {
         // 1. Info evaluación
         const queryEvaluacion = `
             SELECT 
-    e.id AS evaluacion_id,
-    e.contenido,
-    IFNULL(r.nombre_rubrica, 'Rubrica por crear...') AS nombre_rubrica,
-    m.nombre AS materia,
-    COALESCE(puntaje_sub.puntaje, 0) AS puntaje_total,   -- ← valor único por er.id
-    er.fecha_evaluado AS fecha_evaluacion,
-    GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
-    e.ponderacion AS porcentaje_evaluacion,
-    er.observaciones,
-    IFNULL(CONCAT(ud.nombre, ' ', ud.apeliido), CONCAT(prof_sec.nombre, ' ', prof_sec.apeliido)) AS profesor
-FROM evaluacion e 
-INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
-INNER JOIN rubrica r ON ru.id_rubrica = r.id
-INNER JOIN seccion s ON e.id_seccion = s.id
-INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
-INNER JOIN materia m ON mp.codigo_materia = m.codigo
-INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
-INNER JOIN permiso_docente pd ON ins.id_seccion = pd.id_seccion
-INNER JOIN usuario prof_sec ON pd.docente_cedula = prof_sec.cedula
-LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante
-LEFT JOIN usuario ud ON ud.cedula = er.cedula_evaluador
-LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
-LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
-LEFT JOIN (
-    SELECT 
-        er.id AS er_id,
-        SUM(de.puntaje_obtenido * nd.puntaje_maximo * cr.puntaje_maximo * e2.ponderacion / 1000000) AS puntaje
-    FROM evaluacion_realizada er
-    INNER JOIN evaluacion e2 ON er.id_evaluacion = e2.id
-    INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-    INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND de.orden_detalle = nd.orden
-    INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id
-    WHERE er.cedula_evaluado = ?
-    GROUP BY er.id
-) puntaje_sub ON puntaje_sub.er_id = er.id
-WHERE ins.cedula_estudiante = ?
-AND e.id = ?
-GROUP BY e.id, er.id
-ORDER BY e.fecha_evaluacion, er.fecha_evaluado DESC;
+                e.id AS evaluacion_id,
+                e.contenido,
+                IFNULL(r.nombre_rubrica, 'Rubrica por crear...') AS nombre_rubrica,
+                m.nombre AS materia,
+                COALESCE(puntaje_sub.puntaje, 0) AS puntaje_total,   -- ← valor único por er.id
+                er.fecha_evaluado AS fecha_evaluacion,
+                GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
+                e.ponderacion AS porcentaje_evaluacion,
+                er.observaciones,
+                IFNULL(CONCAT(ud.nombre, ' ', ud.apeliido), CONCAT(prof_sec.nombre, ' ', prof_sec.apeliido)) AS profesor
+            FROM evaluacion e 
+            INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
+            INNER JOIN rubrica r ON ru.id_rubrica = r.id
+            INNER JOIN seccion s ON e.id_seccion = s.id
+            INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
+            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+            INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+            INNER JOIN permiso_docente pd ON ins.id_seccion = pd.id_seccion
+            INNER JOIN usuario prof_sec ON pd.docente_cedula = prof_sec.cedula
+            LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante
+            LEFT JOIN usuario ud ON ud.cedula = er.cedula_evaluador
+            LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
+            LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
+            LEFT JOIN (
+                SELECT 
+                    er.id AS er_id,
+                    SUM(de.puntaje_obtenido * nd.puntaje_maximo * cr.puntaje_maximo * e2.ponderacion / 1000000) AS puntaje
+                FROM evaluacion_realizada er
+                INNER JOIN evaluacion e2 ON er.id_evaluacion = e2.id
+                INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND de.orden_detalle = nd.orden
+                INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id
+                WHERE er.cedula_evaluado = ?
+                GROUP BY er.id
+            ) puntaje_sub ON puntaje_sub.er_id = er.id
+            WHERE ins.cedula_estudiante = ?
+            AND e.id = ?
+            GROUP BY e.id, er.id
+            ORDER BY e.fecha_evaluacion, er.fecha_evaluado DESC;
         `;
 
         const evaluacionResult = await new Promise((resolve, reject) => {

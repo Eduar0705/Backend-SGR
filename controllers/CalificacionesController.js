@@ -29,6 +29,7 @@ class CalificacionesController {
                         rubricas: [],
                         calificacion_final: 0,
                         porcentaje_acumulado: 0, 
+                        puntaje_acum_sobre_20: 0,
                         total_evaluado: 0
                     });
                 }
@@ -67,9 +68,9 @@ class CalificacionesController {
                 const materiasDelLapso = Array.from(materiasMap.values());
 
                 materiasDelLapso.forEach(m => {
-                    m.nota_20 = (m.calificacion_final / 100) * 20;
+                    m.nota_20 = (m.calificacion_final / 5);
                     m.nota_100 = m.calificacion_final;
-                    m.nota_display = Math.round(m.nota_20);
+                    m.puntaje_acum_sobre_20 = m.porcentaje_acumulado / 5;
                     allMaterias.push(m);
                 });
 
@@ -94,8 +95,6 @@ class CalificacionesController {
             if (totalMaterias > 0) {
                 porcentajeCompletado = (allMaterias.reduce((acc, m) => acc + m.porcentaje_acumulado, 0) / totalMaterias).toFixed(1);
             }
-            let puntajeEvaluadoSobre20 = porcentajeCompletado/5
-
             res.json({
                 success: true,
                 data: {
@@ -104,8 +103,7 @@ class CalificacionesController {
                         promedioGeneral,
                         materiasAprobadas,
                         totalMaterias,
-                        porcentajeCompletado,
-                        puntajeEvaluadoSobre20
+                        porcentajeCompletado
                     }
                 }
             });

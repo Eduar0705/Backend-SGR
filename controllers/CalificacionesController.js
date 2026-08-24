@@ -28,7 +28,7 @@ class CalificacionesController {
                         nota_referencial: 10,
                         rubricas: [],
                         calificacion_final: 0,
-                        porcentaje_acumulado: 0,
+                        porcentaje_acumulado: 0, 
                         total_evaluado: 0
                     });
                 }
@@ -94,6 +94,7 @@ class CalificacionesController {
             if (totalMaterias > 0) {
                 porcentajeCompletado = (allMaterias.reduce((acc, m) => acc + m.porcentaje_acumulado, 0) / totalMaterias).toFixed(1);
             }
+            let puntajeEvaluadoSobre20 = porcentajeCompletado/5
 
             res.json({
                 success: true,
@@ -103,7 +104,8 @@ class CalificacionesController {
                         promedioGeneral,
                         materiasAprobadas,
                         totalMaterias,
-                        porcentajeCompletado
+                        porcentajeCompletado,
+                        puntajeEvaluadoSobre20
                     }
                 }
             });

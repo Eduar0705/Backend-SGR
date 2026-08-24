@@ -345,11 +345,10 @@ function calcularTiempoTranscurrido(fecha) {
 }
 
 class DashboardModelExtended extends DashboardModel {
-    //P E N D I E N T E   AMBAS
+    //P E N D I E N T E   distribucionNotas
     async getAdvancedStats(cedula, roleId, periodo) {
         
-        const isDocente = roleId === 2;
-        const params = isDocente ? [periodo, cedula] : [periodo];
+        const params = [cedula, periodo]
         
         return new Promise((resolve, reject) => {
             const queries = {
@@ -375,18 +374,24 @@ class DashboardModelExtended extends DashboardModel {
                     GROUP BY rango
                 `,
                 rendimientoMateria: `
-                    SELECT m.nombre, AVG(de.puntaje_obtenido / 5) as promedio
-                    FROM evaluacion e
-                    INNER JOIN seccion s ON e.id_seccion = s.id
-                    INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+                    SELECT 
+                        m.nombre,
+                        AVG(COALESCE(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion /1000000, 0)) AS promedio
+                    FROM evaluacion e 
+                    INNER JOIN rubrica_uso ru ON e.id =ru.id_eval 
+                    INNER JOIN rubrica r ON ru.id_rubrica = r.id 
+                    INNER JOIN criterio_rubrica cr ON cr.rubrica_id = r.id 
+                    INNER JOIN seccion s ON e.id_seccion = s.id 
+                    INNER JOIN materia_pensum mp  ON s.id_materia_plan = mp.id 
                     INNER JOIN materia m ON mp.codigo_materia = m.codigo
-                    INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
-                    INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                    ${isDocente ? 'INNER JOIN permiso_docente pd ON s.id = pd.id_seccion' : ''}
-                    WHERE s.codigo_periodo = ?
-                    ${isDocente ? 'AND pd.docente_cedula = ?' : ''}
+                    INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion 
+                    LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante 
+                    LEFT JOIN detalle_evaluacion de ON er.id  = de.evaluacion_r_id 
+                    LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND nd.orden = de.orden_detalle 
+                        AND nd.criterio_id = cr.id
+                    WHERE pd.docente_cedula = ?
+                    AND s.codigo_periodo = ?
                     GROUP BY m.codigo
-                    ORDER BY promedio DESC
                 `
             };
 

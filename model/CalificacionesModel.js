@@ -6,7 +6,7 @@ class CalificacionesModel {
             SELECT 
                 m.nombre AS materia_nombre,
                 m.codigo AS materia_codigo,
-                CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                s.letra AS seccion_codigo,
                 s.codigo_periodo AS lapso_academico,
                 r.id AS rubrica_id,
                 e.contenido AS nombre_rubrica,
@@ -16,7 +16,7 @@ class CalificacionesModel {
                 er.observaciones,
                 er.id,
                 er.fecha_evaluado AS fecha_evaluacion,
-                SUM(cr.puntaje_maximo) AS puntaje_maximo_rubrica
+                e.ponderacion AS puntaje_maximo_rubrica
             FROM 
                 evaluacion e 
                 INNER JOIN rubrica_uso ru ON e.id = ru.id_eval

@@ -73,8 +73,7 @@ class EvaluacionModel {
                     LEFT JOIN (
                         SELECT 
                             er.id,
-                            er.id_evaluacion,
-                            SUM(de.puntaje_obtenido) AS puntaje_eval
+                            er.id_evaluacion
                         FROM evaluacion_realizada er 
                         INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                         GROUP BY er.id, er.id_evaluacion
@@ -227,8 +226,7 @@ class EvaluacionModel {
                     LEFT JOIN (
                         SELECT 
                             er.id,
-                            er.id_evaluacion,
-                            SUM(de.puntaje_obtenido) AS puntaje_eval
+                            er.id_evaluacion
                         FROM evaluacion_realizada er 
                         INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                         GROUP BY er.id, er.id_evaluacion

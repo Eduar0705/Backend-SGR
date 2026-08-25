@@ -59,11 +59,12 @@ class StudentEvaluacionesModel {
                 e.contenido,
                 IFNULL(r.nombre_rubrica, 'Rubrica por crear...') AS nombre_rubrica,
                 m.nombre AS materia,
-                COALESCE(puntaje_sub.puntaje, 0) AS puntaje_total,   -- ← valor único por er.id
+                COALESCE(puntaje_sub.puntaje, 0) AS puntaje_total,
                 er.fecha_evaluado AS fecha_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.ponderacion AS porcentaje_evaluacion,
                 er.observaciones,
+                r.id AS rubrica_id,
                 IFNULL(CONCAT(ud.nombre, ' ', ud.apeliido), CONCAT(prof_sec.nombre, ' ', prof_sec.apeliido)) AS profesor
             FROM evaluacion e 
             INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
@@ -95,7 +96,6 @@ class StudentEvaluacionesModel {
             GROUP BY e.id, er.id
             ORDER BY e.fecha_evaluacion, er.fecha_evaluado DESC;
         `;
-
         const evaluacionResult = await new Promise((resolve, reject) => {
             connection.query(queryEvaluacion, [estudianteCedula, estudianteCedula,  evaluacionId], (err, results) => {
                 if (err) return reject(err);
@@ -108,7 +108,6 @@ class StudentEvaluacionesModel {
         }
 
         const evaluacion = evaluacionResult[0];
-
         // 2. Info estudiante
         const queryEstudiante = `
             SELECT u.cedula, u.nombre, u.apeliido as apellido, u.email, c.nombre AS carrera
@@ -176,7 +175,7 @@ class StudentEvaluacionesModel {
                         INNER JOIN evaluacion e ON er.id_evaluacion = e.id
                         INNER JOIN rubrica_uso ru ON e.id = ru.id_eval 
                         INNER JOIN rubrica r ON ru.id_rubrica  = r.id AND r.id = cr.rubrica_id 
-                        WHERE e.id = 42 AND er.cedula_evaluado = ?
+                        WHERE e.id = ? AND er.cedula_evaluado = ?
                         GROUP BY de.id_criterio_detalle, de.orden_detalle 
         `;
         const detallesResult = await new Promise((resolve, reject) => {
@@ -205,8 +204,9 @@ class StudentEvaluacionesModel {
                     nombre: nivel.nombre_nivel,
                     descripcion: nivel.descripcion,
                     puntaje: detallesMap[criterio.id] && detallesMap[criterio.id].nivel_seleccionado === nivel.orden
-                        ? detallesMap[criterio.id].puntaje_obtenido : nivel.puntaje,
-                    puntaje_maximo: nivel.puntaje,
+                        ? (parseFloat(detallesMap[criterio.id].puntaje_obtenido).toFixed(2) )
+                        : parseFloat((nivel.puntaje)).toFixed(2),
+                    puntaje_maximo: (nivel.puntaje * criterio.puntaje_maximo * evaluacion.porcentaje_evaluacion / 10000 ),
                     orden: nivel.orden,
                     seleccionado: detallesMap[criterio.id] ? detallesMap[criterio.id].nivel_seleccionado === nivel.orden : false
                 }));
@@ -214,7 +214,7 @@ class StudentEvaluacionesModel {
             return {
                 id: criterio.id,
                 nombre: criterio.descripcion,
-                puntaje_maximo: criterio.puntaje_maximo,
+                puntaje_maximo: criterio.puntaje_maximo * evaluacion.porcentaje_evaluacion / 100,
                 orden: criterio.orden,
                 niveles
             };
@@ -226,7 +226,7 @@ class StudentEvaluacionesModel {
                 id: evaluacion.id,
                 rubrica_id: evaluacion.rubrica_id,
                 observaciones: evaluacion.observaciones,
-                puntaje_total: evaluacion.puntaje_total,
+                puntaje_total: !isNaN(parseFloat(evaluacion.puntaje_total)) ? parseFloat(evaluacion.puntaje_total).toFixed(2) : null,
                 fecha_evaluacion: evaluacion.fecha_evaluacion
             },
             estudiante: {

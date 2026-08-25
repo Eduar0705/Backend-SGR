@@ -253,40 +253,59 @@ class TeacherEvaluacionesModel {
     }
     static async getEvaluadasByEval(idEval) {
         let sqlQuery = `
-                SELECT
+                SELECT 
                     er.id,
                     e.id AS id_evaluacion,
-                    (SELECT COALESCE(SUM(de2.puntaje_obtenido), 0)
-                    FROM detalle_evaluacion de2
-                    WHERE de2.evaluacion_r_id = er.id) as puntaje_total,
-                    e.fecha_evaluacion AS fecha_fija,
-                    er.fecha_evaluado as fecha_evaluacion,
-                    er.observaciones,
+                    r.id AS rubrica_id,
                     ins.cedula_estudiante as estudiante_cedula,
                     u.nombre AS estudiante_nombre,
                     u.apeliido AS estudiante_apellido,
-                    r.nombre_rubrica as nombre_rubrica,
+                    er.observaciones,
+                    COALESCE(puntaje_sub.puntaje, 0) AS puntaje_total,
+                    e.fecha_evaluacion AS fecha_fija,
+                    er.fecha_evaluado AS fecha_evaluacion,
+                    IFNULL(r.nombre_rubrica, 'Rubrica por crear...') AS nombre_rubrica,
                     tr.nombre as tipo_evaluacion,
-                    IFNULL((SELECT SUM(cr2.puntaje_maximo)
-                    FROM criterio_rubrica cr2
-                    WHERE cr2.rubrica_id = r.id), e.ponderacion) as porcentaje_evaluacion,
+                    tr.nombre as tipo_rubrica,
+                    e.ponderacion AS porcentaje_evaluacion,
                     r.instrucciones,
+                    e.competencias,
+                    m.nombre AS materia_nombre,
+                    m.codigo AS materia_codigo,
+                    IFNULL(CONCAT(ud.nombre, ' ', ud.apeliido), CONCAT(prof_sec.nombre, ' ', prof_sec.apeliido)) AS profesor,
+                    e.contenido,
                     CASE
                         WHEN er.id IS NOT NULL THEN 'Completada'
                         ELSE 'Pendiente'
                     END as estado
                 FROM evaluacion e 
-                INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
-                INNER JOIN rubrica r ON r.id = ru.id_rubrica
+                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
+                INNER JOIN rubrica r ON ru.id_rubrica = r.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
+                INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
+                INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 INNER JOIN usuario_estudiante ue ON ins.cedula_estudiante = ue.cedula_usuario
                 INNER JOIN usuario u ON ue.cedula_usuario = u.cedula
-                LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ue.cedula_usuario
+                INNER JOIN permiso_docente pd ON ins.id_seccion = pd.id_seccion
+                INNER JOIN usuario prof_sec ON pd.docente_cedula = prof_sec.cedula
                 LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+                LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante
+                LEFT JOIN usuario ud ON ud.cedula = er.cedula_evaluador
+                LEFT JOIN (
+                    SELECT 
+                        er.id AS er_id,
+                        SUM(de.puntaje_obtenido * nd.puntaje_maximo * cr.puntaje_maximo * e2.ponderacion / 1000000) AS puntaje
+                    FROM evaluacion_realizada er
+                    INNER JOIN evaluacion e2 ON er.id_evaluacion = e2.id
+                    INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                    INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND de.orden_detalle = nd.orden
+                    INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id
+                    GROUP BY er.id
+                ) puntaje_sub ON puntaje_sub.er_id = er.id
                 WHERE e.id = ?
                 GROUP BY e.id, ins.cedula_estudiante
-                ORDER BY er.fecha_evaluado DESC;
+                ORDER BY e.fecha_evaluacion, er.fecha_evaluado DESC;
             `;
 
         const evaluaciones = await query(sqlQuery, [idEval]);
@@ -294,9 +313,9 @@ class TeacherEvaluacionesModel {
             const iniciales = (ev.estudiante_nombre.charAt(0) + ev.estudiante_apellido.charAt(0)).toUpperCase();
             const fecha = ev.fecha_evaluacion ?
                 new Date(ev.fecha_evaluacion).toISOString() : null;
-
             return {
                 ...ev,
+                puntaje_total: parseFloat(ev.puntaje_total).toFixed(2),
                 iniciales,
                 fecha_formateada: fecha ? new Date(fecha).toLocaleDateString('es-ES') : 'Pendiente',
                 calificacion: ev.puntaje_total ?
@@ -469,42 +488,61 @@ class TeacherEvaluacionesModel {
     static async getEvaluacionDetalles(evaluacionId, estudianteCedula) {
         // Evaluacion details directly
         const evalSQL = `
-            SELECT
-                er.id,
-                e.id AS id_evaluacion,
-                r.id as rubrica_id,
-                er.cedula_evaluado as estudiante_cedula,
+            SELECT 
+				er.id,
+                e.id AS evaluacion_id,
+                r.id AS rubrica_id,
+                ins.cedula_estudiante as estudiante_cedula,
+                u.nombre AS estudiante_nombre,
+                u.apeliido AS estudiante_apellido,
                 er.observaciones,
-                (SELECT COALESCE(SUM(de2.puntaje_obtenido), 0)
-                FROM detalle_evaluacion de2
-                WHERE de2.evaluacion_r_id = er.id) as puntaje_total,
-                er.fecha_evaluado as fecha_evaluacion,
-                r.nombre_rubrica,
+                COALESCE(puntaje_sub.puntaje, 0) AS puntaje_total,
+                e.fecha_evaluacion AS fecha_fija,
+                er.fecha_evaluado AS fecha_evaluacion,
+                IFNULL(r.nombre_rubrica, 'Rubrica por crear...') AS nombre_rubrica,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 tr.nombre as tipo_rubrica,
-                (SELECT SUM(cr.puntaje_maximo) FROM criterio_rubrica cr WHERE cr.rubrica_id = r.id) as porcentaje_evaluacion,
+                e.ponderacion as porcentaje_evaluacion,
                 r.instrucciones,
                 e.competencias,
-                m.nombre as materia_nombre,
+                m.nombre AS materia_nombre,
                 m.codigo as materia_codigo,
-                CONCAT(ud.nombre, ' ', ud.apeliido) as profesor
-            FROM evaluacion e
-            INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
-            INNER JOIN rubrica r ON r.id = ru.id_rubrica
-            LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+                IFNULL(CONCAT(ud.nombre, ' ', ud.apeliido), CONCAT(prof_sec.nombre, ' ', prof_sec.apeliido)) AS profesor,
+                e.contenido
+            FROM evaluacion e 
+            INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
+            INNER JOIN rubrica r ON ru.id_rubrica = r.id
             INNER JOIN seccion s ON e.id_seccion = s.id
-            INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
-            INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+            INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
-            LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND ins.cedula_estudiante = er.cedula_evaluado
+            INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+            INNER JOIN usuario_estudiante ue ON ins.cedula_estudiante = ue.cedula_usuario 
+            INNER JOIN usuario u ON ue.cedula_usuario = u.cedula 
+            INNER JOIN permiso_docente pd ON ins.id_seccion = pd.id_seccion
+            INNER JOIN usuario prof_sec ON pd.docente_cedula = prof_sec.cedula
+            LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+            LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante
             LEFT JOIN usuario ud ON ud.cedula = er.cedula_evaluador
-            LEFT JOIN estrategia_empleada eemp ON er.id_evaluacion = eemp.id_eval
+            LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
             LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
-            WHERE ins.cedula_estudiante = ? AND e.id = ?
-            GROUP BY e.id
-            ORDER BY er.fecha_evaluado DESC;
+            LEFT JOIN (
+                SELECT 
+                    er.id AS er_id,
+                    SUM(de.puntaje_obtenido * nd.puntaje_maximo * cr.puntaje_maximo * e2.ponderacion / 1000000) AS puntaje
+                FROM evaluacion_realizada er
+                INNER JOIN evaluacion e2 ON er.id_evaluacion = e2.id
+                INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
+                INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND de.orden_detalle = nd.orden
+                INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id
+                WHERE er.cedula_evaluado = ?
+                GROUP BY er.id
+            ) puntaje_sub ON puntaje_sub.er_id = er.id
+            WHERE ins.cedula_estudiante = ?
+            AND e.id = ?
+            GROUP BY e.id, er.id
+            ORDER BY e.fecha_evaluacion, er.fecha_evaluado DESC;
         `;
-        const evalData = await query(evalSQL, [estudianteCedula, evaluacionId]);
+        const evalData = await query(evalSQL, [estudianteCedula, estudianteCedula, evaluacionId]);
         if (evalData.length === 0) throw new Error('Evaluación no encontrada');
         const evaluacion = evalData[0];
 
@@ -575,21 +613,26 @@ class TeacherEvaluacionesModel {
                     id: n.id,
                     nombre: n.nombre,
                     descripcion: n.descripcion,
-                    puntaje: detallesMap[c.id]?.nivel_seleccionado === n.id ? detallesMap[c.id]?.puntaje_obtenido : n.puntaje,
-                    puntaje_maximo: n.puntaje,
+                    puntaje: (parseFloat(detallesMap[c.id]?.nivel_seleccionado === n.id 
+                        ? (detallesMap[c.id]?.puntaje_obtenido)
+                        : n.puntaje)).toFixed(2),
+                    puntaje_maximo: (n.puntaje * c.puntaje_maximo * evaluacion.porcentaje_evaluacion / 10000),
                     seleccionado: detallesMap[c.id]?.nivel_seleccionado === n.id
                 }));
             return {
                 id: c.id,
                 nombre: c.nombre,
                 descripcion: c.descripcion,
-                puntaje_maximo: c.puntaje_maximo,
+                puntaje_maximo: c.puntaje_maximo * evaluacion.porcentaje_evaluacion / 100,
                 niveles: nivelesCriterio
             };
         });
 
         return {
-            evaluacion,
+            evaluacion: 
+            {...evaluacion,
+                puntaje_total: parseFloat(evaluacion.puntaje_total).toFixed(2)
+            },
             estudiante,
             rubrica: {
                 nombre_rubrica: evaluacion.nombre_rubrica,

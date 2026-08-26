@@ -98,8 +98,11 @@ class TeacherEvaluacionesController {
         try {
             const { evaluacionId, estudianteCedula } = req.params;
             const detalles = await TeacherEvaluacionesModel.getEvaluacionDetalles(evaluacionId, estudianteCedula);
+                        console.log(detalles)
             detalles.criterios.forEach(element => {
+                console.log(element.niveles)
             }); 
+
             res.json({ success: true, ...detalles });
         } catch (error) {
             console.error('Error al obtener detalles:', error);

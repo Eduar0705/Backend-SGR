@@ -33,7 +33,7 @@ app.use('/api/notificaciones', notificacionesRouter);
 
 // Middleware de Log para API
 app.use('/api', (req, res, next) => {
-  console.log(`[API REQUEST] ${req.method} ${req.url} por user ${req.user.cedula}`);
+  console.log(`[API REQUEST] ${req.method} ${req.url}`);
   next();
 });
 
@@ -68,6 +68,7 @@ app.use('/api/permisos', permisosRouter);
 // AcademicoRouter captura lo que queda bajo /api (incluyendo /api/evaluaciones)
 let academicoRouter = require('./routes/academico');
 const PeriodosController = require('./controllers/PeriodosController');
+const { timeStamp } = require('console');
 app.use('/api', academicoRouter);
 
 // Manejador 404 para API (Retorna JSON, no HTML)

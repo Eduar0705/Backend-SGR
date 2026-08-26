@@ -544,7 +544,7 @@ class TeacherEvaluacionesModel {
             SELECT 
             de.id_criterio_detalle, 
             de.orden_detalle AS nivel_seleccionado, 
-            (de.puntaje_obtenido * nd.puntaje_maximo * cr.puntaje_maximo * e.ponderacion / 1000000) AS puntaje_obtenido
+            de.puntaje_obtenido AS puntaje_obtenido
                     FROM detalle_evaluacion de 
                     INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND de.orden_detalle = nd.orden 
                     INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id 
@@ -570,8 +570,8 @@ class TeacherEvaluacionesModel {
                     nombre: n.nombre,
                     descripcion: n.descripcion,
                     puntaje: (parseFloat(detallesMap[c.id]?.nivel_seleccionado === n.id 
-                        ? (detallesMap[c.id]?.puntaje_obtenido)
-                        : n.puntaje)).toFixed(2),
+                        ? ((detallesMap[c.id]?.puntaje_obtenido * n.puntaje * c.puntaje_maximo * evaluacion.porcentaje_evaluacion / 1000000))
+                        : n.puntaje * c.puntaje_maximo * evaluacion.porcentaje_evaluacion / 10000)).toFixed(2),
                     puntaje_maximo: (n.puntaje * c.puntaje_maximo * evaluacion.porcentaje_evaluacion / 10000),
                     seleccionado: detallesMap[c.id]?.nivel_seleccionado === n.id
                 }));
@@ -604,8 +604,8 @@ class TeacherEvaluacionesModel {
     }
 
     static async saveEvaluacion(evaluacionId, estudianteCedula, evaluadorCedula, payload) {
+        //Colocar notificacion de primera informando si se cambio nota o la que ya esta para informar correccion de eval
         const pool = conexion
-
         const connection = await new Promise((resolve, reject) => {
             pool.getConnection((err, conn) => err ? reject(err) : resolve(conn));
         });
@@ -619,7 +619,7 @@ class TeacherEvaluacionesModel {
             connection.commit(err => err ? reject(err) : resolve());
         });
         const rollback = () => new Promise((resolve, reject) => {
-            connection.rollback(() => resolve()); // rollback siempre resuelve
+            connection.rollback(() => resolve());
         });
         await beginTransaction();
 
@@ -644,11 +644,15 @@ class TeacherEvaluacionesModel {
                     [er_id]
                 );
             }
-
+            //aqui
             if (payload.detalles && payload.detalles.length > 0) {
                 const values = payload.detalles.map(d => [
-                    er_id, d.criterio_id, d.nivel_id, d.puntaje_obtenido, null
+                    er_id, d.criterio_id, 
+                    d.nivel_id, 
+                    d.puntaje_maximo!=0 ? ((d.puntaje_obtenido / d.puntaje_maximo) * 100) : 0, 
+                    null
                 ]);
+                console.log(values)
                 await query(
                     `INSERT INTO detalle_evaluacion (evaluacion_r_id, id_criterio_detalle, orden_detalle, puntaje_obtenido, observaciones)
                  VALUES ?`,

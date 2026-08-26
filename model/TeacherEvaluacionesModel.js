@@ -13,7 +13,7 @@ function query(sql, params = []) {
 class TeacherEvaluacionesModel {
     static async getAllTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
-        console.log(periodo); periodo = "2025-1"
+        periodo = "2025-1"
         let queryParams = [];
 
         if (esAdmin) {
@@ -152,7 +152,7 @@ class TeacherEvaluacionesModel {
     }
     static async getTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
-        console.log(periodo); periodo = "2025-1"
+        periodo = "2025-1"
         let queryParams = [];
 
         if (esAdmin) {
@@ -325,7 +325,7 @@ class TeacherEvaluacionesModel {
         });
     }
     static async getCarreras(docenteCedula, periodo) {
-        console.log(periodo); periodo = "2025-1"
+        periodo = "2025-1"
         const sqlQuery = `
             SELECT DISTINCT
                 c.codigo,
@@ -346,7 +346,7 @@ class TeacherEvaluacionesModel {
     }
 
     static async getMaterias(carreraCodigo, docenteCedula, periodo) {
-        console.log(periodo); periodo = "2025-1"
+        periodo = "2025-1"
         const sqlQuery = `
             SELECT DISTINCT
                 m.codigo,
@@ -369,7 +369,7 @@ class TeacherEvaluacionesModel {
     }
 
     static async getSecciones(materiaCodigo, docenteCedula, periodo) {
-        console.log(periodo); periodo = "2025-1"
+        periodo = "2025-1"
         const sqlQuery = `
             SELECT DISTINCT
                 s.id,
@@ -439,50 +439,6 @@ class TeacherEvaluacionesModel {
             ORDER BY r.nombre_rubrica
         `;
         return query(sqlQuery, [docenteCedula]);
-    }
-
-    static async createEvaluaciones(rubrica_id, estudiantes, observaciones, docenteCedula) {
-        const verifyQ = `
-            SELECT ru.id_eval
-            FROM rubrica r
-            INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
-            INNER JOIN evaluacion e ON ru.id_eval = e.id
-            INNER JOIN permiso_docente pd ON pd.id_seccion = e.id_seccion
-            WHERE r.id = ? 
-              AND r.activo = 1
-              AND pd.docente_cedula = ?
-        `;
-        const resVerify = await query(verifyQ, [rubrica_id, docenteCedula]);
-        if (resVerify.length === 0) {
-            throw new Error('La rúbrica no existe o no tienes permisos para usarla');
-        }
-
-        const id_evaluacion = resVerify[0].id_eval;
-
-        // Verificar evaluados duplicados
-        const checkDupe = `
-            SELECT cedula_evaluado 
-            FROM evaluacion_realizada 
-            WHERE id_evaluacion = ? AND cedula_evaluado IN (?)
-        `;
-        const dupes = await query(checkDupe, [id_evaluacion, estudiantes]);
-        if (dupes.length > 0) {
-            throw new Error('Ya existen evaluaciones para algunas cédulas: ' + dupes.map(d => d.cedula_evaluado).join(', '));
-        }
-
-        // Insertar evaluaciones
-        const values = estudiantes.map(cedula => [
-            id_evaluacion,
-            cedula,
-            docenteCedula, // cedula_evaluador
-            observaciones || null
-        ]);
-
-        const insertQ = `
-            INSERT INTO evaluacion_realizada (id_evaluacion, cedula_evaluado, cedula_evaluador, observaciones)
-            VALUES ?
-        `;
-        return query(insertQ, [values]);
     }
 
     static async getEvaluacionDetalles(evaluacionId, estudianteCedula) {
@@ -653,27 +609,21 @@ class TeacherEvaluacionesModel {
         const connection = await new Promise((resolve, reject) => {
             pool.getConnection((err, conn) => err ? reject(err) : resolve(conn));
         });
-
         const query = (sql, params) => new Promise((resolve, reject) => {
             connection.query(sql, params, (err, results) => err ? reject(err) : resolve(results));
         });
-
         const beginTransaction = () => new Promise((resolve, reject) => {
             connection.beginTransaction(err => err ? reject(err) : resolve());
         });
-
         const commit = () => new Promise((resolve, reject) => {
             connection.commit(err => err ? reject(err) : resolve());
         });
-
         const rollback = () => new Promise((resolve, reject) => {
             connection.rollback(() => resolve()); // rollback siempre resuelve
         });
-
         await beginTransaction();
 
         let er_id;
-
         try {
             const rows = await query(
                 `SELECT id FROM evaluacion_realizada WHERE id_evaluacion = ? AND cedula_evaluado = ?`,

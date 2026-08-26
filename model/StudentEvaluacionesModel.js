@@ -1,5 +1,4 @@
 const connection = require('./conexion');
-// R E V I S A R
 class StudentEvaluacionesModel {
     async getEvaluacionesByEstudiante(cedula) {
         const query = `

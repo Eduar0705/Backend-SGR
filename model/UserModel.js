@@ -182,7 +182,7 @@ class UserModel {
                     const periodoGeneral = periodoGeneralResult && periodoGeneralResult[0] ?
                         periodoGeneralResult[0].codigo : null;
 
-                    console.log(`[PERIODO] Período general encontrado: ${periodoGeneral}`);
+                    console.log(`[PERIODO] Período general encontrado: ${periodoGeneral} para ${cedula}`);
 
                     // Si el rol no requiere consulta específica
                     if (id_rol !== 2 && id_rol !== 3) {
@@ -240,7 +240,7 @@ class UserModel {
                         const periodoUsuario = periodoUsuarioResult && periodoUsuarioResult[0] ?
                             periodoUsuarioResult[0].codigo : null;
 
-                        console.log(`[PERIODO] Período usuario encontrado: ${periodoUsuario}`);
+                        console.log(`[PERIODO] Período usuario encontrado: ${periodoUsuario} para ${cedula}`);
 
                         resolve({
                             success: true,

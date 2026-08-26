@@ -193,7 +193,6 @@ class PeriodosModel {
     }
     async updateLapso(id, fecha_inicio, fecha_fin) {
         return new Promise((resolve, reject) => {
-            console.log(id, fecha_inicio, fecha_fin)
             const query = `
                 UPDATE lapso_correcciones
                 SET fecha_inicio=?, fecha_fin=?

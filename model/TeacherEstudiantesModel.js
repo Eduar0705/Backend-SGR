@@ -13,7 +13,7 @@ class TeacherEstudiantesModel {
     static async getEstudiantes(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
         let queryParams = [];
-        console.log(periodo); periodo = "2025-1"
+        periodo = "2025-1"
 
         if (esAdmin) {
             // Admin puede ver todos los estudiantes

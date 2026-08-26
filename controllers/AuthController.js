@@ -7,7 +7,7 @@ class AuthController {
     async login(req, res) {
         try {
             const { cedula, password } = req.body;
-            console.log(`[AUTH] Login attempt - Cedula: ${cedula}, Password: ${password}`);
+            console.log(`[AUTH] Login attempt - Cedula: ${cedula}`);
 
             if (!cedula || !password) {
                 console.log('[AUTH] Missing credentials');
@@ -18,7 +18,7 @@ class AuthController {
             }
 
             const user = await userModel.getByCedula(cedula);
-            console.log('[AUTH] User found in DB:', user ? 'YES' : 'NO');
+            console.log('[AUTH] User found in DB:', user ? `YES, Es ${cedula}` : 'NO');
 
             if (!user) {
                 return res.status(401).json({

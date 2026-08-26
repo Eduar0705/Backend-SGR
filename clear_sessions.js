@@ -5,7 +5,7 @@ function clearAllSessions() {
         if (error) {
             console.error('Error al intentar cerrar las sesiones:', error);
         } else {
-            console.log(`Se cerraron exitosamente ${result.affectedRows} sesiones abiertas.`);
+            console.log(`Se cerraron exitosamente las ${result.affectedRows} sesiones abiertas.`);
         }
         process.exit(0);
     });

@@ -94,27 +94,11 @@ class TeacherEvaluacionesController {
         }
     }
 
-    static async crearEvaluaciones(req, res) {
-        try {
-            const { rubrica_id, estudiantes, observaciones } = req.body;
-            if (!rubrica_id || !estudiantes || estudiantes.length === 0) {
-                return res.json({ success: false, message: 'Datos incompletos' });
-            }
-            const result = await TeacherEvaluacionesModel.createEvaluaciones(rubrica_id, estudiantes, observaciones, req.user.cedula);
-            res.json({ success: true, message: 'Evaluaciones creadas exitosamente', cantidad: (result && result.affectedRows) || estudiantes.length });
-        } catch (error) {
-            console.error('Error al crear:', error);
-            res.json({ success: false, message: error.message || 'Error al crear las evaluaciones' });
-        }
-    }
-
     static async getDetalles(req, res) {
         try {
             const { evaluacionId, estudianteCedula } = req.params;
             const detalles = await TeacherEvaluacionesModel.getEvaluacionDetalles(evaluacionId, estudianteCedula);
-            console.log(detalles)
             detalles.criterios.forEach(element => {
-                console.log(element.niveles)
             }); 
             res.json({ success: true, ...detalles });
         } catch (error) {

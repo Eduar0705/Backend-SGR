@@ -2,7 +2,6 @@ const connection = require('./conexion');
 
 class DocenteModel {
     async getDocentes(periodo) {
-        console.log(periodo)
         const query = `
             SELECT 
                 u.cedula, 

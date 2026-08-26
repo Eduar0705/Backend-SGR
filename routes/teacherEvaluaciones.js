@@ -14,9 +14,6 @@ router.get('/evaluadas/:id_eval', TeacherEvaluacionesController.getEvaluadasByEv
 router.get('/carreras', TeacherEvaluacionesController.getCarreras);
 router.get('/rubricas/activas', TeacherEvaluacionesController.getRubricasActivas);
 
-// Crear nuevas evaluaciones
-router.post('/crear', TeacherEvaluacionesController.crearEvaluaciones);
-
 // Detalles de la evaluación para calificar o ver
 router.get('/:evaluacionId/:estudianteCedula/detalles', TeacherEvaluacionesController.getDetalles);
 

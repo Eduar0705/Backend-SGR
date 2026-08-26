@@ -33,7 +33,7 @@ app.use('/api/notificaciones', notificacionesRouter);
 
 // Middleware de Log para API
 app.use('/api', (req, res, next) => {
-  console.log(`[API REQUEST] ${req.method} ${req.url}`);
+  console.log(`[API REQUEST] ${req.method} ${req.url} por user ${req.user.cedula}`);
   next();
 });
 

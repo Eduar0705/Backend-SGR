@@ -119,12 +119,6 @@ class RubricaController {
             res.status(500).json({ error: 'Error al eliminar rubrica. Por favor, intente de nuevo mas tarde.' });
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // FIX PRINCIPAL: updateRubrica reescrito usando async/await con Promises
-    // para evitar el bug de callbacks concurrentes con contadores manuales
-    // que causaba que commit se ejecutara múltiples veces o nunca.
-    // ─────────────────────────────────────────────────────────────────────────
     async updateRubrica(req, res) {
         const { id } = req.params;
 
@@ -134,7 +128,6 @@ class RubricaController {
 
         const { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje } = req.body;
 
-        // ── Parsear criterios ─────────────────────────────────────────────────
         let criteriosParsed = criterios;
         if (typeof criterios === 'string') {
             try {
@@ -144,7 +137,6 @@ class RubricaController {
             }
         }
 
-        // ── Validaciones ──────────────────────────────────────────────────────
         if (!nombre_rubrica || !id_evaluacion || !tipo_rubrica || !instrucciones) {
             return res.status(400).json({ success: false, mensaje: 'Todos los campos obligatorios deben estar completos' });
         }
@@ -180,8 +172,8 @@ class RubricaController {
                     return res.status(400).json({ success: false, mensaje: `El nivel "${nivel.nombre_nivel}" necesita una descripción` });
                 }
                 const puntajeNivel = parseFloat(nivel.puntaje);
-                if (isNaN(puntajeNivel) || puntajeNivel < 0.25) {
-                    return res.status(400).json({ success: false, mensaje: `El nivel "${nivel.nombre_nivel}" debe tener un puntaje mínimo de 0.25 puntos` });
+                if (isNaN(puntajeNivel) || puntajeNivel < 0.025) {
+                    return res.status(400).json({ success: false, mensaje: `El nivel "${nivel.nombre_nivel}" debe tener un puntaje mínimo de 0.025 puntos` });
                 }
                 if (puntajeNivel > puntajeCriterio) {
                     return res.status(400).json({ success: false, mensaje: `El puntaje del nivel "${nivel.nombre_nivel}" excede el puntaje máximo del criterio` });
@@ -196,7 +188,6 @@ class RubricaController {
             });
         }
 
-        // ── Transacción con async/await ───────────────────────────────────────
         let conn;
         try {
             conn = await RubricaModel.getConnectionAsync();

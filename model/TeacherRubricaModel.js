@@ -181,26 +181,28 @@ class TeacherRubricaModel {
             });
         });
     }
-    // ============================================================
     // MÉTODOS PARA GESTIÓN DE RÚBRICAS (DOCENTE)
-    // ============================================================
 
     async getRubricas(cedula) {
         const query = `
             SELECT
                 r.id,
+                e.contenido,
                 e.id AS id_evaluacion,
+                e.contenido,
                 r.nombre_rubrica,
                 e.fecha_evaluacion,
                 s.codigo_periodo,
                 r.fecha_creacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.ponderacion AS porcentaje_evaluacion,
+                c.nombre AS carrera_nombre,
                 m.nombre AS materia_nombre,
                 m.codigo AS materia_codigo,
                 CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                 CASE WHEN r.activo = 1 THEN ru.estado ELSE 'Inactivo' END AS estado,
                 r.activo,
+                s.letra AS seccion_letra,
                 CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
             FROM rubrica r
             INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
@@ -209,12 +211,13 @@ class TeacherRubricaModel {
             LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
             INNER JOIN seccion s ON e.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+            INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
             INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
             WHERE pd.docente_cedula = ? AND r.activo = 1 AND u.activo = 1
-            GROUP BY r.id
+            GROUP BY e.id
             ORDER BY r.fecha_creacion DESC
         `;
         return new Promise((resolve, reject) => {

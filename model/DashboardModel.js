@@ -164,13 +164,19 @@ class DashboardModel {
             `;
             //QUEDA   P E N D I E N T E    IMPLEMENTAR PONDERACION EN EL FRONTEND
             const q4 = `
-                SELECT 
+                	SELECT
+		nombre_rubrica, materia,
+		puntaje_total, ponderacion, fecha_evaluacion,
+		GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion
+	FROM
+	(
+		SELECT 
                     r.nombre_rubrica, 
                     m.nombre as materia, 
                 	SUM(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion /1000000) AS puntaje_total,
                     e.ponderacion,
-                    er.fecha_evaluado as fecha_evaluacion, 
-                    tr.nombre AS tipo_evaluacion
+                    er.fecha_evaluado as fecha_evaluacion,
+                    e.id
                 FROM evaluacion e
                 INNER JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
                 INNER JOIN rubrica_uso ru ON ru.id_eval = er.id_evaluacion
@@ -182,9 +188,13 @@ class DashboardModel {
                 INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 
                 AND cr.id = nd.criterio_id 
-                INNER JOIN tipo_rubrica tr ON tr.id = r.id_tipo
                 WHERE er.cedula_evaluado = ?
-                GROUP BY e.id ORDER BY er.fecha_evaluado DESC LIMIT 3
+                GROUP BY e.id 
+                ORDER BY er.fecha_evaluado DESC LIMIT 3
+                ) AS ult_evaluaciones
+                LEFT JOIN estrategia_empleada eemp ON ult_evaluaciones.id = eemp.id_eval 
+                LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id 
+                GROUP BY ult_evaluaciones.id
             `;
             const q5 = `
                 SELECT 

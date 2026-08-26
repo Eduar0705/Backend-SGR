@@ -644,7 +644,6 @@ class TeacherEvaluacionesModel {
                     [er_id]
                 );
             }
-            //aqui
             if (payload.detalles && payload.detalles.length > 0) {
                 const values = payload.detalles.map(d => [
                     er_id, d.criterio_id, 
@@ -652,7 +651,6 @@ class TeacherEvaluacionesModel {
                     d.puntaje_maximo!=0 ? ((d.puntaje_obtenido / d.puntaje_maximo) * 100) : 0, 
                     null
                 ]);
-                console.log(values)
                 await query(
                     `INSERT INTO detalle_evaluacion (evaluacion_r_id, id_criterio_detalle, orden_detalle, puntaje_obtenido, observaciones)
                  VALUES ?`,

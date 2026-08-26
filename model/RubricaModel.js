@@ -349,6 +349,7 @@ class RubricaModel {
             const query = `
                 SELECT
                     r.id,
+                    e.id AS id_evaluacion,
                     r.nombre_rubrica,
                     e.fecha_evaluacion,
                     r.fecha_creacion,
@@ -382,7 +383,7 @@ class RubricaModel {
         });
     }
 
-    async getRubricaDetalle(id) {
+    async getRubricaDetalle(id, id_eval) {
         return new Promise((resolve, reject) => {
             const queryRubrica = `
                 SELECT
@@ -421,7 +422,7 @@ class RubricaModel {
                 LEFT JOIN usuario u2 ON u2.cedula = ud2.cedula_usuario
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                 LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
-                WHERE r.id = ?
+                WHERE r.id = ? AND e.id = ?
                 GROUP BY r.id;
             `;
             const queryCriterios = `SELECT id, descripcion, puntaje_maximo, orden FROM criterio_rubrica WHERE rubrica_id = ? ORDER BY orden`;
@@ -433,7 +434,7 @@ class RubricaModel {
                 ORDER BY cr.orden, n.orden DESC;
             `;
 
-            connection.query(queryRubrica, [id], (err, rubrica) => {
+            connection.query(queryRubrica, [id, id_eval], (err, rubrica) => {
                 if (err) return reject(err);
                 if (rubrica.length === 0) return resolve(null);
 
@@ -455,7 +456,7 @@ class RubricaModel {
         });
     }
 
-    async getRubricaForEdit(id, session) {
+    async getRubricaForEdit(id, id_eval, session) {
         return new Promise((resolve, reject) => {
             const esAdmin = session.id_rol === 1;
 
@@ -486,6 +487,7 @@ class RubricaModel {
                         ELSE 'Grupal' 
                     END AS modalidad,
                     e.cantidad_personas, 
+                    e.ponderacion,
                     r.activo, 
                     r.fecha_creacion AS created_at, 
                     r.fecha_actualizacion AS updated_at,
@@ -507,10 +509,10 @@ class RubricaModel {
                 LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                 LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
-                WHERE r.id = ? AND r.activo = 1
+                WHERE r.id = ? AND e.id = ? AND r.activo = 1
             `;
 
-            let paramsRubrica = [id];
+            let paramsRubrica = [id, id_eval];
             if (!esAdmin) {
                 queryRubrica += ` AND pd.docente_cedula = ?`;
                 paramsRubrica.push(session.cedula);
@@ -535,7 +537,10 @@ class RubricaModel {
                         if (criterios.length === 0) return resolve({ rubrica, criterios: [] });
 
                         const criteriosIds = criterios.map(c => c.id);
-                        const queryNiveles = `SELECT criterio_id, nombre_nivel, descripcion, puntaje_maximo AS puntaje, orden FROM nivel_desempeno WHERE criterio_id IN (?) ORDER BY criterio_id, orden DESC;`;
+                        const queryNiveles = `SELECT criterio_id, nombre_nivel, descripcion, puntaje_maximo AS puntaje, orden 
+                                                FROM nivel_desempeno 
+                                                WHERE criterio_id IN (?) 
+                                                ORDER BY criterio_id, orden DESC;`;
 
                         connection.query(queryNiveles, [criteriosIds], (err, niveles) => {
                             if (err) return reject(err);
@@ -718,7 +723,7 @@ class RubricaModel {
                     LEFT JOIN 
                     	(SELECT 
                     		er.id, 
-                    		er.id_evaluacion, 
+                    		er.id_evaluacion 
                     	FROM evaluacion_realizada er 
                     	INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id 
                     	GROUP BY er.id, er.id_evaluacion

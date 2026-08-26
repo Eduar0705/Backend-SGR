@@ -46,10 +46,10 @@ router.get("/admin/rubricas", async function(req, res) {
 });
 
 // Ver detalle de rúbrica (para imprimir)
-router.get("/admin/rubricas/detalle/:id", async function(req, res) {
+router.get("/admin/rubricas/detalle/:id/:id_eval", async function(req, res) {
     try {
-        const { id } = req.params;
-        const resultado = await RubricaModel.getRubricaDetalle(id);
+        const { id, id_eval } = req.params;
+        const resultado = await RubricaModel.getRubricaDetalle(id, id_eval);
         if (resultado) {
             res.json({ success: true, rubrica: resultado.rubrica, criterios: resultado.criterios });
         } else {
@@ -65,10 +65,10 @@ router.get("/admin/rubricas/detalle/:id", async function(req, res) {
 router.post('/rubrica/actualizar/:id', RubricaController.updateRubrica);
 router.delete('/admin/rubricas/delete/:id', RubricaController.deleteRubrica);
 // Obtener datos para editar rúbrica
-router.get('/admin/rubricas/editar/:id', async (req, res) => {
+router.get('/admin/rubricas/editar/:id/:id_eval', async (req, res) => {
     try {
-        const { id } = req.params;
-        const resultado = await RubricaModel.getRubricaForEdit(id, req.user);
+        const { id, id_eval } = req.params;
+        const resultado = await RubricaModel.getRubricaForEdit(id, id_eval, req.user);
         if (resultado) {
             res.json({ success: true, ...resultado });
         } else {

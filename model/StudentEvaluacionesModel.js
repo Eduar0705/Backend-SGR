@@ -16,6 +16,7 @@ class StudentEvaluacionesModel {
                 INNER JOIN criterio_rubrica cr2 ON cr2.id = nd2.criterio_id
                 WHERE er2.id_evaluacion = e.id AND er2.cedula_evaluado = ins.cedula_estudiante
                 ) AS puntaje_total,
+                e.fecha_evaluacion AS fecha_fija,
                 er.fecha_evaluado as fecha_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.ponderacion as porcentaje_evaluacion,

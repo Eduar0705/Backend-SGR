@@ -20,11 +20,11 @@ router.post('/', TeacherRubricaController.crearRubrica);
 // GET /api/teacher/rubricas → Listar rúbricas
 router.get('/', TeacherRubricaController.getRubricas);
 
-// GET /api/teacher/rubricas/detalle/:id → Ver rúbrica
-router.get('/detalle/:id', TeacherRubricaController.getRubricaDetalle);
+// GET /api/teacher/rubricas/detalle/:id/:id_eval → Ver rúbrica
+router.get('/detalle/:id/:id_eval', TeacherRubricaController.getRubricaDetalle);
 
-// GET /api/teacher/rubricas/editar/:id → Obtener rúbrica para editar
-router.get('/editar/:id', TeacherRubricaController.getRubricaForEdit);
+// GET /api/teacher/rubricas/editar/:id/:id_eval → Obtener rúbrica para editar
+router.get('/editar/:id/:id_eval', TeacherRubricaController.getRubricaForEdit);
 
 // PUT /api/teacher/rubricas/:id → Editar rúbrica
 router.put('/:id', TeacherRubricaController.updateRubrica);

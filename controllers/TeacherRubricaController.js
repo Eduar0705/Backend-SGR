@@ -85,7 +85,7 @@ class TeacherRubricaController {
 
     async getRubricaDetalle(req, res) {
         try {
-            const result = await TeacherRubricaModel.getRubricaDetalle(req.params.id, req.user.cedula);
+            const result = await TeacherRubricaModel.getRubricaDetalle(req.params.id, req.params.id_eval, req.user.cedula);
             if (!result) return res.status(404).json({ success: false, message: 'Rúbrica no encontrada' });
             res.json({ success: true, rubrica: result.rubrica, criterios: result.criterios });
         } catch (error) {
@@ -96,7 +96,7 @@ class TeacherRubricaController {
 
     async getRubricaForEdit(req, res) {
         try {
-            const result = await TeacherRubricaModel.getRubricaForEdit(req.params.id, req.user.cedula);
+            const result = await TeacherRubricaModel.getRubricaForEdit(req.params.id, req.params.id_eval, req.user.cedula);
             if (!result) return res.status(404).json({ success: false, message: 'Rúbrica no encontrada o sin permisos' });
             res.json({ success: true, rubrica: result.rubrica, criterios: result.criterios });
         } catch (error) {

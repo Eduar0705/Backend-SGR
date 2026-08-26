@@ -189,6 +189,7 @@ class TeacherRubricaModel {
         const query = `
             SELECT
                 r.id,
+                e.id AS id_evaluacion,
                 r.nombre_rubrica,
                 e.fecha_evaluacion,
                 s.codigo_periodo,
@@ -221,7 +222,7 @@ class TeacherRubricaModel {
         });
     }
 
-    async getRubricaDetalle(id, cedula) {
+    async getRubricaDetalle(id, id_eval, cedula) {
         // Obtenemos detalle principal
         const queryRubrica = `
             SELECT
@@ -248,7 +249,7 @@ class TeacherRubricaModel {
             INNER JOIN usuario u_p ON u_p.cedula = ud_p.cedula_usuario
             LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
             LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
-            WHERE r.id = ? AND pd.docente_cedula = ? -- Aseguramos acceso por sección
+            WHERE r.id = ? AND e.id = ? AND pd.docente_cedula = ? -- Aseguramos acceso por sección
             GROUP BY r.id
         `;
         const queryCriterios = `SELECT cr.id, cr.descripcion, cr.puntaje_maximo, cr.orden FROM criterio_rubrica cr WHERE cr.rubrica_id = ? ORDER BY cr.orden`;
@@ -261,7 +262,7 @@ class TeacherRubricaModel {
         `;
         
         return new Promise((resolve, reject) => {
-            connection.query(queryRubrica, [id, cedula], (err, rubrica) => {
+            connection.query(queryRubrica, [id, id_eval, cedula], (err, rubrica) => {
                 if (err) return reject(err);
                 if (rubrica.length === 0) return resolve(null);
                 
@@ -283,7 +284,7 @@ class TeacherRubricaModel {
         });
     }
 
-    async getRubricaForEdit(id, cedula) {
+    async getRubricaForEdit(id, id_eval, cedula) {
         let queryRubrica = `
             SELECT 
                 r.id, 
@@ -333,12 +334,12 @@ class TeacherRubricaModel {
             LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
             LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
             LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
-            WHERE r.id = ? AND r.activo = 1 AND pd.docente_cedula = ?
+            WHERE r.id = ? AND e.id = ? AND r.activo = 1 AND pd.docente_cedula = ?
             GROUP BY r.id ORDER BY fecha_evaluacion DESC
         `;
 
         return new Promise((resolve, reject) => {
-            connection.query(queryRubrica, [id, cedula], (err, rubricaResult) => {
+            connection.query(queryRubrica, [id, id_eval, cedula], (err, rubricaResult) => {
                 if (err) return reject(err);
                 if (rubricaResult.length === 0) return resolve(null);
 

@@ -12,7 +12,7 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE pd.docente_cedula = ?
-            AND s.codigo_periodo = ?
+            AND s.codigo_periodo = '2025-1'
             ORDER BY c.nombre
         `;
         return new Promise((resolve, reject) => {
@@ -38,7 +38,7 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_carrera = ? AND pd.docente_cedula = ?
-            AND s.codigo_periodo = ?
+            AND s.codigo_periodo = '2025-1'
             ORDER BY mp.num_semestre
         `;
         return new Promise((resolve, reject) => {
@@ -54,27 +54,28 @@ class TeacherRubricaModel {
             INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia AND mp.codigo_carrera = ?
             INNER JOIN pensum p ON mp.id_pensum = p.id
             INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
-            INNER JOIN seccion s ON mp.id = s.id_materia_plan AND s.codigo_periodo = ?
+            INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.num_semestre = ? AND pd.docente_cedula = ?
+            AND s.codigo_periodo = '2025-1'
             ORDER BY m.nombre
         `;
         return new Promise((resolve, reject) => {
-            connection.query(query, [carrera, periodo, semestre, cedula], (err, r) => err ? reject(err) : resolve(r));
+            connection.query(query, [carrera, semestre, cedula, periodo], (err, r) => err ? reject(err) : resolve(r));
         });
     }
 
     // Secciones por materia (del docente en materia_pensum)
     async getSeccionesByMateria(materia, cedula, periodo) {
         const query = `
-            SELECT DISTINCT s.id, s.letra, pa.codigo
+            SELECT s.id, s.letra, pa.codigo
             FROM seccion s
             INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
             INNER JOIN pensum pen ON mp.id_pensum = pen.id
             INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_materia = ? AND pd.docente_cedula = ?
-            AND s.codigo_periodo = ?
+            AND pa.codigo = '2025-1'
             ORDER BY s.letra
         `;
         return new Promise((resolve, reject) => {
@@ -226,13 +227,13 @@ class TeacherRubricaModel {
     }
 
     async getRubricaDetalle(id, id_eval, cedula) {
-        // Obtenemos detalle principal
+        let porcentaje_evaluacion;
         const queryRubrica = `
             SELECT
                 r.id, r.nombre_rubrica, r.cedula_docente AS docente_cedula,
                 m.codigo AS materia_id, s.letra AS seccion_id, s.codigo_periodo AS lapso_academico,
                 e.fecha_evaluacion,
-                (SELECT SUM(puntaje_maximo) FROM criterio_rubrica cr_sub WHERE cr_sub.rubrica_id = r.id) AS porcentaje_evaluacion,
+                e.ponderacion AS porcentaje_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.competencias, r.instrucciones,
                 CASE WHEN cantidad_personas=1 THEN 'Individual' WHEN cantidad_personas=2 THEN 'En Pareja' ELSE 'Grupal' END AS modalidad,
@@ -268,7 +269,7 @@ class TeacherRubricaModel {
             connection.query(queryRubrica, [id, id_eval, cedula], (err, rubrica) => {
                 if (err) return reject(err);
                 if (rubrica.length === 0) return resolve(null);
-                
+                porcentaje_evaluacion = rubrica[0].porcentaje_evaluacion
                 connection.query(queryCriterios, [id], (err, criterios) => {
                     if (err) return reject(err);
                     
@@ -277,7 +278,16 @@ class TeacherRubricaModel {
                         
                         const criteriosConNiveles = criterios.map(criterio => ({
                             ...criterio,
+                            puntaje_maximo: criterio.puntaje_maximo * porcentaje_evaluacion / 100,
                             niveles: niveles.filter(nivel => nivel.criterio_id === criterio.id)
+                                            .map(n => (
+                                            {
+                                                criterio_id: n.criterio_id,
+                                                nombre_nivel: n.nombre_nivel, 
+                                                descripcion: n.descripcion, 
+                                                puntaje: parseFloat(n.puntaje * criterio.puntaje_maximo * porcentaje_evaluacion / 10000).toFixed(2), 
+                                                orden: n.orden
+                                            }))
                         }));
                         
                         resolve({ rubrica: rubrica[0], criterios: criteriosConNiveles });
@@ -300,10 +310,7 @@ class TeacherRubricaModel {
                 s.id AS seccion_id,
                 pa.codigo AS lapse_academico, 
                 e.fecha_evaluacion,
-                (SELECT SUM(puntaje_maximo) 
-                    FROM criterio_rubrica cr_sub 
-                    WHERE cr_sub.rubrica_id = r.id) 
-                AS porcentaje_evaluacion,
+                e.ponderacion AS porcentaje_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.contenido AS contenido_evaluacion, 
                 e.competencias, 
@@ -367,7 +374,16 @@ class TeacherRubricaModel {
 
                             const criteriosConNiveles = criterios.map(criterio => ({
                                 ...criterio,
+                                puntaje_maximo: criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 100,
                                 niveles: niveles.filter(nivel => nivel.criterio_id === criterio.id)
+                                                .map(n => (
+                                            {
+                                                criterio_id: n.criterio_id,
+                                                nombre_nivel: n.nombre_nivel, 
+                                                descripcion: n.descripcion, 
+                                                puntaje: parseFloat(n.puntaje * criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 10000).toFixed(2), 
+                                                orden: n.orden
+                                            }))
                             }));
 
                             resolve({ rubrica, criterios: criteriosConNiveles });

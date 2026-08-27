@@ -105,7 +105,6 @@ class TeacherRubricaModel {
         });
     }
 
-    // Crear rúbrica completa (transacción)
     async crearRubrica(data, cedula) {
         const { nombre_rubrica, tipo_rubrica, evaluacion_id, instrucciones, criterios } = data;
 

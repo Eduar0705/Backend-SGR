@@ -429,23 +429,19 @@ class TeacherRubricaModel {
 
                         if (prevEvalId && data.id_evaluacion && prevEvalId != data.id_evaluacion) {
                             // Cambiar la evaluación vinculada
-                            // Primero verificamos si YA existe el vínculo con la nueva evaluación para evitar ER_DUP_ENTRY
                             const checkCurrentLinkQ = 'SELECT COUNT(*) as count FROM rubrica_uso WHERE id_eval = ? AND id_rubrica = ?';
                             const [linkCheck] = await new Promise((res, rej) => conn.query(checkCurrentLinkQ, [data.id_evaluacion, id], (e, r) => e ? rej(e) : res(r)));
                             
                             if (linkCheck.count > 0) {
-                                // Si ya existe el vínculo nuevo, eliminamos el viejo (limpieza de duplicados accidentales)
                                 const deleteOldLinkQ = 'DELETE FROM rubrica_uso WHERE id_eval = ? AND id_rubrica = ?';
                                 await new Promise((res, rej) => conn.query(deleteOldLinkQ, [prevEvalId, id], (e, r) => e ? rej(e) : res(r)));
                             } else {
-                                // Si no existe, actualizamos el vínculo anterior al nuevo
                                 const updateUsoQ = 'UPDATE rubrica_uso SET id_eval = ? WHERE id_rubrica = ? AND id_eval = ?';
                                 await new Promise((res, rej) => conn.query(updateUsoQ, [data.id_evaluacion, id, prevEvalId], (e, r) => e ? rej(e) : res(r)));
                             }
                         }
 
                         // 4. Eliminar niveles y criterios anteriores
-                        // Primero niveles (por FK)
                         const deleteNivelesQ = 'DELETE FROM nivel_desempeno WHERE criterio_id IN (SELECT id FROM criterio_rubrica WHERE rubrica_id = ?)';
                         await new Promise((res, rej) => conn.query(deleteNivelesQ, [id], (e, r) => e ? rej(e) : res(r)));
 
@@ -458,16 +454,17 @@ class TeacherRubricaModel {
                         for (let i = 0; i < objCriterios.length; i++) {
                             const crit = objCriterios[i];
                             const critQuery = 'INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)';
-                            const resCrit = await new Promise((res, rej) => conn.query(critQuery, [id, crit.descripcion, crit.puntaje_maximo, crit.orden || (i + 1)], (e, r) => e ? rej(e) : res(r)));
-                            
+                            console.log(`Criterio #${i}: ${crit.puntaje_maximo}, puntaje ${data.porcentaje_evaluacion}`)
+                            const resCrit = await new Promise((res, rej) => conn.query(critQuery, [id, crit.descripcion, ((crit.puntaje_maximo / data.porcentaje_evaluacion)*100), crit.orden || (i + 1)], (e, r) => e ? rej(e) : res(r)));
                             const nuevoCriterioId = resCrit.insertId;
 
                             if (crit.niveles && Array.isArray(crit.niveles)) {
                                 for (let j = 0; j < crit.niveles.length; j++) {
                                     const nivel = crit.niveles[j];
                                     const nivelQuery = 'INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)';
-                                    // Usamos nivel.puntaje_maximo || nivel.puntaje para compatibilidad
-                                    const puntaje = nivel.puntaje_maximo || nivel.puntaje || 0;
+                                    const puntaje = (nivel.puntaje / crit.puntaje_maximo) * 100;
+                                    console.log(`Nivel #${j}: ${nivel.puntaje}, crit #${crit.puntaje_maximo}, puntaje ${data.porcentaje_evaluacion}`)
+
                                     await new Promise((res, rej) => conn.query(nivelQuery, [nuevoCriterioId, nivel.nombre_nivel, nivel.descripcion, puntaje, nivel.orden || (j + 1)], (e, r) => e ? rej(e) : res(r)));
                                 }
                             }

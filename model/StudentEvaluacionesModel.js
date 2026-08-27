@@ -204,8 +204,8 @@ class StudentEvaluacionesModel {
                     nombre: nivel.nombre_nivel,
                     descripcion: nivel.descripcion,
                     puntaje: detallesMap[criterio.id] && detallesMap[criterio.id].nivel_seleccionado === nivel.orden
-                        ? (parseFloat(detallesMap[criterio.id].puntaje_obtenido).toFixed(2) )
-                        : parseFloat((nivel.puntaje)).toFixed(2),
+                        ? (parseFloat(detallesMap[criterio.id].puntaje_obtenido).toFixed(3) )
+                        : parseFloat((nivel.puntaje)).toFixed(3),
                     puntaje_maximo: (nivel.puntaje * criterio.puntaje_maximo * evaluacion.porcentaje_evaluacion / 10000 ),
                     orden: nivel.orden,
                     seleccionado: detallesMap[criterio.id] ? detallesMap[criterio.id].nivel_seleccionado === nivel.orden : false
@@ -226,7 +226,7 @@ class StudentEvaluacionesModel {
                 id: evaluacion.id,
                 rubrica_id: evaluacion.rubrica_id,
                 observaciones: evaluacion.observaciones,
-                puntaje_total: !isNaN(parseFloat(evaluacion.puntaje_total)) ? parseFloat(evaluacion.puntaje_total).toFixed(2) : null,
+                puntaje_total: !isNaN(parseFloat(evaluacion.puntaje_total)) ? parseFloat(evaluacion.puntaje_total).toFixed(3) : null,
                 fecha_evaluacion: evaluacion.fecha_evaluacion
             },
             estudiante: {

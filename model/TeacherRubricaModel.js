@@ -284,7 +284,7 @@ class TeacherRubricaModel {
                                                 criterio_id: n.criterio_id,
                                                 nombre_nivel: n.nombre_nivel, 
                                                 descripcion: n.descripcion, 
-                                                puntaje: parseFloat(n.puntaje * criterio.puntaje_maximo * porcentaje_evaluacion / 10000).toFixed(2), 
+                                                puntaje: parseFloat(n.puntaje * criterio.puntaje_maximo * porcentaje_evaluacion / 10000).toFixed(3), 
                                                 orden: n.orden
                                             }))
                         }));
@@ -380,7 +380,7 @@ class TeacherRubricaModel {
                                                 criterio_id: n.criterio_id,
                                                 nombre_nivel: n.nombre_nivel, 
                                                 descripcion: n.descripcion, 
-                                                puntaje: parseFloat(n.puntaje * criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 10000).toFixed(2), 
+                                                puntaje: parseFloat(n.puntaje * criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 10000).toFixed(3), 
                                                 orden: n.orden
                                             }))
                             }));

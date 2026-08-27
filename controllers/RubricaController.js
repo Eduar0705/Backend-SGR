@@ -184,7 +184,7 @@ class RubricaController {
         if (Math.abs(sumaPuntajes - porcentaje) > 0.01) {
             return res.status(400).json({
                 success: false,
-                mensaje: `La suma de puntajes (${sumaPuntajes.toFixed(2)}) debe ser EXACTAMENTE IGUAL al porcentaje de evaluación (${porcentaje}%)`
+                mensaje: `La suma de puntajes (${sumaPuntajes.toFixed(3)}) debe ser IGUAL al porcentaje de evaluación (${porcentaje}%)`
             });
         }
 

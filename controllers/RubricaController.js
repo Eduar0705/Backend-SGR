@@ -127,7 +127,8 @@ class RubricaController {
         }
 
         const { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje } = req.body;
-
+        let data = { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje }
+        console.log(data)
         let criteriosParsed = criterios;
         if (typeof criterios === 'string') {
             try {
@@ -148,7 +149,6 @@ class RubricaController {
         let sumaPuntajes = 0;
         for (let i = 0; i < criteriosParsed.length; i++) {
             const criterio = criteriosParsed[i];
-
             if (!criterio.descripcion || criterio.descripcion.trim() === '') {
                 return res.status(400).json({ success: false, mensaje: `El criterio ${i + 1} necesita una descripción` });
             }
@@ -187,60 +187,14 @@ class RubricaController {
                 mensaje: `La suma de puntajes (${sumaPuntajes.toFixed(3)}) debe ser IGUAL al porcentaje de evaluación (${porcentaje}%)`
             });
         }
-
-        let conn;
+        data = {...data,
+                criterios: criteriosParsed
+        }
         try {
-            conn = await RubricaModel.getConnectionAsync();
-            await RubricaModel.beginTransactionAsync(conn);
-
-            // 1. Actualizar datos base de la rúbrica
-            await RubricaModel.queryAsync(conn,
-                `UPDATE rubrica SET nombre_rubrica = ?, instrucciones = ?, id_tipo = ? WHERE id = ?`,
-                [nombre_rubrica, instrucciones, tipo_rubrica, id]
-            );
-
-            // 2. Actualizar relación con evaluación
-            await RubricaModel.queryAsync(conn, 'DELETE FROM rubrica_uso WHERE id_rubrica = ?', [id]);
-            await RubricaModel.queryAsync(conn, 'INSERT INTO rubrica_uso (id_eval, id_rubrica) VALUES (?, ?)', [id_evaluacion, id]);
-
-            // 3. Eliminar criterios y niveles existentes
-            const criteriosExistentes = await RubricaModel.queryAsync(conn, 'SELECT id FROM criterio_rubrica WHERE rubrica_id = ?', [id]);
-            if (criteriosExistentes.length > 0) {
-                const criteriosIds = criteriosExistentes.map(c => c.id);
-                await RubricaModel.queryAsync(conn, `DELETE FROM nivel_desempeno WHERE criterio_id IN (?)`, [criteriosIds]);
-                await RubricaModel.queryAsync(conn, `DELETE FROM criterio_rubrica WHERE rubrica_id = ?`, [id]);
-            }
-
-            // 4. Insertar nuevos criterios y niveles (secuencialmente con for...of)
-            for (let i = 0; i < criteriosParsed.length; i++) {
-                const criterio = criteriosParsed[i];
-                const resCriterio = await RubricaModel.queryAsync(conn,
-                    `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)`,
-                    [id, criterio.descripcion.trim(), parseFloat(criterio.puntaje_maximo), parseInt(criterio.orden) || (i + 1)]
-                );
-                const criterioId = resCriterio.insertId;
-
-                if (criterio.niveles && criterio.niveles.length > 0) {
-                    for (let j = 0; j < criterio.niveles.length; j++) {
-                        const nivel = criterio.niveles[j];
-                        await RubricaModel.queryAsync(conn,
-                            `INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)`,
-                            [criterioId, nivel.nombre_nivel.trim(), nivel.descripcion.trim(), parseFloat(nivel.puntaje), parseInt(nivel.orden) || (j + 1)]
-                        );
-                    }
-                }
-            }
-
-            await RubricaModel.commitAsync(conn);
-            conn.release();
-
+            const result = await RubricaModel.updateRubrica(req.params.id, data);
             res.json({ success: true, mensaje: '¡Rúbrica actualizada exitosamente!', rubricaId: id });
 
         } catch (error) {
-            if (conn) {
-                await RubricaModel.rollbackAsync(conn);
-                conn.release();
-            }
             console.error('Error al actualizar rúbrica:', error);
             res.status(500).json({ success: false, mensaje: error.message || 'Error interno del servidor' });
         }

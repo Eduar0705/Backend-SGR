@@ -454,7 +454,6 @@ class TeacherRubricaModel {
                         for (let i = 0; i < objCriterios.length; i++) {
                             const crit = objCriterios[i];
                             const critQuery = 'INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)';
-                            console.log(`Criterio #${i}: ${crit.puntaje_maximo}, puntaje ${data.porcentaje_evaluacion}`)
                             const resCrit = await new Promise((res, rej) => conn.query(critQuery, [id, crit.descripcion, ((crit.puntaje_maximo / data.porcentaje_evaluacion)*100), crit.orden || (i + 1)], (e, r) => e ? rej(e) : res(r)));
                             const nuevoCriterioId = resCrit.insertId;
 
@@ -463,8 +462,6 @@ class TeacherRubricaModel {
                                     const nivel = crit.niveles[j];
                                     const nivelQuery = 'INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)';
                                     const puntaje = (nivel.puntaje / crit.puntaje_maximo) * 100;
-                                    console.log(`Nivel #${j}: ${nivel.puntaje}, crit #${crit.puntaje_maximo}, puntaje ${data.porcentaje_evaluacion}`)
-
                                     await new Promise((res, rej) => conn.query(nivelQuery, [nuevoCriterioId, nivel.nombre_nivel, nivel.descripcion, puntaje, nivel.orden || (j + 1)], (e, r) => e ? rej(e) : res(r)));
                                 }
                             }

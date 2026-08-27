@@ -106,7 +106,7 @@ class TeacherRubricaModel {
     }
 
     async crearRubrica(data, cedula) {
-        const { nombre_rubrica, tipo_rubrica, evaluacion_id, instrucciones, criterios } = data;
+        const { nombre_rubrica, tipo_rubrica, evaluacion_id, instrucciones, criterios, porcentaje_evaluacion } = data;
 
         return new Promise((resolve, reject) => {
             connection.getConnection((err, conn) => {
@@ -143,7 +143,7 @@ class TeacherRubricaModel {
                                 if (hayError) return;
 
                                 const qCriterio = `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)`;
-                                conn.query(qCriterio, [rubricaId, criterio.descripcion, criterio.puntaje_maximo, criterio.orden || ci + 1], (err, resCrit) => {
+                                conn.query(qCriterio, [rubricaId, criterio.descripcion, ((criterio.puntaje_maximo / porcentaje_evaluacion) * 100), criterio.orden || ci + 1], (err, resCrit) => {
                                     if (hayError) return;
                                     if (err) { hayError = true; return conn.rollback(() => { conn.release(); reject(err); }); }
 
@@ -161,7 +161,7 @@ class TeacherRubricaModel {
                                     criterio.niveles.forEach((nivel, ni) => {
                                         if (hayError) return;
                                         const qNivel = `INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)`;
-                                        conn.query(qNivel, [criterioId, nivel.nombre_nivel, nivel.descripcion, nivel.puntaje, nivel.orden || ni + 1], (err) => {
+                                        conn.query(qNivel, [criterioId, nivel.nombre_nivel, nivel.descripcion, ((nivel.puntaje / criterio.puntaje_maximo) * 100), nivel.orden || ni + 1], (err) => {
                                             if (hayError) return;
                                             if (err) { hayError = true; return conn.rollback(() => { conn.release(); reject(err); }); }
                                             nivelesCompletados++;

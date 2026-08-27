@@ -4,7 +4,8 @@ class NotificacionController {
     async getNotifications(req, res) {
         try {
             const cedula = req.user.cedula;
-            const notifications = await NotificacionModel.getByUsuario(cedula);
+            const id_rol = req.user.id_rol;
+            const notifications = await NotificacionModel.getByUsuario(cedula, id_rol);
             const unreadCount = notifications.filter(n => !n.leido).length;
 
             res.json({

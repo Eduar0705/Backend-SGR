@@ -676,7 +676,7 @@ class TeacherEvaluacionesModel {
         try {
             const rows = await new Promise((resolve, reject) => {
                 pool.query(`
-                SELECT r.nombre_rubrica, m.nombre as materia_nombre
+                SELECT r.nombre_rubrica, r.id AS rubrica_id, m.nombre as materia_nombre, e.contenido
                 FROM evaluacion_realizada er
                 INNER JOIN evaluacion e ON er.id_evaluacion = e.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
@@ -692,8 +692,8 @@ class TeacherEvaluacionesModel {
             if (evalInfo) {
                 await NotificacionModel.create({
                     usuario_destino: estudianteCedula,
-                    mensaje: `Tu evaluación en la materia "${evalInfo.materia_nombre}" ha sido corregida (Rúbrica: ${evalInfo.nombre_rubrica}).`,
-                    id_rubrica: null
+                    mensaje: `Tu evaluación de ${evalInfo.contenido} en la materia "${evalInfo.materia_nombre}" ha sido corregida.`,
+                    id_rubrica: evalInfo.rubrica_id
                 });
             }
         } catch (notifErr) {

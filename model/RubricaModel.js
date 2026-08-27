@@ -311,7 +311,7 @@ class RubricaModel {
             try {
                 await NotificacionModel.create({
                     usuario_destino: data.cedula_docente,
-                    mensaje: `La rúbrica "${data.nombre_rubrica}" ha sido habilitada exitosamente para su uso.`,
+                    mensaje: `La rúbrica "${data.nombre_rubrica}" ha sido creada por el docente de cedula ${data.cedula_docente}.`,
                     id_rubrica: rubricaId
                 });
             } catch (notifErr) {
@@ -772,39 +772,14 @@ class RubricaModel {
                             conn.query(updateRubricaQ, [data.nombre_rubrica, data.instrucciones, data.tipo_rubrica, id], (e, r) => e ? rej(e) : res(r))
                         );
 
-                        // 2. Actualizar relación con evaluación (eliminar anterior e insertar nueva)
                         const deleteEvalQ = 'DELETE FROM rubrica_uso WHERE id_rubrica = ?';
-                        await new Promise((res, rej) =>
-                            conn.query(deleteEvalQ, [id], (e, r) => e ? rej(e) : res(r))
-                        );
+                        await new Promise((res, rej) => conn.query(deleteEvalQ, [id], (e, r) => e ? rej(e) : res(r)));
 
-                        // Insertar nueva relación (asumiendo que data.evaluacion_id existe)
+                        // Insertar nueva relación
                         const insertEvalQ = 'INSERT INTO rubrica_uso (id_rubrica, id_eval) VALUES (?, ?)';
                         await new Promise((res, rej) =>
                             conn.query(insertEvalQ, [id, data.id_evaluacion], (e, r) => e ? rej(e) : res(r))
                         );
-
-                        // 3. Obtener criterios existentes y eliminarlos (con sus niveles)
-                        const getCriteriosQ = 'SELECT id FROM criterio_rubrica WHERE rubrica_id = ?';
-                        const criteriosExistentes = await new Promise((res, rej) =>
-                            conn.query(getCriteriosQ, [id], (e, r) => e ? rej(e) : res(r))
-                        );
-
-                        if (criteriosExistentes.length > 0) {
-                            const criteriosIds = criteriosExistentes.map(c => c.id);
-
-                            // Eliminar niveles de esos criterios
-                            const deleteNivelesQ = 'DELETE FROM nivel_desempeno WHERE criterio_id IN (?)';
-                            await new Promise((res, rej) =>
-                                conn.query(deleteNivelesQ, [criteriosIds], (e, r) => e ? rej(e) : res(r))
-                            );
-
-                            // Eliminar criterios
-                            const deleteCriteriosQ = 'DELETE FROM criterio_rubrica WHERE rubrica_id = ?';
-                            await new Promise((res, rej) =>
-                                conn.query(deleteCriteriosQ, [id], (e, r) => e ? rej(e) : res(r))
-                            );
-                        }
 
                         // 4. Insertar nuevos criterios y niveles (secuencialmente)
                         for (let i = 0; i < data.criterios.length; i++) {
@@ -815,17 +790,15 @@ class RubricaModel {
                             );
 
                             const critQuery = `
-                            INSERT INTO criterio_rubrica 
-                            (rubrica_id, descripcion, puntaje_maximo, orden) 
-                            VALUES (?, ?, ?, ?)
+                            UPDATE criterio_rubrica SET descripcion=?, puntaje_maximo=? WHERE rubrica_id=? AND orden=?
                         `;
                             const resCrit = await new Promise((res, rej) =>
                                 conn.query(
                                     critQuery,
                                     [
-                                        id,
                                         criterio.descripcion.trim(),
                                         puntajeMaximoPorcentaje,
+                                        id,
                                         parseInt(criterio.orden) || (i + 1)
                                     ],
                                     (e, r) => e ? rej(e) : res(r)
@@ -841,18 +814,16 @@ class RubricaModel {
                                     );
 
                                     const nivelQuery = `
-                                    INSERT INTO nivel_desempeno 
-                                    (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) 
-                                    VALUES (?, ?, ?, ?, ?)
+                                    UPDATE nivel_desempeno SET nombre_nivel=?, descripcion=?, puntaje_maximo=? WHERE criterio_id=? AND orden=?
                                 `;
                                     await new Promise((res, rej) =>
                                         conn.query(
                                             nivelQuery,
                                             [
-                                                criterioId,
                                                 nivel.nombre_nivel.trim(),
                                                 nivel.descripcion.trim(),
                                                 puntajeNivelPorcentaje,
+                                                criterioId,
                                                 parseInt(nivel.orden) || (j + 1)
                                             ],
                                             (e, r) => e ? rej(e) : res(r)

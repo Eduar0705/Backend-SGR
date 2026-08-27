@@ -1,14 +1,16 @@
 const connection = require('./conexion');
 
 class NotificacionModel {
-    async getByUsuario(cedula) {
+    async getByUsuario(cedula, id_rol) {
         const query = `
             SELECT 
                 n.*,
                 datos_adicionales.rubrica_id,
                 datos_adicionales.nombre_rubrica,
                 datos_adicionales.materia_nombre,
-                datos_adicionales.seccion_codigo
+                datos_adicionales.seccion_codigo,
+                datos_adicionales.contenido,
+                datos_adicionales.evaluacion_id
             FROM notificacion n
             LEFT JOIN (
                 SELECT
@@ -16,6 +18,8 @@ class NotificacionModel {
                     r.id AS rubrica_id,
                     r.nombre_rubrica,
                     m.nombre AS materia_nombre,
+                    e.contenido,
+                    e.id AS evaluacion_id, ${id_rol == 3 ? 'er.id AS evaluacion_r_id, er.cedula_evaluado,'  : ''}
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo
                 FROM notificacion_rubrica nr
                 INNER JOIN rubrica r ON nr.id_rubrica = r.id
@@ -24,8 +28,12 @@ class NotificacionModel {
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
+                ${id_rol == 3 
+                ? 'LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ' + cedula
+                : ''
+                }
                 GROUP BY nr.id_notif
-            ) AS datos_adicionales ON n.id = datos_adicionales.id_notif
+            ) AS datos_adicionales ON n.id = datos_adicionales.id_notif ${id_rol==3 ? 'AND datos_adicionales.cedula_evaluado = n.usuario_destino' : ''}
             WHERE n.usuario_destino = ?
             ORDER BY n.fecha DESC 
             LIMIT 50

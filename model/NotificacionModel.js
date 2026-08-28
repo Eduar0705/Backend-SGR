@@ -29,7 +29,7 @@ class NotificacionModel {
                 INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 ${id_rol == 3 
-                ? 'LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ' + cedula
+                ? 'LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ?'
                 : ''
                 }
                 GROUP BY nr.id_notif
@@ -40,7 +40,7 @@ class NotificacionModel {
         `;
 
         return new Promise((resolve, reject) => {
-            connection.query(query, [cedula], (err, results) => {
+            connection.query(query, id_rol==3 ? [cedula, cedula] : [cedula], (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
             });

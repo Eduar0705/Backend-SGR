@@ -298,17 +298,39 @@ class RubricaController {
     }
 }
     async getSeccionesAdmin(req, res) {
-    try {
-        const { materia, carreraCodigo } = req.params;
-        const periodo = req.query.periodo;
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getSeccionesAdmin(materia, carreraCodigo, req.user.cedula, esAdmin, periodo);
-        res.json(resultado);
-    } catch (error) {
-        console.error('Error al obtener secciones:', error);
-        res.status(500).json({ error: 'Error al obtener secciones' });
+        try {
+            const { materia, carreraCodigo } = req.params;
+            const periodo = req.query.periodo;
+            const esAdmin = req.user.id_rol === 1;
+            const resultado = await RubricaModel.getSeccionesAdmin(materia, carreraCodigo, req.user.cedula, esAdmin, periodo);
+            res.json(resultado);
+        } catch (error) {
+            console.error('Error al obtener secciones:', error);
+            res.status(500).json({ error: 'Error al obtener secciones' });
+        }
     }
-}
+
+    async auditarRubrica(req, res) {
+        try {
+            const { id_rubrica, id_eval, estado } = req.body;
+            if (!id_rubrica || !estado) {
+                return res.status(400).json({ success: false, message: 'Faltan parámetros obligatorios (id_rubrica, estado)' });
+            }
+
+            let estadoFinal = estado;
+            if (estado === 'A' || estado.toLowerCase() === 'aprobada' || estado.toLowerCase() === 'aprobar') {
+                estadoFinal = 'Aprobada';
+            } else if (estado === 'R' || estado.toLowerCase() === 'rechazada' || estado.toLowerCase() === 'rechazar') {
+                estadoFinal = 'Rechazada';
+            }
+
+            await RubricaModel.auditarRubrica(id_rubrica, id_eval, estadoFinal);
+            res.json({ success: true, message: `Rúbrica ${estadoFinal.toLowerCase()} exitosamente`, estado: estadoFinal });
+        } catch (error) {
+            console.error('Error al auditar rúbrica:', error);
+            res.status(500).json({ success: false, message: error.message || 'Error al auditar rúbrica' });
+        }
+    }
 }
 
 module.exports = new RubricaController();

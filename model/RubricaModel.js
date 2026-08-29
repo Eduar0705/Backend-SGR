@@ -343,6 +343,8 @@ class RubricaModel {
                     e.contenido,
                     e.id AS id_evaluacion,
                     r.nombre_rubrica,
+                    r.cedula_docente,
+                    ud.cedula_usuario AS docente_cedula,
                     e.fecha_evaluacion,
                     r.fecha_creacion,
                     GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
@@ -1053,6 +1055,57 @@ class RubricaModel {
             connection.query(query, params, (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
+            });
+        });
+    }
+
+    async auditarRubrica(id_rubrica, id_eval, estado) {
+        return new Promise((resolve, reject) => {
+            let query = 'UPDATE rubrica_uso SET estado = ? WHERE id_rubrica = ?';
+            let params = [estado, id_rubrica];
+            if (id_eval) {
+                query += ' AND id_eval = ?';
+                params.push(id_eval);
+            }
+            connection.query(query, params, async (err, result) => {
+                if (err) return reject(err);
+
+                // Enviar notificación al creador de la rúbrica o docente asignado a la sección
+                try {
+                    const infoQuery = `
+                        SELECT 
+                            r.id AS id_rubrica,
+                            r.nombre_rubrica,
+                            r.cedula_docente,
+                            pd.docente_cedula AS seccion_docente_cedula
+                        FROM rubrica r
+                        LEFT JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+                        LEFT JOIN evaluacion e ON ru.id_eval = e.id
+                        LEFT JOIN seccion s ON e.id_seccion = s.id
+                        LEFT JOIN permiso_docente pd ON s.id = pd.id_seccion
+                        WHERE r.id = ? AND (? IS NULL OR ru.id_eval = ?)
+                        LIMIT 1
+                    `;
+                    connection.query(infoQuery, [id_rubrica, id_eval || null, id_eval || null], async (infoErr, infoRows) => {
+                        if (!infoErr && infoRows && infoRows.length > 0) {
+                            const rubricaInfo = infoRows[0];
+                            const destinoCedula = rubricaInfo.cedula_docente || rubricaInfo.seccion_docente_cedula;
+                            const accion = (estado.toLowerCase() === 'aprobada' || estado === 'A') ? 'aprobado' : 'rechazado';
+                            
+                            if (destinoCedula) {
+                                await NotificacionModel.create({
+                                    usuario_destino: destinoCedula,
+                                    mensaje: `Un administrador ha ${accion} su rúbrica "${rubricaInfo.nombre_rubrica}".`,
+                                    id_rubrica: id_rubrica
+                                });
+                            }
+                        }
+                    });
+                } catch (notifErr) {
+                    console.error('Error al crear notificación de auditoría:', notifErr);
+                }
+
+                resolve({ success: true, affectedRows: result.affectedRows });
             });
         });
     }

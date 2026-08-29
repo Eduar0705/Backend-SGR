@@ -6,6 +6,7 @@ class StudentEvaluacionesModel {
         const query = `
             SELECT 
                 e.id as evaluacion_id,
+                r.id as rubrica_id,
                 e.contenido,
                 IFNULL(r.nombre_rubrica, 'Rubrica por crear...') AS nombre_rubrica,
                 m.nombre as materia,
@@ -22,6 +23,9 @@ class StudentEvaluacionesModel {
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.ponderacion as porcentaje_evaluacion,
                 er.observaciones,
+                m.nombre AS materia_nombre,
+                m.codigo AS materia_codigo,
+                s.letra AS seccion_letra,
                 (SELECT 
                     CONCAT(u.nombre, ' ', u.apeliido)
                 FROM permiso_docente pd2
@@ -64,18 +68,18 @@ class StudentEvaluacionesModel {
         const queryEvaluacion = `
             SELECT 
                 e.id AS evaluacion_id,
-                e.contenido,                         -- ✅ Nuevo
+                e.contenido,                         
                 IFNULL(r.nombre_rubrica, 'Rubrica por crear...') AS nombre_rubrica,
                 m.nombre AS materia,
                 COALESCE(puntaje_sub.puntaje, 0) AS puntaje_total,
                 er.fecha_evaluado AS fecha_evaluacion,
-                e.fecha_evaluacion AS fecha_fija,    -- ✅ Nuevo
+                e.fecha_evaluacion AS fecha_fija,    
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
                 e.ponderacion AS porcentaje_evaluacion,
                 er.observaciones,
                 r.id AS rubrica_id,
-                tr.nombre AS tipo_rubrica,           -- ✅ Nuevo
-                IFNULL(CONCAT(ud.nombre, ' ', ud.apeliido), CONCAT(prof_sec.nombre, ' ', prof_sec.apeliido)) AS profesor,  -- ✅ Nuevo
+                tr.nombre AS tipo_rubrica,           
+                IFNULL(CONCAT(ud.nombre, ' ', ud.apeliido), CONCAT(prof_sec.nombre, ' ', prof_sec.apeliido)) AS profesor,  
                 r.instrucciones,
                 e.competencias,
                 m.nombre AS materia_nombre,
@@ -83,7 +87,7 @@ class StudentEvaluacionesModel {
             FROM evaluacion e 
             INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
             INNER JOIN rubrica r ON ru.id_rubrica = r.id
-            INNER JOIN tipo_rubrica tr ON r.id_tipo = tr.id   -- ✅ Nuevo JOIN
+            INNER JOIN tipo_rubrica tr ON r.id_tipo = tr.id  
             INNER JOIN seccion s ON e.id_seccion = s.id
             INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
@@ -125,7 +129,6 @@ class StudentEvaluacionesModel {
 
         const evaluacion = evaluacionResult[0];
 
-        // 2. Info estudiante (sin cambios)
         const queryEstudiante = `
             SELECT u.cedula, u.nombre, u.apeliido as apellido, u.email, c.nombre AS carrera
             FROM usuario u
@@ -146,7 +149,6 @@ class StudentEvaluacionesModel {
 
         const estudiante = estudianteResult[0];
 
-        // 3. Criterios (sin cambios)
         const queryCriterios = `
             SELECT id, descripcion, puntaje_maximo, orden
             FROM criterio_rubrica WHERE rubrica_id = ? ORDER BY orden
@@ -163,7 +165,6 @@ class StudentEvaluacionesModel {
             return { success: false, holdup: true, message: 'No hay criterios de evaluación configurados' };
         }
 
-        // 4. Niveles (sin cambios)
         const queryNiveles = `
             SELECT criterio_id, nombre_nivel, descripcion, puntaje_maximo AS puntaje, orden
             FROM nivel_desempeno WHERE criterio_id IN (?) ORDER BY criterio_id, orden
@@ -179,7 +180,6 @@ class StudentEvaluacionesModel {
             return { success: false, holdup: true, message: 'No hay niveles de desempeño configurados para esta rúbrica' };
         }
 
-        // 5. Detalles (sin cambios)
         const queryDetalles = `
             SELECT 
                 de.id_criterio_detalle, 
@@ -200,17 +200,14 @@ class StudentEvaluacionesModel {
             });
         });
 
-        if (detallesResult.length === 0) {
-            return { success: false, no_evaluada: true, message: 'No has sido evaluado aún' };
+        const isEvaluada = detallesResult.length > 0;
+        const detallesMap = {};
+        if (isEvaluada) {
+            detallesResult.forEach(d => {
+                detallesMap[d.id_criterio_detalle] = { nivel_seleccionado: d.nivel_seleccionado, puntaje_obtenido: d.puntaje_obtenido };
+            });
         }
 
-        // Mapa de detalles (sin cambios)
-        const detallesMap = {};
-        detallesResult.forEach(d => {
-            detallesMap[d.id_criterio_detalle] = { nivel_seleccionado: d.nivel_seleccionado, puntaje_obtenido: d.puntaje_obtenido };
-        });
-
-        // Armado de criterios con niveles (sin cambios)
         const criteriosConNiveles = criteriosResult.map(criterio => {
             const niveles = nivelesResult
                 .filter(n => n.criterio_id === criterio.id)
@@ -218,12 +215,12 @@ class StudentEvaluacionesModel {
                     id: nivel.orden,
                     nombre: nivel.nombre_nivel,
                     descripcion: nivel.descripcion,
-                    puntaje: detallesMap[criterio.id] && detallesMap[criterio.id].nivel_seleccionado === nivel.orden
+                    puntaje: isEvaluada && detallesMap[criterio.id] && detallesMap[criterio.id].nivel_seleccionado === nivel.orden
                         ? ((detallesMap[criterio.id]?.puntaje_obtenido * nivel.puntaje * criterio.puntaje_maximo * evaluacion.porcentaje_evaluacion / 1000000))
                         : nivel.puntaje * criterio.puntaje_maximo * evaluacion.porcentaje_evaluacion / 10000,
                     puntaje_maximo: (nivel.puntaje * criterio.puntaje_maximo * evaluacion.porcentaje_evaluacion) / 10000,
                     orden: nivel.orden,
-                    seleccionado: detallesMap[criterio.id] ? detallesMap[criterio.id].nivel_seleccionado === nivel.orden : false,
+                    seleccionado: isEvaluada && detallesMap[criterio.id] ? detallesMap[criterio.id].nivel_seleccionado === nivel.orden : false,
                 }));
 
             return {
@@ -235,10 +232,44 @@ class StudentEvaluacionesModel {
             };
         });
 
-        // ✅ Respuesta final con los nuevos campos
-        const puntajeFinal = !isNaN(parseFloat(evaluacion.puntaje_total))
+        const puntajeFinal = isEvaluada && !isNaN(parseFloat(evaluacion.puntaje_total))
             ? aplicarRedondeoPuntaje(parseFloat(evaluacion.puntaje_total), evaluacion.porcentaje_evaluacion)
             : null;
+
+        if (!isEvaluada) {
+            return {
+                success: false,
+                no_evaluada: true,
+                message: 'No has sido evaluado aún',
+                evaluacion: {
+                    id: evaluacion.evaluacion_id,
+                    rubrica_id: evaluacion.rubrica_id,
+                    observaciones: null,
+                    puntaje_total: null,
+                    fecha_evaluacion: null,
+                    fecha_fija: evaluacion.fecha_fija,
+                    contenido: evaluacion.contenido
+                },
+                estudiante: {
+                    cedula: estudiante.cedula,
+                    nombre: estudiante.nombre,
+                    apellido: estudiante.apellido,
+                    email: estudiante.email,
+                    carrera: estudiante.carrera
+                },
+                rubrica: {
+                    nombre_rubrica: evaluacion.nombre_rubrica,
+                    tipo_evaluacion: evaluacion.tipo_evaluacion,
+                    porcentaje_evaluacion: evaluacion.porcentaje_evaluacion,
+                    profesor: evaluacion.profesor,
+                    instrucciones: evaluacion.instrucciones,
+                    competencias: evaluacion.competencias,
+                    materia: evaluacion.materia_nombre,
+                    materia_codigo: evaluacion.materia_codigo
+                },
+                criterios: criteriosConNiveles
+            };
+        }
 
         return {
             success: true,
@@ -248,8 +279,8 @@ class StudentEvaluacionesModel {
                 observaciones: evaluacion.observaciones,
                 puntaje_total: puntajeFinal,
                 fecha_evaluacion: evaluacion.fecha_evaluacion,
-                fecha_fija: evaluacion.fecha_fija,          // ✅ Nuevo
-                contenido: evaluacion.contenido              // ✅ Nuevo
+                fecha_fija: evaluacion.fecha_fija,         
+                contenido: evaluacion.contenido            
             },
             estudiante: {
                 cedula: estudiante.cedula,
@@ -261,13 +292,13 @@ class StudentEvaluacionesModel {
             rubrica: {
                 nombre_rubrica: evaluacion.nombre_rubrica,
                 tipo_evaluacion: evaluacion.tipo_evaluacion,
-                tipo_rubrica: evaluacion.tipo_rubrica,       // ✅ Nuevo
+                tipo_rubrica: evaluacion.tipo_rubrica,     
                 porcentaje_evaluacion: evaluacion.porcentaje_evaluacion,
                 instrucciones: evaluacion.instrucciones,
                 competencias: evaluacion.competencias,
                 materia: evaluacion.materia_nombre,
                 materia_codigo: evaluacion.materia_codigo,
-                profesor: evaluacion.profesor                // ✅ Nuevo
+                profesor: evaluacion.profesor             
             },
             criterios: criteriosConNiveles
         };

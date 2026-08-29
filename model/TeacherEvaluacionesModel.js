@@ -571,7 +571,7 @@ class TeacherEvaluacionesModel {
                     descripcion: n.descripcion,
                     puntaje: (parseFloat(detallesMap[c.id]?.nivel_seleccionado === n.id 
                         ? ((detallesMap[c.id]?.puntaje_obtenido * n.puntaje * c.puntaje_maximo * evaluacion.porcentaje_evaluacion / 1000000))
-                        : n.puntaje * c.puntaje_maximo * evaluacion.porcentaje_evaluacion / 10000)).toFixed(3),
+                        : n.puntaje * c.puntaje_maximo * evaluacion.porcentaje_evaluacion / 10000)),
                     puntaje_maximo: (n.puntaje * c.puntaje_maximo * evaluacion.porcentaje_evaluacion / 10000),
                     seleccionado: detallesMap[c.id]?.nivel_seleccionado === n.id
                 }));

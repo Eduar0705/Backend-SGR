@@ -1,5 +1,6 @@
 const conexion = require('./conexion');
 const NotificacionModel = require('./NotificacionModel');
+const { aplicarRedondeoPuntaje } = require('../utils/evaluacionUtils');
 
 function query(sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -139,13 +140,17 @@ class TeacherEvaluacionesModel {
             const iniciales = (ev.estudiante_nombre.charAt(0) + ev.estudiante_apellido.charAt(0)).toUpperCase();
             const fecha = ev.fecha_evaluacion ?
                 new Date(ev.fecha_evaluacion).toISOString() : null;
+            const puntajeRedondeado = ev.puntaje_total !== null && ev.puntaje_total !== undefined
+                ? aplicarRedondeoPuntaje(ev.puntaje_total, ev.porcentaje_evaluacion)
+                : null;
 
             return {
                 ...ev,
+                puntaje_total: puntajeRedondeado !== null ? parseFloat(puntajeRedondeado).toFixed(3) : null,
                 iniciales,
                 fecha_formateada: fecha ? new Date(fecha).toLocaleDateString('es-ES') : 'Pendiente',
-                calificacion: ev.puntaje_total ?
-                    `${parseFloat(ev.puntaje_total).toFixed(1)}/${ev.porcentaje_evaluacion} (${(parseFloat(ev.puntaje_total) / 5).toFixed(1)}/${ev.porcentaje_evaluacion / 5})` :
+                calificacion: puntajeRedondeado !== null ?
+                    `${parseFloat(puntajeRedondeado).toFixed(1)}/${ev.porcentaje_evaluacion} (${(parseFloat(puntajeRedondeado) / 5).toFixed(1)}/${ev.porcentaje_evaluacion / 5})` :
                     '-/-'
             };
         });
@@ -313,13 +318,17 @@ class TeacherEvaluacionesModel {
             const iniciales = (ev.estudiante_nombre.charAt(0) + ev.estudiante_apellido.charAt(0)).toUpperCase();
             const fecha = ev.fecha_evaluacion ?
                 new Date(ev.fecha_evaluacion).toISOString() : null;
+            const puntajeRedondeado = ev.puntaje_total !== null && ev.puntaje_total !== undefined
+                ? aplicarRedondeoPuntaje(ev.puntaje_total, ev.porcentaje_evaluacion)
+                : null;
+
             return {
                 ...ev,
-                puntaje_total: parseFloat(ev.puntaje_total).toFixed(3),
+                puntaje_total: puntajeRedondeado !== null ? parseFloat(puntajeRedondeado).toFixed(3) : null,
                 iniciales,
                 fecha_formateada: fecha ? new Date(fecha).toLocaleDateString('es-ES') : 'Pendiente',
-                calificacion: ev.puntaje_total ?
-                    `${parseFloat(ev.puntaje_total).toFixed(1)}/${ev.porcentaje_evaluacion} (${(parseFloat(ev.puntaje_total) / 5).toFixed(1)}/${ev.porcentaje_evaluacion / 5})` :
+                calificacion: puntajeRedondeado !== null ?
+                    `${parseFloat(puntajeRedondeado).toFixed(1)}/${ev.porcentaje_evaluacion} (${(parseFloat(puntajeRedondeado) / 5).toFixed(1)}/${ev.porcentaje_evaluacion / 5})` :
                     '-/-'
             };
         });
@@ -584,10 +593,14 @@ class TeacherEvaluacionesModel {
             };
         });
 
+        const puntajeTotalRedondeado = evaluacion.puntaje_total !== null && evaluacion.puntaje_total !== undefined
+            ? aplicarRedondeoPuntaje(evaluacion.puntaje_total, evaluacion.porcentaje_evaluacion)
+            : null;
+
         return {
-            evaluacion: 
-            {...evaluacion,
-                puntaje_total: parseFloat(evaluacion.puntaje_total).toFixed(3)
+            evaluacion: {
+                ...evaluacion,
+                puntaje_total: puntajeTotalRedondeado !== null ? parseFloat(puntajeTotalRedondeado).toFixed(3) : null
             },
             estudiante,
             rubrica: {

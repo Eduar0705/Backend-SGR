@@ -1,4 +1,6 @@
 const connection = require('./conexion');
+const { aplicarRedondeoPuntaje } = require('../utils/evaluacionUtils');
+
 class StudentEvaluacionesModel {
     async getEvaluacionesByEstudiante(cedula) {
         const query = `
@@ -46,7 +48,13 @@ class StudentEvaluacionesModel {
         return new Promise((resolve, reject) => {
             connection.query(query, [cedula], (err, results) => {
                 if (err) return reject(err);
-                resolve(results);
+                const mapped = (results || []).map(ev => ({
+                    ...ev,
+                    puntaje_total: ev.puntaje_total !== null && ev.puntaje_total !== undefined
+                        ? aplicarRedondeoPuntaje(ev.puntaje_total, ev.porcentaje_evaluacion)
+                        : null
+                }));
+                resolve(mapped);
             });
         });
     }
@@ -228,13 +236,17 @@ class StudentEvaluacionesModel {
         });
 
         // ✅ Respuesta final con los nuevos campos
+        const puntajeFinal = !isNaN(parseFloat(evaluacion.puntaje_total))
+            ? aplicarRedondeoPuntaje(parseFloat(evaluacion.puntaje_total), evaluacion.porcentaje_evaluacion)
+            : null;
+
         return {
             success: true,
             evaluacion: {
                 id: evaluacion.evaluacion_id,
                 rubrica_id: evaluacion.rubrica_id,
                 observaciones: evaluacion.observaciones,
-                puntaje_total: !isNaN(parseFloat(evaluacion.puntaje_total)) ? parseFloat(evaluacion.puntaje_total) : null,
+                puntaje_total: puntajeFinal,
                 fecha_evaluacion: evaluacion.fecha_evaluacion,
                 fecha_fija: evaluacion.fecha_fija,          // ✅ Nuevo
                 contenido: evaluacion.contenido              // ✅ Nuevo

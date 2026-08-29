@@ -1,4 +1,5 @@
 const connection = require('./conexion');
+const { aplicarRedondeoPuntaje } = require('../utils/evaluacionUtils');
 
 class DashboardModel {
     async getStats(periodo) {
@@ -68,6 +69,7 @@ class DashboardModel {
                     u.nombre AS estudiante_nombre, u.apeliido AS estudiante_apellido,
                     r.nombre_rubrica, m.nombre AS materia_nombre,
                     uh.nombre AS docente_nombre, uh.apeliido AS docente_apellido,
+                    e.ponderacion AS porcentaje_evaluacion,
                     ROUND(AVG(COALESCE(de.puntaje_obtenido,0))/5,2) AS puntaje_total
                 FROM rubrica r
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
@@ -117,7 +119,9 @@ class DashboardModel {
                                     materia_nombre: a.materia_nombre,
                                     docente_nombre: a.docente_nombre,
                                     docente_apellido: a.docente_apellido,
-                                    puntaje_total: a.puntaje_total,
+                                    puntaje_total: a.puntaje_total !== null && a.puntaje_total !== undefined
+                                        ? aplicarRedondeoPuntaje(a.puntaje_total, a.porcentaje_evaluacion || 20)
+                                        : null,
                                     fecha: a.fecha_evaluacion
                                 }));
 
@@ -232,7 +236,12 @@ class DashboardModel {
                                         evaluacionesCompletadas: r2[0].total,
                                         evaluacionesPendientes: r3[0].total
                                     },
-                                    evaluacionesRecientes: r4,
+                                    evaluacionesRecientes: (r4 || []).map(ev => ({
+                                        ...ev,
+                                        puntaje_total: ev.puntaje_total !== null && ev.puntaje_total !== undefined
+                                            ? aplicarRedondeoPuntaje(ev.puntaje_total, ev.ponderacion)
+                                            : null
+                                    })),
                                     proximasEvaluaciones: r5
                                 });
                             });
@@ -283,6 +292,7 @@ class DashboardModel {
                     er.id, er.fecha_evaluado AS fecha_evaluacion,
                     u.nombre AS estudiante_nombre, u.apeliido AS estudiante_apellido,
                     r.nombre_rubrica, m.nombre AS materia_nombre,
+                    e.ponderacion AS porcentaje_evaluacion,
                     ROUND(SUM(de.puntaje_obtenido * nd.puntaje_maximo  * cr.puntaje_maximo * e.ponderacion /1000000), 2) AS puntaje_total
                 FROM rubrica r
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
@@ -320,7 +330,12 @@ class DashboardModel {
                                     totalEstudiantes: r2[0].total,
                                     totalEvaluaciones: r3[0].total,
                                     rubricasRecientes: r4,
-                                    actividadReciente: r5
+                                    actividadReciente: (r5 || []).map(ev => ({
+                                        ...ev,
+                                        puntaje_total: ev.puntaje_total !== null && ev.puntaje_total !== undefined
+                                            ? aplicarRedondeoPuntaje(ev.puntaje_total, ev.porcentaje_evaluacion)
+                                            : null
+                                    }))
                                 });
                             });
                         });

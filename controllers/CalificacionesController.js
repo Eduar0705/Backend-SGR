@@ -1,4 +1,5 @@
 const CalificacionesModel = require('../model/CalificacionesModel');
+const { aplicarRedondeoPuntaje } = require('../utils/evaluacionUtils');
 
 class CalificacionesController {
     async getCalificaciones(req, res) {
@@ -38,8 +39,11 @@ class CalificacionesController {
 
                 if (row.rubrica_id) {
                     const maxPuntaje = parseFloat(row.puntaje_maximo_rubrica) || 0;
-                    const puntajeObtenido = parseFloat(row.puntaje_total) || 0;
                     const porcentajeRubrica = parseFloat(row.porcentaje_evaluacion) || 0;
+                    const puntajeObtenidoRaw = row.puntaje_total !== null ? parseFloat(row.puntaje_total) : null;
+                    const puntajeObtenido = puntajeObtenidoRaw !== null
+                        ? aplicarRedondeoPuntaje(puntajeObtenidoRaw, porcentajeRubrica)
+                        : 0;
 
                     let calificacionRubrica = 0;
                     if (maxPuntaje > 0 && row.puntaje_total !== null) {

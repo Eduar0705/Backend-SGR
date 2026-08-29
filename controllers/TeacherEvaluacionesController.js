@@ -114,7 +114,16 @@ class TeacherEvaluacionesController {
         try {
             const { evaluacionId, estudianteCedula } = req.params;
             const payload = req.body;
-            const cedula_evaluador = req.user.cedula
+            const cedula_evaluador = req.user.cedula;
+
+            const puntajeTotal = parseFloat(payload.puntaje_total);
+            if (isNaN(puntajeTotal) || puntajeTotal < 0.02499) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'La calificación total no puede ser inferior a 0.025 puntos.'
+                });
+            }
+
             await TeacherEvaluacionesModel.saveEvaluacion(evaluacionId, estudianteCedula, cedula_evaluador, payload);
             res.json({ success: true, message: 'Evaluación guardada con éxito' });
         } catch (error) {

@@ -162,7 +162,7 @@ class RubricaController {
                 return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
             }
 
-            // FIX: Validar que criterios sea un array válido (igual que en updateRubrica)
+            // Validar que criterios sea un array válido
             let criteriosParsed = criterios;
             if (typeof criterios === 'string') {
                 try {
@@ -172,8 +172,15 @@ class RubricaController {
                 }
             }
 
-            if (!Array.isArray(criteriosParsed) || criteriosParsed.length === 0) {
-                return res.status(400).json({ success: false, message: 'Debe agregar al menos un criterio de evaluación' });
+            const { validarEstructuraRubrica } = require('../utils/evaluacionUtils');
+            const validacion = validarEstructuraRubrica({
+                criterios: criteriosParsed,
+                porcentaje: porcentaje || req.body.porcentaje_evaluacion,
+                esCreacion: true
+            });
+
+            if (!validacion.valido) {
+                return res.status(400).json({ success: false, message: validacion.mensaje });
             }
 
             const result = await RubricaModel.saveRubrica({
@@ -182,7 +189,7 @@ class RubricaController {
                 tipo_rubrica,
                 instrucciones,
                 criterios: criteriosParsed,
-                porcentaje,
+                porcentaje: porcentaje || req.body.porcentaje_evaluacion,
                 cedula_docente
             });
 
@@ -210,8 +217,8 @@ class RubricaController {
         }
 
         const { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje } = req.body;
-        let data = { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje }
-        console.log(data)
+        let data = { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje };
+        
         let criteriosParsed = criterios;
         if (typeof criterios === 'string') {
             try {
@@ -225,54 +232,22 @@ class RubricaController {
             return res.status(400).json({ success: false, mensaje: 'Todos los campos obligatorios deben estar completos' });
         }
 
-        if (!criteriosParsed || !Array.isArray(criteriosParsed) || criteriosParsed.length === 0) {
-            return res.status(400).json({ success: false, mensaje: 'Debe agregar al menos un criterio de evaluación' });
+        const { validarEstructuraRubrica } = require('../utils/evaluacionUtils');
+        const validacion = validarEstructuraRubrica({
+            criterios: criteriosParsed,
+            porcentaje: porcentaje || req.body.porcentaje_evaluacion,
+            esCreacion: false
+        });
+
+        if (!validacion.valido) {
+            return res.status(400).json({ success: false, mensaje: validacion.mensaje });
         }
 
-        let sumaPuntajes = 0;
-        for (let i = 0; i < criteriosParsed.length; i++) {
-            const criterio = criteriosParsed[i];
-            if (!criterio.descripcion || criterio.descripcion.trim() === '') {
-                return res.status(400).json({ success: false, mensaje: `El criterio ${i + 1} necesita una descripción` });
-            }
+        data = {
+            ...data,
+            criterios: criteriosParsed
+        };
 
-            const puntajeCriterio = parseFloat(criterio.puntaje_maximo);
-            if (isNaN(puntajeCriterio) || puntajeCriterio < 1) {
-                return res.status(400).json({ success: false, mensaje: `El criterio ${i + 1} debe tener un puntaje mínimo de 1 punto` });
-            }
-            sumaPuntajes += puntajeCriterio;
-
-            if (!criterio.niveles || !Array.isArray(criterio.niveles) || criterio.niveles.length === 0) {
-                return res.status(400).json({ success: false, mensaje: `El criterio ${i + 1} debe tener al menos un nivel de desempeño` });
-            }
-
-            for (let j = 0; j < criterio.niveles.length; j++) {
-                const nivel = criterio.niveles[j];
-                if (!nivel.nombre_nivel || nivel.nombre_nivel.trim() === '') {
-                    return res.status(400).json({ success: false, mensaje: `El nivel ${j + 1} del criterio ${i + 1} necesita un nombre` });
-                }
-                if (!nivel.descripcion || nivel.descripcion.trim() === '') {
-                    return res.status(400).json({ success: false, mensaje: `El nivel "${nivel.nombre_nivel}" necesita una descripción` });
-                }
-                const puntajeNivel = parseFloat(nivel.puntaje);
-                if (isNaN(puntajeNivel) || puntajeNivel < 0.025) {
-                    return res.status(400).json({ success: false, mensaje: `El nivel "${nivel.nombre_nivel}" debe tener un puntaje mínimo de 0.025 puntos` });
-                }
-                if (puntajeNivel > puntajeCriterio) {
-                    return res.status(400).json({ success: false, mensaje: `El puntaje del nivel "${nivel.nombre_nivel}" excede el puntaje máximo del criterio` });
-                }
-            }
-        }
-
-        if (Math.abs(sumaPuntajes - porcentaje) > 0.01) {
-            return res.status(400).json({
-                success: false,
-                mensaje: `La suma de puntajes (${sumaPuntajes.toFixed(3)}) debe ser IGUAL al porcentaje de evaluación (${porcentaje}%)`
-            });
-        }
-        data = {...data,
-                criterios: criteriosParsed
-        }
         try {
             const result = await RubricaModel.updateRubrica(req.params.id, data);
             res.json({ success: true, mensaje: '¡Rúbrica actualizada exitosamente!', rubricaId: id });

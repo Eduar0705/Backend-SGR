@@ -429,13 +429,10 @@ async updateRubrica(id, data) {
                     for (let i = 0; i < data.criterios.length; i++) {
                         const criterio = data.criterios[i];
                         const ordenCriterio = parseInt(criterio.orden) || (i + 1);
-                        const puntajeMaximoPorcentaje = parseFloat(
-                            ((criterio.puntaje_maximo / data.porcentaje_evaluacion) * 100).toFixed(2)
-                        );
-
+                        const puntajeMaximoPorcentaje = 
+                        (((parseFloat(criterio.puntaje_maximo) / parseFloat(data.porcentaje)) * 100).toFixed(2));
                         let criterioId = criterio.id ? parseInt(criterio.id) : null;
                         let esNuevo = !criterioId;
-
                         if (criterioId) {
                             const resUpdate = await new Promise((res, rej) =>
                                 conn.query(

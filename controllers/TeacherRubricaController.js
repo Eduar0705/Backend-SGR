@@ -1,5 +1,6 @@
 const TeacherRubricaModel = require('../model/TeacherRubricaModel');
 const RubricaModel = require('../model/RubricaModel');
+const { validarEstructuraRubrica } = require('../utils/evaluacionUtils');
 
 class TeacherRubricaController {
     async getFormData(req, res) {
@@ -63,6 +64,16 @@ class TeacherRubricaController {
 
     async crearRubrica(req, res) {
         try {
+            const validacion = validarEstructuraRubrica({
+                criterios: req.body.criterios,
+                porcentaje: req.body.porcentaje_evaluacion || req.body.porcentaje,
+                esCreacion: true
+            });
+
+            if (!validacion.valido) {
+                return res.status(400).json({ status: 'error', success: false, mensaje: validacion.mensaje });
+            }
+
             const cedula = req.user.cedula;
             const result = await TeacherRubricaModel.crearRubrica(req.body, cedula);
             res.json(result);
@@ -107,6 +118,16 @@ class TeacherRubricaController {
 
     async updateRubrica(req, res) {
         try {
+            const validacion = validarEstructuraRubrica({
+                criterios: req.body.criterios,
+                porcentaje: req.body.porcentaje_evaluacion || req.body.porcentaje,
+                esCreacion: false
+            });
+
+            if (!validacion.valido) {
+                return res.status(400).json({ status: 'error', success: false, mensaje: validacion.mensaje });
+            }
+
             const result = await TeacherRubricaModel.updateRubrica(req.params.id, req.body, req.user.cedula);
             res.json({ success: true, mensaje: result.message, datos: result });
         } catch (error) {

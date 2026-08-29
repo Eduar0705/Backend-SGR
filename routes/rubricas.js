@@ -8,16 +8,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 router.use(authMiddleware);
 
 // Listar todas las rúbricas (GET /api/rubricas)
-router.get("/", async function(req, res) {
-    try {
-        const periodo = req.query.periodo
-        const rubricas = await RubricaModel.getAllRubricas(periodo);
-        res.json({ success: true, rubricas });
-    } catch (error) {
-        console.error('Error al obtener rúbricas:', error);
-        res.json({ success: false, rubricas: [] });
-    }
-});
+router.get("/", RubricaController.getAllRubricas);
 
 // Rutas de datos jerárquicos
 router.get('/hierarchical-data', RubricaController.getHierarchicalData);
@@ -34,166 +25,42 @@ router.post('/guardar', RubricaController.createRubrica);
 // ============================================================
 
 // Listar todas las rúbricas
-router.get("/admin/rubricas", async function(req, res) {
-    try {
-        const periodo = req.query.periodo;
-        const rubricas = await RubricaModel.getAllRubricas(periodo);
-        res.json({ success: true, rubricas });
-    } catch (error) {
-        console.error('Error al obtener rúbricas:', error);
-        res.json({ success: false, rubricas: [] });
-    }
-});
+router.get("/admin/rubricas", RubricaController.getAllRubricas);
 
 // Ver detalle de rúbrica (para imprimir)
-router.get("/admin/rubricas/detalle/:id/:id_eval", async function(req, res) {
-    try {
-        const { id, id_eval } = req.params;
-        const resultado = await RubricaModel.getRubricaDetalle(id, id_eval);
-        if (resultado) {
-            res.json({ success: true, rubrica: resultado.rubrica, criterios: resultado.criterios });
-        } else {
-            res.status(404).json({ success: false, message: 'Rúbrica no encontrada' });
-        }
-    } catch (error) {
-        console.error('Error al obtener detalle de rúbrica:', error);
-        res.status(500).json({ success: false, message: 'Error al obtener detalle' });
-    }
-});
+router.get("/admin/rubricas/detalle/:id/:id_eval", RubricaController.getRubricaDetalle);
 
 // Actualizar rúbrica
 router.post('/rubrica/actualizar/:id', RubricaController.updateRubrica);
 router.delete('/admin/rubricas/delete/:id', RubricaController.deleteRubrica);
 // Obtener datos para editar rúbrica
-router.get('/admin/rubricas/editar/:id/:id_eval', async (req, res) => {
-    try {
-        const { id, id_eval } = req.params;
-        const resultado = await RubricaModel.getRubricaForEdit(id, id_eval, req.user);
-        if (resultado) {
-            res.json({ success: true, ...resultado });
-        } else {
-            res.json({ success: false, message: 'Rúbrica no encontrada o sin permisos' });
-        }
-    } catch (error) {
-        console.error('Error al obtener rúbrica para editar:', error);
-        res.json({ success: false, message: 'Error al obtener la rúbrica' });
-    }
-});
+router.get('/admin/rubricas/editar/:id/:id_eval', RubricaController.getRubricaForEdit);
 
 // Obtener carrera y semestre de una materia
-router.get('/admin/rubricas/carrera-seccion/:seccion_codigo', async (req, res) => {
-    try {
-        const { seccion_codigo } = req.params;
-        const resultado = await RubricaModel.getCarreraYSemestreBySeccion(seccion_codigo);
-        if (resultado) {
-            res.json({ success: true, ...resultado });
-        } else {
-            res.json({ success: false, message: 'Materia no encontrada' });
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        res.json({ success: false, message: 'Error al obtener información' });
-    }
-});
+router.get('/admin/rubricas/carrera-seccion/:seccion_codigo', RubricaController.getCarreraYSemestreBySeccion);
 
 // Obtener carreras
-router.get('/admin/carreras', async (req, res) => {
-    try {
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getCarreras(req.user.cedula, esAdmin);
-        res.json({ success: true, carreras: resultado });
-    } catch (error) {
-        console.error('Error:', error);
-        res.json({ success: false, message: 'Error al obtener carreras' });
-    }
-});
+router.get('/admin/carreras', RubricaController.getCarreras);
 
 // Obtener materias y secciones (para el modal)
-router.get('/admin/opciones', async (req, res) => {
-    try {
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getOpciones(req.user.cedula, esAdmin);
-        res.json({ success: true, ...resultado });
-    } catch (error) {
-        console.error('Error al obtener opciones:', error);
-        res.json({ success: false, message: 'Error al obtener opciones' });
-    }
-});
+router.get('/admin/opciones', RubricaController.getOpciones);
 
 // Obtener profesores únicos
-router.get("/admin/rubricas/profesores", async function(req, res) {
-    try {
-        const profesores = await RubricaModel.getProfesores();
-        res.json({ success: true, profesores });
-    } catch (error) {
-        console.error('Error al obtener profesores:', error);
-        res.status(500).json({ success: false, message: 'Error interno del servidor' });
-    }
-});
+router.get("/admin/rubricas/profesores", RubricaController.getProfesores);
 
 // Obtener tipos de rúbrica
-router.get("/admin/tipos_rubrica/", async (req, res) => {
-    try {
-        const tipos = await RubricaModel.getTiposRubrica();
-        res.json(tipos);
-    } catch (error) {
-        console.error('Error al obtener tipos de rubrica:', error);
-        res.status(500).json({ error: 'Error al obtener tipos de rubrica' });
-    }
-});
+router.get("/admin/tipos_rubrica/", RubricaController.getTiposRubrica);
 
 // Buscar evaluaciones en la sección con o sin rúbrica
-router.get("/admin/evaluaciones_con_rubrica/:seccionId", async function (req, res) {
-    try {
-        const { seccionId } = req.params;
-        const evaluaciones = await RubricaModel.getEvaluacionesConRubrica(seccionId);
-        res.json({ success: true, evaluaciones });
-    } catch (error) {
-        console.error('Error al obtener evaluaciones:', error);
-        res.json({ success: false, message: 'Error al obtener evaluaciones' });
-    }
-});
+router.get("/admin/evaluaciones_con_rubrica/:seccionId", RubricaController.getEvaluacionesConRubrica);
 
 // Obtener semestres por carrera (admin)
-router.get("/api/admin/semestres/:carrera", async (req, res) => {
-    try {
-        const { carrera } = req.params;
-        const periodo = req.query.periodo;
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getSemestresAdmin(carrera, req.user.cedula, esAdmin, periodo);
-        res.json(resultado);
-    } catch (error) {
-        console.error('Error al obtener semestres:', error);
-        res.status(500).json({ error: 'Error al obtener semestres' });
-    }
-});
+router.get("/api/admin/semestres/:carrera", RubricaController.getSemestresAdmin);
 
 // Obtener materias por carrera y semestre (admin)
-router.get("/api/admin/materias/:carrera/:semestre", async (req, res) => {
-    try {
-        const { carrera, semestre } = req.params;
-        const periodo = req.query.periodo;
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getMateriasAdmin(carrera, semestre, req.user.cedula, esAdmin, periodo);
-        res.json(resultado);
-    } catch (error) {
-        console.error('Error al obtener materias:', error);
-        res.status(500).json({ error: 'Error al obtener materias' });
-    }
-});
+router.get("/api/admin/materias/:carrera/:semestre", RubricaController.getMateriasAdmin);
 
 // Obtener secciones por materia (admin)
-router.get("/api/admin/secciones/:materia/:carreraCodigo", async (req, res) => {
-    try {
-        const { materia, carreraCodigo } = req.params;
-        const periodo = req.query.periodo;
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getSeccionesAdmin(materia, carreraCodigo, req.user.cedula, esAdmin, periodo);
-        res.json(resultado);
-    } catch (error) {
-        console.error('Error al obtener secciones:', error);
-        res.status(500).json({ error: 'Error al obtener secciones' });
-    }
-});
+router.get("/api/admin/secciones/:materia/:carreraCodigo", RubricaController.getSeccionesAdmin);
 
 module.exports = router;

@@ -14,6 +14,30 @@ class RubricaController {
             res.status(500).json({ success: false, message: 'Error al obtener datos' });
         }
     }
+    async getCarreras(req, res) {
+    try {
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getCarreras(req.user.cedula, esAdmin);
+        res.json({ success: true, carreras: resultado });
+    } catch (error) {
+        console.error('Error:', error);
+        res.json({ success: false, message: 'Error al obtener carreras' });
+    }
+}
+    async getCarreraYSemestreBySeccion(req, res) {
+    try {
+        const { seccion_codigo } = req.params;
+        const resultado = await RubricaModel.getCarreraYSemestreBySeccion(seccion_codigo);
+        if (resultado) {
+            res.json({ success: true, ...resultado });
+        } else {
+            res.json({ success: false, message: 'Materia no encontrada' });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        res.json({ success: false, message: 'Error al obtener información' });
+    }
+}
 
     async getSemestres(req, res) {
         try {
@@ -61,7 +85,66 @@ class RubricaController {
             res.status(500).json({ success: false, message: 'Error al obtener evaluaciones' });
         }
     }
-
+    async getOpciones(req, res) {
+    try {
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getOpciones(req.user.cedula, esAdmin);
+        res.json({ success: true, ...resultado });
+    } catch (error) {
+        console.error('Error al obtener opciones:', error);
+        res.json({ success: false, message: 'Error al obtener opciones' });
+    }
+}
+    async getProfesores(req, res) {
+    try {
+        const profesores = await RubricaModel.getProfesores();
+        res.json({ success: true, profesores });
+    } catch (error) {
+        console.error('Error al obtener profesores:', error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor' });
+    }
+}
+    async getTiposRubrica(req, res) {
+    try {
+        const tipos = await RubricaModel.getTiposRubrica();
+        res.json(tipos);
+    } catch (error) {
+        console.error('Error al obtener tipos de rubrica:', error);
+        res.status(500).json({ error: 'Error al obtener tipos de rubrica' });
+    }
+}
+    async getEvaluacionesConRubrica(req, res) {
+    try {
+        const { seccionId } = req.params;
+        const evaluaciones = await RubricaModel.getEvaluacionesConRubrica(seccionId);
+        res.json({ success: true, evaluaciones });
+    } catch (error) {
+        console.error('Error al obtener evaluaciones:', error);
+        res.json({ success: false, message: 'Error al obtener evaluaciones' });
+    }
+}
+    async getSemestresAdmin(req, res) {
+    try {
+        const { carrera } = req.params;
+        const periodo = req.query.periodo;
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getSemestresAdmin(carrera, req.user.cedula, esAdmin, periodo);
+        res.json(resultado);
+    } catch (error) {
+        console.error('Error al obtener semestres:', error);
+        res.status(500).json({ error: 'Error al obtener semestres' });
+    }
+}
+    async getAllRubricas(req, res) {
+    try {
+        const periodo = req.query.periodo
+        const rubricas = await RubricaModel.getAllRubricas(periodo);
+        res.json({ success: true, rubricas });
+    } catch (error) {
+        console.error('Error al obtener rúbricas:', error);
+        res.json({ success: false, rubricas: [] });
+    }
+}
     async createRubrica(req, res) {
         try {
             const {
@@ -199,6 +282,58 @@ class RubricaController {
             res.status(500).json({ success: false, mensaje: error.message || 'Error interno del servidor' });
         }
     }
+    async getRubricaDetalle(req, res) {
+    try {
+        const { id, id_eval } = req.params;
+        const resultado = await RubricaModel.getRubricaDetalle(id, id_eval);
+        if (resultado) {
+            res.json({ success: true, rubrica: resultado.rubrica, criterios: resultado.criterios });
+        } else {
+            res.status(404).json({ success: false, message: 'Rúbrica no encontrada' });
+        }
+    } catch (error) {
+        console.error('Error al obtener detalle de rúbrica:', error);
+        res.status(500).json({ success: false, message: 'Error al obtener detalle' });
+    }
+}
+    async getRubricaForEdit(req, res) {
+    try {
+        const { id, id_eval } = req.params;
+        const resultado = await RubricaModel.getRubricaForEdit(id, id_eval, req.user);
+        if (resultado) {
+            res.json({ success: true, ...resultado });
+        } else {
+            res.json({ success: false, message: 'Rúbrica no encontrada o sin permisos' });
+        }
+    } catch (error) {
+        console.error('Error al obtener rúbrica para editar:', error);
+        res.json({ success: false, message: 'Error al obtener la rúbrica' });
+    }
+}
+    async getMateriasAdmin(req, res) {
+    try {
+        const { carrera, semestre } = req.params;
+        const periodo = req.query.periodo;
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getMateriasAdmin(carrera, semestre, req.user.cedula, esAdmin, periodo);
+        res.json(resultado);
+    } catch (error) {
+        console.error('Error al obtener materias:', error);
+        res.status(500).json({ error: 'Error al obtener materias' });
+    }
+}
+    async getSeccionesAdmin(req, res) {
+    try {
+        const { materia, carreraCodigo } = req.params;
+        const periodo = req.query.periodo;
+        const esAdmin = req.user.id_rol === 1;
+        const resultado = await RubricaModel.getSeccionesAdmin(materia, carreraCodigo, req.user.cedula, esAdmin, periodo);
+        res.json(resultado);
+    } catch (error) {
+        console.error('Error al obtener secciones:', error);
+        res.status(500).json({ error: 'Error al obtener secciones' });
+    }
+}
 }
 
 module.exports = new RubricaController();

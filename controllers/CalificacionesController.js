@@ -7,10 +7,11 @@ class CalificacionesController {
             const cedula = req.user.cedula;
             const results = await CalificacionesModel.getCalificacionesByEstudiante(cedula);
             const lapsosMap = new Map();
-            const allMaterias = [];
+            const uniqueMateriasMap = new Map();
 
             results.forEach(row => {
                 const lapsoKey = row.lapso_academico || 'Sin Periodo';
+                const fechaPeriodo = row.fecha_periodo; // Extraemos la fecha del periodo
 
                 if (!lapsosMap.has(lapsoKey)) {
                     lapsosMap.set(lapsoKey, new Map());
@@ -19,7 +20,7 @@ class CalificacionesController {
                 const materiasMap = lapsosMap.get(lapsoKey);
 
                 if (!materiasMap.has(row.materia_codigo)) {
-                    materiasMap.set(row.materia_codigo, {
+                    const nuevaMateria = {
                         nombre: row.materia_nombre,
                         codigo: row.materia_codigo,
                         seccion: row.seccion_codigo,
@@ -29,8 +30,24 @@ class CalificacionesController {
                         calificacion_final: 0,
                         porcentaje_acumulado: 0, 
                         puntaje_acum_sobre_20: 0,
-                        total_evaluado: 0
-                    });
+                        total_evaluado: 0,
+                        fecha_periodo: fechaPeriodo // Guardamos la fecha del periodo
+                    };
+                    materiasMap.set(row.materia_codigo, nuevaMateria);
+
+                    // Lógica para stats únicas basada en fecha_periodo
+                    if (!uniqueMateriasMap.has(row.materia_codigo)) {
+                        uniqueMateriasMap.set(row.materia_codigo, nuevaMateria);
+                    } else {
+                        const existente = uniqueMateriasMap.get(row.materia_codigo);
+                        const fechaActual = new Date(fechaPeriodo).getTime();
+                        const fechaExistente = new Date(existente.fecha_periodo).getTime();
+                        
+                        // Si la fecha actual es estrictamente mayor, es el periodo más reciente
+                        if (fechaActual > fechaExistente) {
+                            uniqueMateriasMap.set(row.materia_codigo, nuevaMateria);
+                        }
+                    }
                 }
 
                 const materia = materiasMap.get(row.materia_codigo);
@@ -53,12 +70,13 @@ class CalificacionesController {
                     if (row.puntaje_total !== null) {
                         materia.porcentaje_acumulado += porcentajeRubrica;
                     }
-                    // Normaliza a milisegundos para comparar correctamente
+
                     const fechaEvalTime = row.fecha_evaluacion ? new Date(row.fecha_evaluacion).getTime() : null;
                     const fechaModifTime = row.fecha_modif ? new Date(row.fecha_modif).getTime() : null;
                     const hasModification = fechaEvalTime && fechaModifTime && fechaEvalTime !== fechaModifTime;
+
                     materia.rubricas.push({
-                        nombre: row.nombre_rubrica, //realmente contenido de evaluacion
+                        nombre: row.nombre_rubrica,
                         porcentaje: porcentajeRubrica,
                         puntaje_obtenido: row.puntaje_total !== null ? puntajeObtenido : null,
                         puntaje_maximo: maxPuntaje,
@@ -78,7 +96,7 @@ class CalificacionesController {
                     m.nota_20 = (m.calificacion_final / 5);
                     m.nota_100 = m.calificacion_final;
                     m.puntaje_acum_sobre_20 = m.porcentaje_acumulado / 5;
-                    allMaterias.push(m);
+                    console.log(m.codigo, m.nota_20, m.nota_100, m.puntaje_acum_sobre_20)
                 });
 
                 lapsos.push({
@@ -88,6 +106,9 @@ class CalificacionesController {
             }
 
             lapsos.sort((a, b) => b.nombre.localeCompare(a.nombre));
+
+            // Usamos el Map global que ya contiene solo la materia de su periodo más reciente
+            const allMaterias = Array.from(uniqueMateriasMap.values());
 
             const totalMaterias = allMaterias.length;
             const materiasAprobadas = allMaterias.filter(m => m.nota_20 >= 10).length;

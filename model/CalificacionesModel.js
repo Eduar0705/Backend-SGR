@@ -18,16 +18,18 @@ class CalificacionesModel {
                 er.fecha_evaluado AS fecha_evaluacion,
                 e.fecha_evaluacion AS fecha_fija,
                 er.fecha_actualizacion AS fecha_modif,
+                pa.fecha_inicio AS fecha_periodo,
                 e.ponderacion AS puntaje_maximo_rubrica
             FROM 
-                evaluacion e 
-                LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
-                LEFT JOIN rubrica r ON ru.id_rubrica = r.id
-                LEFT JOIN criterio_rubrica cr ON r.id = cr.rubrica_id 
-                INNER JOIN seccion s ON e.id_seccion = s.id
+                seccion s
+                INNER JOIN periodo_academico pa ON s.codigo_periodo = pa.codigo
                 INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+                LEFT JOIN evaluacion e ON s.id = e.id_seccion
+                LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
+                LEFT JOIN rubrica r ON ru.id_rubrica = r.id
+                LEFT JOIN criterio_rubrica cr ON r.id = cr.rubrica_id 
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 

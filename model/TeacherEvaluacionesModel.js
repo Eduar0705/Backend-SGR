@@ -559,6 +559,7 @@ class TeacherEvaluacionesModel {
                     INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id 
                     INNER JOIN evaluacion_realizada er ON de.evaluacion_r_id = er.id
                     INNER JOIN evaluacion e ON er.id_evaluacion = e.id
+                    INNER JOIN rubrica_uso ru ON ru.id_rubrica = cr.rubrica_id AND ru.id_eval = e.id
                     WHERE er.id = ?
                     GROUP BY de.id_criterio_detalle, de.orden_detalle 
         `;

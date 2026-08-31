@@ -731,12 +731,13 @@ class RubricaModel {
                     LEFT JOIN 
                     	(SELECT 
                     		er.id, 
+                            er.id_evaluacion,
                     		er.id_evaluacion 
                     	FROM evaluacion_realizada er 
                     	INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id 
                     	GROUP BY er.id, er.id_evaluacion
                     	) 
-                    AS eval_est ON eval_est.id_evaluacion = e.id 
+                    AS eval_est ON eval_est.id_evaluacion = e.id
                     LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
                     LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
                     GROUP BY e.id

@@ -46,7 +46,8 @@ class EvaluacionModel {
                         COALESCE(estud_sec.cantidad_en_seccion,0) AS total_evaluaciones, 
                         CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                         (SELECT COALESCE(COUNT(DISTINCT er.id),0) FROM evaluacion_realizada er
-                        INNER JOIN evaluacion ON er.id_evaluacion = e.id) AS completadas,
+                        INNER JOIN evaluacion ON er.id_evaluacion = e.id
+                        INNER JOIN rubrica_uso ru ON e.id = ru.id_eval) AS completadas,
                         e.fecha_evaluacion,
                         IFNULL(he.id_horario, hec.id) AS id_horario, 
                         CASE 
@@ -199,7 +200,8 @@ class EvaluacionModel {
                         CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                         s.id AS seccion_id,
                         (SELECT COALESCE(COUNT(DISTINCT er.id),0) FROM evaluacion_realizada er
-                        INNER JOIN evaluacion ON er.id_evaluacion = e.id) AS completadas,
+                        INNER JOIN evaluacion ON er.id_evaluacion = e.id
+                        INNER JOIN rubrica_uso ru ON e.id = ru.id_eval) AS completadas,
                         e.fecha_evaluacion,
                         IFNULL(he.id_horario, hec.id) AS id_horario, 
                         CASE 

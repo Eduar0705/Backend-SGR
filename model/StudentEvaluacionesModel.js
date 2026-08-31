@@ -64,7 +64,6 @@ class StudentEvaluacionesModel {
     }
 
     async getDetalleEvaluacion(evaluacionId, estudianteCedula) {
-        // 1. Info evaluación (agregamos nuevos campos)
         const queryEvaluacion = `
             SELECT 
                 e.id AS evaluacion_id,

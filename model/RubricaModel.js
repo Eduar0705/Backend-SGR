@@ -224,7 +224,6 @@ class RubricaModel {
         });
     }
 
-    // ─── HELPER: queryAsync para transacciones ──────────────────────────────
     queryAsync(conn, sql, params) {
         return new Promise((resolve, reject) => {
             conn.query(sql, params, (err, results) => {
@@ -234,7 +233,6 @@ class RubricaModel {
         });
     }
 
-    // ─── HELPER: beginTransaction / commit / rollback como Promises ─────────
     beginTransactionAsync(conn) {
         return new Promise((resolve, reject) => {
             conn.beginTransaction(err => (err ? reject(err) : resolve()));
@@ -267,26 +265,22 @@ class RubricaModel {
             conn = await this.getConnectionAsync();
             await this.beginTransactionAsync(conn);
 
-            // Verificar que la evaluación no tenga rúbrica ya asignada
             const existing = await this.queryAsync(conn, 'SELECT id_rubrica FROM rubrica_uso WHERE id_eval = ?', [data.id_evaluacion]);
             if (existing.length > 0) {
                 throw new Error('Esta evaluación ya tiene una rúbrica asignada.');
             }
 
-            // Insertar rúbrica
             const resRubrica = await this.queryAsync(conn,
                 `INSERT INTO rubrica (nombre_rubrica, cedula_docente, instrucciones, id_tipo) VALUES (?, ?, ?, ?)`,
                 [data.nombre_rubrica, data.cedula_docente, data.instrucciones, data.tipo_rubrica]
             );
             const rubricaId = resRubrica.insertId;
 
-            // Relacionar rúbrica con evaluación
             await this.queryAsync(conn,
                 'INSERT INTO rubrica_uso (id_eval, id_rubrica) VALUES (?, ?)',
                 [data.id_evaluacion, rubricaId]
             );
 
-            // Insertar criterios y niveles
             for (const crit of data.criterios) {
                 const resCrit = await this.queryAsync(conn,
                     `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)`,
@@ -307,7 +301,6 @@ class RubricaModel {
             await this.commitAsync(conn);
             conn.release();
 
-            // Notificar al docente (no bloquea la respuesta)
             try {
                 await NotificacionModel.create({
                     usuario_destino: data.cedula_docente,
@@ -785,7 +778,7 @@ class RubricaModel {
                         conn.query(insertEvalQ, [id, data.id_evaluacion], (e, r) => e ? rej(e) : res(r))
                     );
 
-                    // 3. Upsert de criterios (por id real) y sus niveles (por orden, clave compuesta)
+                    // 3. Update/insert de criterios y sus niveles
                     const idsCriteriosPayload = [];
 
                     for (let i = 0; i < data.criterios.length; i++) {
@@ -799,7 +792,6 @@ class RubricaModel {
                         let esNuevo = !criterioId
 
                         if (criterioId) {
-                            // Ya existe -> UPDATE
                             const resUpdate = await new Promise((res, rej) =>
                                 conn.query(
                                     `UPDATE criterio_rubrica 
@@ -814,7 +806,6 @@ class RubricaModel {
                             }
                         }
                         if(esNuevo) {
-                            // Sin id -> nuevo -> INSERT
                             const resCrit = await new Promise((res, rej) =>
                                 conn.query(
                                     `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden)
@@ -827,8 +818,6 @@ class RubricaModel {
                         }
 
                         idsCriteriosPayload.push(criterioId);
-
-                        // --- Niveles de este criterio: clave compuesta (criterio_id, orden) ---
                         if (criterio.niveles && criterio.niveles.length > 0) {
                             const ordenesNivelesPayload = [];
 
@@ -857,8 +846,6 @@ class RubricaModel {
                                     )
                                 );
                             }
-
-                            // Borrar niveles de este criterio cuyo orden ya no viene en el payload
                             await new Promise((res, rej) =>
                                 conn.query(
                                     'DELETE FROM nivel_desempeno WHERE criterio_id = ? AND orden NOT IN (?)',
@@ -906,7 +893,6 @@ class RubricaModel {
                         }
                     }
 
-                    // 5. Confirmar transacción
                     conn.commit((err) => {
                         if (err) {
                             return conn.rollback(() => {

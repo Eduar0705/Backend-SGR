@@ -6,8 +6,6 @@ class CalificacionesController {
         try {
             const cedula = req.user.cedula;
             const results = await CalificacionesModel.getCalificacionesByEstudiante(cedula);
-
-            // Procesar resultados en estructura de lapsos
             const lapsosMap = new Map();
             const allMaterias = [];
 

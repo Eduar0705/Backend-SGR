@@ -118,8 +118,7 @@ class AuthController {
 
             await userModel.storeResetToken(cedula, recoveryCode, expires);
 
-            // Enviar email (Configuración temporal)
-            // NOTA: El usuario debe proporcionar credenciales SMTP reales para producción
+            // Enviar email
             const transporter = nodemailer.createTransport({
                 host: process.env.SMTP_HOST || 'smtp.gmail.com',
                 port: process.env.SMTP_PORT || 587,
@@ -150,8 +149,6 @@ class AuthController {
                     </div>
                 `
             };
-
-            // Intentamos enviar el correo. Si falla, al menos registramos el código en consola para desarrollo
             try {
                 if (process.env.SMTP_USER && process.env.SMTP_PASS) {
                     await transporter.sendMail(mailOptions);
@@ -160,8 +157,8 @@ class AuthController {
                     console.log(`[AUTH] DEVELOPMENT MODE: Recovery code for ${cedula} is ${recoveryCode}`);
                     return res.json({
                         success: true,
-                        message: 'Código generado (Modo Desarrollo). Ver consola del servidor.',
-                        devCode: recoveryCode // Solo para desarrollo inicial
+                        message: 'Código generado.',
+                        devCode: recoveryCode 
                     });
                 }
             } catch (mailError) {

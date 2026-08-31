@@ -4,7 +4,6 @@ const { aplicarRedondeoPuntaje } = require('../utils/evaluacionUtils');
 class DashboardModel {
     async getStats(periodo) {
         return new Promise((resolve, reject) => {
-            // 1. Contar los profesores
             const countProf = `SELECT 
                                     COUNT(*) AS total 
                                 FROM usuario_docente ud 
@@ -17,7 +16,6 @@ class DashboardModel {
                                 WHERE u.activo = 1
                                 AND pa.codigo = ?`;
             
-            // 2. Contar las Rúbricas
             const countRubricas = ` SELECT 
                                         COUNT(*) AS total 
                                     FROM rubrica r
@@ -26,7 +24,6 @@ class DashboardModel {
                                     INNER JOIN seccion s ON e.id_seccion = s.id
                                     WHERE s.codigo_periodo = ?`;
 
-            // 3. Contar evaluaciones pendientes
             const countEvaluacionesPendientes = `
                 SELECT COUNT(*) AS total
                 FROM (
@@ -42,7 +39,6 @@ class DashboardModel {
                 ) AS evaluaciones_sin_corregir
             `;
 
-            // 4. Rúbricas recientes
             const recentRubricasQuery = `
                 SELECT 
                     r.id, r.nombre_rubrica, r.fecha_creacion, r.fecha_actualizacion,
@@ -62,7 +58,6 @@ class DashboardModel {
                 ORDER BY r.fecha_actualizacion DESC LIMIT 4;
             `;
 
-            // 5. Actividad reciente
             const recentActivityQuery = `
                 SELECT
                     er.id, er.fecha_evaluado AS fecha_evaluacion,

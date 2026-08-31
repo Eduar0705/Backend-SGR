@@ -57,14 +57,11 @@ class PeriodosModel {
                         conn.release();
                         return reject(err);
                     }
-                            // 1. Eliminar cortes
                             conn.query(
                                 `DELETE FROM corte_periodo WHERE codigo_periodo = ?`,
                                 [codigo_periodo],
                                 (error) => {
                                     if (error) return conn.rollback(() => { conn.release(); reject(error); });
-
-                                    // 2. Eliminar periodo
                                     conn.query(
                                         `DELETE FROM periodo_academico WHERE codigo = ?`,
                                         [codigo_periodo],

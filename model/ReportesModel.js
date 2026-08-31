@@ -37,7 +37,7 @@ class ReportesModel {
                     HAVING dias_inactivo > 30 OR dias_inactivo IS NULL
                     LIMIT 10
                 `,
-                // 4. Top Profesores (Rúbricas)
+                // 4. Top Profesores (x Rúbricas)
                 topProfesoresPorRubricas: `
                     SELECT CONCAT(u.nombre, ' ', u.apeliido) as nombre_completo, COUNT(r.id) as total_rubricas
                     FROM usuario_docente ud
@@ -48,7 +48,7 @@ class ReportesModel {
                     ORDER BY total_rubricas DESC
                     LIMIT 5
                 `,
-                // 5. Top Profesores (Evaluaciones)
+                // 5. Top Profesores (x Evaluaciones)
                 topProfesoresPorEvaluaciones: `
                     SELECT CONCAT(u.nombre, ' ', u.apeliido) as nombre_completo, COUNT(er.id) as total_evaluaciones
                     FROM usuario_docente ud
@@ -68,7 +68,7 @@ class ReportesModel {
                     GROUP BY mes
                     ORDER BY mes ASC
                 `,
-                // 7. Uso de Rúbricas por Materia
+                // 7. Uso de Rúbricas x Materia
                 usoRubricasPorMateria: `
                     SELECT m.nombre as materia, COUNT(DISTINCT r.id) as total_rubricas
                     FROM materia m
@@ -241,7 +241,7 @@ class ReportesModel {
                         HAVING dias_inactivo > 30 OR dias_inactivo IS NULL
                         LIMIT 10
                     `,
-                    // 4. Top Profesores (Rúbricas)
+                    // 4. Top Profesores (x Rúbricas)
                     topProfesoresPorRubricas: `
                         SELECT CONCAT(u.nombre, ' ', u.apeliido) as nombre_completo, COUNT(rp.id) as total_rubricas
                         FROM usuario_docente ud
@@ -257,7 +257,7 @@ class ReportesModel {
                         ORDER BY total_rubricas DESC
                         LIMIT 5
                     `,
-                    // 5. Top Profesores (Evaluaciones)
+                    // 5. Top Profesores (x Evaluaciones)
                     topProfesoresPorEvaluaciones: `
                         SELECT CONCAT(u.nombre, ' ', u.apeliido) as nombre_completo, COUNT(er.id) as total_evaluaciones
                         FROM usuario_docente ud
@@ -285,7 +285,7 @@ class ReportesModel {
                         GROUP BY mes
                         ORDER BY mes ASC
                     `,
-                    // 7. Uso de Rúbricas por Materia
+                    // 7. Uso de Rúbricas x Materia
                     usoRubricasPorMateria: `
                         SELECT m.nombre as materia, COUNT(DISTINCT r.id) as total_rubricas
                         FROM materia m
@@ -423,7 +423,6 @@ class ReportesModel {
                 connection.query(queries[key], (err, rows) => {
                     if (err) {
                         console.error(`Error en query ${key}:`, err);
-                        // No rechazamos inmediatamente para intentar obtener lo que se pueda
                         results[key] = [];
                     } else {
                         if (key === 'totales') {

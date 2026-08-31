@@ -451,7 +451,6 @@ class TeacherEvaluacionesModel {
     }
 
     static async getEvaluacionDetalles(evaluacionId, estudianteCedula) {
-        // Evaluacion details directly
         const evalSQL = `
             SELECT 
 				er.id,
@@ -526,7 +525,6 @@ class TeacherEvaluacionesModel {
         const estData = await query(estSQL, [estudianteCedula]);
         const estudiante = estData[0];
 
-        // Criterios 
         const criteriosSQL = `
             SELECT id, descripcion as nombre, descripcion, puntaje_maximo, orden
             FROM criterio_rubrica
@@ -685,7 +683,6 @@ class TeacherEvaluacionesModel {
             connection.release();
         }
 
-        // Notificación fuera de la transacción (fallo no crítico)
         try {
             const rows = await new Promise((resolve, reject) => {
                 pool.query(`

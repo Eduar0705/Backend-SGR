@@ -1,7 +1,6 @@
 const connection = require('./conexion');
 
 class TeacherRubricaModel {
-    // Carreras donde el docente tiene permiso
     async getCarrerasByDocente(cedula, periodo) {
         const query = `
             SELECT DISTINCT c.codigo, c.nombre
@@ -20,7 +19,6 @@ class TeacherRubricaModel {
         });
     }
 
-    // Tipos de rúbrica
     async getTiposRubrica() {
         const query = 'SELECT id, nombre FROM tipo_rubrica GROUP BY nombre ORDER BY nombre';
         return new Promise((resolve, reject) => {
@@ -46,7 +44,6 @@ class TeacherRubricaModel {
         });
     }
 
-    // Materias por carrera y semestre
     async getMateriasByCarreraSemestre(carrera, semestre, cedula, periodo) {
         const query = `
             SELECT DISTINCT m.codigo, m.nombre
@@ -65,7 +62,7 @@ class TeacherRubricaModel {
         });
     }
 
-    // Secciones por materia (del docente en materia_pensum)
+    // Secciones por materia (del docente)
     async getSeccionesByMateria(materia, cedula, periodo) {
         const query = `
             SELECT s.id, s.letra, pa.codigo
@@ -83,7 +80,7 @@ class TeacherRubricaModel {
         });
     }
 
-    // Evaluaciones de una sección (sin rúbrica asignada aún)
+    // Evaluaciones de una sección (sin rúbrica asignada)
     async getEvaluacionesBySeccion(seccionId) {
         const query = `
             SELECT e.id, e.competencias, e.ponderacion, e.fecha_evaluacion
@@ -97,7 +94,6 @@ class TeacherRubricaModel {
         });
     }
 
-    // Estrategias de evaluación
     async getEstrategias() {
         const query = 'SELECT id, nombre FROM estrategia_eval ORDER BY nombre';
         return new Promise((resolve, reject) => {
@@ -181,8 +177,7 @@ class TeacherRubricaModel {
             });
         });
     }
-    // MÉTODOS PARA GESTIÓN DE RÚBRICAS (DOCENTE)
-
+    // MÉTODOS PARA GESTIÓN DE RÚBRICAS
     async getRubricas(cedula) {
         const query = `
             SELECT
@@ -412,7 +407,7 @@ async updateRubrica(id, data) {
                         conn.query(updateRubricaQ, [data.nombre_rubrica, data.instrucciones, data.tipo_rubrica, id], (e, r) => e ? rej(e) : res(r))
                     );
 
-                    // 2. Actualizar relación con evaluación
+                    // 2. Actualizar relación con evaluación (posiblemente removeré esta parte)
                     const deleteEvalQ = 'DELETE FROM rubrica_uso WHERE id_rubrica = ?';
                     await new Promise((res, rej) =>
                         conn.query(deleteEvalQ, [id], (e, r) => e ? rej(e) : res(r))
@@ -423,7 +418,7 @@ async updateRubrica(id, data) {
                         conn.query(insertEvalQ, [id, data.id_evaluacion], (e, r) => e ? rej(e) : res(r))
                     );
 
-                    // 3. Upsert de criterios (por id real) y sus niveles (por orden, clave compuesta)
+                    // 3. Insert/update de criterios y sus niveles
                     const idsCriteriosPayload = [];
 
                     for (let i = 0; i < data.criterios.length; i++) {
@@ -444,7 +439,6 @@ async updateRubrica(id, data) {
                                 )
                             );
 
-                            // Si no afectó ninguna fila, el id no existe realmente -> tratar como nuevo
                             if (resUpdate.affectedRows === 0) {
                                 esNuevo = true;
                             }
@@ -465,7 +459,6 @@ async updateRubrica(id, data) {
 
                         idsCriteriosPayload.push(criterioId);
 
-                        // --- Niveles de este criterio: clave compuesta (criterio_id, orden) ---
                         if (criterio.niveles && criterio.niveles.length > 0) {
                             const ordenesNivelesPayload = [];
 
@@ -511,7 +504,7 @@ async updateRubrica(id, data) {
                         }
                     }
 
-                    // 4. Eliminar criterios (y sus niveles) que ya no vienen en el payload
+                    // 4. Eliminar criterios que ya no vienen en el payload
                     if (idsCriteriosPayload.length > 0) {
                         const criteriosABorrar = await new Promise((res, rej) =>
                             conn.query(

@@ -63,7 +63,6 @@ class PermisosModel {
 
     async createOrReactivatePermiso(docente_cedula, seccion_id, cedula_creador) {
         return new Promise((resolve, reject) => {
-            // Verificar si ya existe (incluso inactivo)
             const checkQuery = `SELECT id, activo FROM permiso_docente WHERE docente_cedula = ? AND id_seccion = ?`;
             connection.query(checkQuery, [docente_cedula, seccion_id], (err, results) => {
                 if (err) return reject(err);
@@ -73,14 +72,12 @@ class PermisosModel {
                     if (permiso.activo === 1) {
                         return resolve({ success: false, message: 'El permiso ya existe y está activo', id: permiso.id });
                     }
-                    // Reactivar
                     const updateQuery = `UPDATE permiso_docente SET activo = 1, cedula_creador = ? WHERE id = ?`;
                     connection.query(updateQuery, [cedula_creador, permiso.id], (err, result) => {
                         if (err) return reject(err);
                         resolve({ success: true, message: 'Permiso reactivado exitosamente', id: permiso.id, reactivado: true });
                     });
                 } else {
-                    // Crear nuevo
                     const insertQuery = `INSERT INTO permiso_docente (docente_cedula, id_seccion, cedula_creador, activo) VALUES (?, ?, ?, 1)`;
                     connection.query(insertQuery, [docente_cedula, seccion_id, cedula_creador], (err, result) => {
                         if (err) return reject(err);

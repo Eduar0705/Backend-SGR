@@ -35,7 +35,6 @@ class DocenteModel {
 
     async createDocente({ cedula, nombre, apellido, email, telefono, especialidad, notas }) {
         return new Promise((resolve, reject) => {
-            // Verificar si el usuario ya existe (en usuario y/o usuario_docente)
             const checkQuery = `
                 SELECT u.cedula, u.nombre, u.apeliido, u.email, u.activo, u.id_rol,
                        ud.cedula_usuario AS docente_existe
@@ -54,7 +53,6 @@ class DocenteModel {
                         if (err) { conn.release(); return reject(err); }
 
                         if (results.length > 0 && results[0].docente_existe && results[0].activo == 0) {
-                            // Re-activar docente existente (tiene registro en usuario y usuario_docente)
                             const updateUsuario = `UPDATE usuario SET nombre = ?, apeliido = ?, email = ?, activo = 1 WHERE cedula = ?`;
                             conn.query(updateUsuario, [nombre, apellido, email, cedula], (err) => {
                                 if (err) {
@@ -77,7 +75,6 @@ class DocenteModel {
                                 });
                             });
                         } else if (results.length > 0 && results[0].docente_existe && results[0].activo == 1) {
-                            // Ya existe como docente y está activo
                             conn.release();
                             resolve({ success: false, message: 'Ya existe un docente con esa cédula' });
                         } else if (results.length > 0 && !results[0].docente_existe) {
@@ -105,7 +102,6 @@ class DocenteModel {
                                 });
                             });
                         } else {
-                            // Crear nuevo (no existe en ninguna tabla)
                             const insertUsuario = `INSERT INTO usuario (cedula, nombre, apeliido, email, id_rol) VALUES (?, ?, ?, ?, 2)`;
                             conn.query(insertUsuario, [cedula, nombre, apellido, email], (err) => {
                                 if (err) {
@@ -138,8 +134,6 @@ class DocenteModel {
         return new Promise((resolve, reject) => {
             connection.getConnection((err, conn) => {
                 if (err) return reject(err);
-
-                // Validar que no exista ya un usuario con la nueva cédula
                 const checkUsuario = `SELECT cedula FROM usuario WHERE cedula = ?`;
                 conn.query(checkUsuario, [cedula], (err, results) => {
                     if (err) {

@@ -5,12 +5,13 @@ const ReportesController = require('../controllers/ReportesController');
 const authMiddleware = require('../middleware/auth.middleware');
 const evaluacionesRouter = require('./evaluaciones');
 
+
 // Rutas generales
 router.get('/carreras', AcademicoController.getCarreras);
 router.get('/estrategias_eval', AcademicoController.getEstrategias);
 router.get('/tipos-rubrica', AcademicoController.getTiposRubrica);
 
-// Integrar Evaluaciones como sub-ruta: /api/evaluaciones
+// Integrar Evaluaciones como sub-ruta
 router.use('/evaluaciones', evaluacionesRouter);
 
 // Rutas con prefijo admin

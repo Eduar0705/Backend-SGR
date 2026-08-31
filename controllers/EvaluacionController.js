@@ -134,7 +134,6 @@ class EvaluacionController {
                 contenido, corte, competencias, instrumentos, porcentaje, estrategias_eval,
                 tipo_horario, hora_inicio, hora_fin
             } = req.body;
-            // Validaciones básicas
             const missingFields = [];
             if (!fecha_evaluacion) missingFields.push('fecha_evaluacion');
             if (!id_seccion) missingFields.push('id_seccion');
@@ -152,7 +151,6 @@ class EvaluacionController {
                 });
             }
 
-            // Verificar duplicados
             if (tipo_horario === 'Sección') {
                 const duplicados = await EvaluacionModel.checkDuplicadosHorario(fecha_evaluacion, id_horario);
                 if (duplicados.length > 0) return res.status(400).json({ success: false, message: 'Ya existe una evaluación registrada para esta sección en este horario.' });

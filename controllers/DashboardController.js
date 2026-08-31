@@ -21,7 +21,7 @@ class DashboardController {
 
     async getStudentDashboardStats(req, res) {
         try {
-            const { cedula } = req.user; // Obtenido del authMiddleware
+            const { cedula } = req.user;
             const stats = await dashboardModel.getStudentStats(cedula);
 
             return res.json({

@@ -162,7 +162,6 @@ class RubricaController {
                 return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
             }
 
-            // Validar que criterios sea un array válido
             let criteriosParsed = criterios;
             if (typeof criterios === 'string') {
                 try {

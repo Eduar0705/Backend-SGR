@@ -1,4 +1,3 @@
-// controller/DocenteController.js
 const DocenteModel = require('../model/DocenteModel');
 const PermisosModel = require('../model/PermisosModel');
 
@@ -84,7 +83,7 @@ class DocenteController {
     async savePermisos(req, res) {
         try {
             const { cedula } = req.params;
-            const { secciones } = req.body; // Array de IDs de sección
+            const { secciones } = req.body;
             const cedula_creador = req.session.cedula || req.user.cedula;
 
             if (!Array.isArray(secciones) || secciones.length === 0) {

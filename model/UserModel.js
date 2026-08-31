@@ -71,7 +71,6 @@ class UserModel {
     }
 
     async update(cedulaOriginal, { cedula, nombre, apellido, email, password, rol }) {
-        // Si viene contraseña, la hasheamos antes de la promesa; si no, dejamos null
         let passwordHash = null;
         if (password && password.trim() !== '') {
             passwordHash = await bcrypt.hash(password, 10);
@@ -162,7 +161,6 @@ class UserModel {
                     return reject(err);
                 }
 
-                // Consulta período general
                 const periodoGeneralQuery = `
                 SELECT codigo
                 FROM periodo_academico
@@ -184,7 +182,6 @@ class UserModel {
 
                     console.log(`[PERIODO] Período general encontrado: ${periodoGeneral} para ${cedula}`);
 
-                    // Si el rol no requiere consulta específica
                     if (id_rol !== 2 && id_rol !== 3) {
                         conn.release();
                         return resolve({
@@ -194,7 +191,6 @@ class UserModel {
                         });
                     }
 
-                    // Determinar qué consulta ejecutar según el rol
                     let ultimoPeriodoUsuarioQuery;
                     let queryParams = [cedula];
 
@@ -227,9 +223,7 @@ class UserModel {
                     `;
                     }
 
-                    // Ejecutar consulta para el rol específico
                     conn.query(ultimoPeriodoUsuarioQuery, queryParams, (err, periodoUsuarioResult) => {
-                        // Liberar conexión después de ambas consultas
                         conn.release();
 
                         if (err) {

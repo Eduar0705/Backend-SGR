@@ -65,17 +65,17 @@ app.use('/api', teacherEstudiantesRouter);
 let permisosRouter = require('./routes/permisos');
 app.use('/api/permisos', permisosRouter);
 
-// AcademicoRouter captura lo que queda bajo /api (incluyendo /api/evaluaciones)
+// AcademicoRouter captura lo que queda bajo /api
 let academicoRouter = require('./routes/academico');
 const PeriodosController = require('./controllers/PeriodosController');
 const { timeStamp } = require('console');
 app.use('/api', academicoRouter);
 
-// Manejador 404 para API (Retorna JSON, no HTML)
+// Manejador 404 para API
 app.use('/api/*', (req, res) => {
   res.status(404).json({ 
     success: false, 
-    message: `Endpoint de API no encontrado: ${req.originalUrl}` 
+    message: `Intentas ir a un lugar que no existe: ${req.originalUrl}` 
   });
 });
 

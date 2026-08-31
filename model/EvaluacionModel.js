@@ -463,9 +463,7 @@ class EvaluacionModel {
                     ], (err, result) => {
                         if (err) return conn.rollback(() => { conn.release(); reject(err); });
 
-                        const eval_id = result.insertId;
-                        
-                        // Insertar horario
+                        const eval_id = result.insertId;                        
                         let insertHorario;
                         let valuesHorario;
                         if (type === 'Sección') {
@@ -478,8 +476,6 @@ class EvaluacionModel {
 
                         conn.query(insertHorario, valuesHorario, err => {
                             if (err) return conn.rollback(() => { conn.release(); reject(err); });
-
-                            // Insertar estrategias
                             const valuesEstrategias = strategies.map(estId => [estId, eval_id]);
                             const insertEstrategias = `INSERT INTO estrategia_empleada (id_estrategia, id_eval) VALUES ?`;
                             conn.query(insertEstrategias, [valuesEstrategias], err => {
@@ -571,8 +567,6 @@ class EvaluacionModel {
                             if (err) return conn.rollback(() => { conn.release(); reject(err); });
                             conn.query(`DELETE FROM horario_eval_clandestina WHERE id_eval = ?`, [id], err => {
                                 if (err) return conn.rollback(() => { conn.release(); reject(err); });
-
-                                // Insertar nuevo horario
                                 let insertHorario;
                                 let valuesHorario;
                                 if (type === 'Sección') {
@@ -586,7 +580,6 @@ class EvaluacionModel {
                                 conn.query(insertHorario, valuesHorario, err => {
                                     if (err) return conn.rollback(() => { conn.release(); reject(err); });
 
-                                    // Actualizar estrategias
                                     conn.query(`DELETE FROM estrategia_empleada WHERE id_eval = ?`, [id], err => {
                                         if (err) return conn.rollback(() => { conn.release(); reject(err); });
 

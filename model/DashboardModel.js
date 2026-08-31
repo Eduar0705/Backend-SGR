@@ -310,7 +310,7 @@ class DashboardModel {
                 LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 
                 	AND cr.id = nd.criterio_id 
                 WHERE pd.docente_cedula = ? AND r.activo = 1 AND u.activo = 1 
-                AND s.codigo_periodo = '2025-1'
+                AND s.codigo_periodo = ?
                 GROUP BY er.id, er.fecha_evaluado, ins.cedula_estudiante, ins.id_seccion
                 ORDER BY fecha_evaluado DESC LIMIT 4;
             `;

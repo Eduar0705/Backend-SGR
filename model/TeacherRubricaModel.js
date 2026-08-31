@@ -11,7 +11,7 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE pd.docente_cedula = ?
-            AND s.codigo_periodo = '2025-1'
+            AND s.codigo_periodo = ?
             ORDER BY c.nombre
         `;
         return new Promise((resolve, reject) => {
@@ -36,7 +36,7 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_carrera = ? AND pd.docente_cedula = ?
-            AND s.codigo_periodo = '2025-1'
+            AND s.codigo_periodo = ?
             ORDER BY mp.num_semestre
         `;
         return new Promise((resolve, reject) => {
@@ -54,7 +54,7 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON mp.id = s.id_materia_plan
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.num_semestre = ? AND pd.docente_cedula = ?
-            AND s.codigo_periodo = '2025-1'
+            AND s.codigo_periodo = ?
             ORDER BY m.nombre
         `;
         return new Promise((resolve, reject) => {
@@ -72,7 +72,7 @@ class TeacherRubricaModel {
             INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_materia = ? AND pd.docente_cedula = ?
-            AND pa.codigo = '2025-1'
+            AND pa.codigo = ?
             ORDER BY s.letra
         `;
         return new Promise((resolve, reject) => {

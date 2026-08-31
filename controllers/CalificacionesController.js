@@ -53,7 +53,10 @@ class CalificacionesController {
                     if (row.puntaje_total !== null) {
                         materia.porcentaje_acumulado += porcentajeRubrica;
                     }
-
+                    // Normaliza a milisegundos para comparar correctamente
+                    const fechaEvalTime = row.fecha_evaluacion ? new Date(row.fecha_evaluacion).getTime() : null;
+                    const fechaModifTime = row.fecha_modif ? new Date(row.fecha_modif).getTime() : null;
+                    const hasModification = fechaEvalTime && fechaModifTime && fechaEvalTime !== fechaModifTime;
                     materia.rubricas.push({
                         nombre: row.nombre_rubrica, //realmente contenido de evaluacion
                         porcentaje: porcentajeRubrica,
@@ -61,7 +64,8 @@ class CalificacionesController {
                         puntaje_maximo: maxPuntaje,
                         observaciones: row.observaciones || null,
                         fecha_eval: row.fecha_evaluacion || null,
-                        fecha_fija: row.fecha_fija || null
+                        fecha_fija: row.fecha_fija || null,
+                        fecha_modif: hasModification ? row.fecha_modif : null
                     });
                 }
             });

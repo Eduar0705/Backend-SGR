@@ -17,6 +17,7 @@ class CalificacionesModel {
                 er.id,
                 er.fecha_evaluado AS fecha_evaluacion,
                 e.fecha_evaluacion AS fecha_fija,
+                er.fecha_actualizacion AS fecha_modif,
                 e.ponderacion AS puntaje_maximo_rubrica
             FROM 
                 evaluacion e 

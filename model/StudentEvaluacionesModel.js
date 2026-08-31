@@ -2,12 +2,14 @@ const connection = require('./conexion');
 const { aplicarRedondeoPuntaje } = require('../utils/evaluacionUtils');
 
 class StudentEvaluacionesModel {
-    async getEvaluacionesByEstudiante(cedula) {
+    async getEvaluacionesByEstudiante(cedula, periodo) {
         const query = `
             SELECT 
                 e.id as evaluacion_id,
+                er.id AS evaluacion_r_id,
                 r.id as rubrica_id,
                 e.contenido,
+                s.codigo_periodo,
                 IFNULL(r.nombre_rubrica, 'Rubrica por crear...') AS nombre_rubrica,
                 m.nombre as materia,
                 (SELECT 
@@ -35,22 +37,23 @@ class StudentEvaluacionesModel {
                 ) as profesor
             FROM 
                 evaluacion e 
-                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
-                INNER JOIN rubrica r ON ru.id_rubrica = r.id
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+                LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
+                LEFT JOIN rubrica r ON ru.id_rubrica = r.id
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND er.cedula_evaluado = ins.cedula_estudiante
                 LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval 
                 LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
                 LEFT JOIN usuario ud ON ud.cedula = er.cedula_evaluador
             WHERE ins.cedula_estudiante = ?
+            AND s.codigo_periodo = ?
             GROUP BY e.id, er.id
             ORDER BY e.fecha_evaluacion, er.fecha_evaluado DESC;
         `;
         return new Promise((resolve, reject) => {
-            connection.query(query, [cedula], (err, results) => {
+            connection.query(query, [cedula, periodo], (err, results) => {
                 if (err) return reject(err);
                 const mapped = (results || []).map(ev => ({
                     ...ev,

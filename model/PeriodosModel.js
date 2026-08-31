@@ -35,6 +35,28 @@ class PeriodosModel {
             });
         });
     }
+    async getPeriodosByEstudiante(cedula_estud) {
+        return new Promise((resolve, reject) => {
+            const query = `SELECT
+                        DISTINCT pa.codigo
+                    FROM periodo_academico pa 
+                    INNER JOIN seccion s ON s.codigo_periodo = pa.codigo
+                    INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
+                    WHERE ins.cedula_estudiante = ?
+                    ORDER BY pa.codigo DESC`
+            connection.query(query, [cedula_estud], (err, results) => {
+                if (err) return reject(err);
+
+                const formatted = results.map(row => ({
+                    ...row,
+                    fecha_inicio: addOneDay(row.fecha_inicio?.toISOString().split('T')[0]),
+                    fecha_fin: addOneDay(row.fecha_fin?.toISOString().split('T')[0]),
+                }));
+
+                resolve(formatted);
+            });
+        });
+    }
     async createPeriodo(codigo, fecha_inicio, fecha_fin, id_pensum) {
         return new Promise((resolve, reject) => {
             const query = `INSERT INTO periodo_academico

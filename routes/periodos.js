@@ -9,6 +9,8 @@ router.get('/', PeriodosController.getPeriodos);
 router.post('/crear', PeriodosController.createPeriodo);
 router.delete('/delete/:codigo_periodo', PeriodosController.deletePeriodo)
 
+router.get('/:cedula_estud', PeriodosController.getPeriodosByEstudiante);
+
 router.get('/cortes', PeriodosController.getCortes);
 router.post('/crearcorte', PeriodosController.createCorte);
 router.delete('/deletecorte/:codigo_periodo/:orden', PeriodosController.deleteCorte);

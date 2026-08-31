@@ -4,7 +4,10 @@ class StudentEvaluacionesController {
     async getEvaluaciones(req, res) {
         try {
             const cedula = req.user.cedula;
-            const evaluaciones = await StudentEvaluacionesModel.getEvaluacionesByEstudiante(cedula);
+            const periodo = req.query.periodo;
+            console.log(req.query, req.params)
+            console.log(cedula, periodo)
+            const evaluaciones = await StudentEvaluacionesModel.getEvaluacionesByEstudiante(cedula, periodo);
             res.json({ success: true, data: evaluaciones });
         } catch (error) {
             console.error('Error getEvaluaciones (student):', error);

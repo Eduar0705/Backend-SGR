@@ -35,7 +35,7 @@ class CalificacionesController {
 
                 const materia = materiasMap.get(row.materia_codigo);
 
-                if (row.rubrica_id) {
+                if (row.nombre_rubrica) {
                     const maxPuntaje = parseFloat(row.puntaje_maximo_rubrica) || 0;
                     const porcentajeRubrica = parseFloat(row.porcentaje_evaluacion) || 0;
                     const puntajeObtenidoRaw = row.puntaje_total !== null ? parseFloat(row.puntaje_total) : null;
@@ -55,12 +55,13 @@ class CalificacionesController {
                     }
 
                     materia.rubricas.push({
-                        nombre: row.nombre_rubrica,
+                        nombre: row.nombre_rubrica, //realmente contenido de evaluacion
                         porcentaje: porcentajeRubrica,
                         puntaje_obtenido: row.puntaje_total !== null ? puntajeObtenido : null,
                         puntaje_maximo: maxPuntaje,
                         observaciones: row.observaciones || null,
-                        fecha: row.fecha_evaluacion || null
+                        fecha_eval: row.fecha_evaluacion || null,
+                        fecha_fija: row.fecha_fija || null
                     });
                 }
             });

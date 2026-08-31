@@ -16,12 +16,13 @@ class CalificacionesModel {
                 er.observaciones,
                 er.id,
                 er.fecha_evaluado AS fecha_evaluacion,
+                e.fecha_evaluacion AS fecha_fija,
                 e.ponderacion AS puntaje_maximo_rubrica
             FROM 
                 evaluacion e 
-                INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
-                INNER JOIN rubrica r ON ru.id_rubrica = r.id
-                INNER JOIN criterio_rubrica cr ON r.id = cr.rubrica_id 
+                LEFT JOIN rubrica_uso ru ON e.id = ru.id_eval
+                LEFT JOIN rubrica r ON ru.id_rubrica = r.id
+                LEFT JOIN criterio_rubrica cr ON r.id = cr.rubrica_id 
                 INNER JOIN seccion s ON e.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
@@ -31,10 +32,9 @@ class CalificacionesModel {
                 LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 
                 		AND cr.id = nd.criterio_id 
             WHERE ins.cedula_estudiante = ?
-            GROUP BY
-                m.codigo, r.id, s.codigo_periodo, s.letra, er.id
+            GROUP BY e.id, s.id, s.codigo_periodo, s.letra
             ORDER BY 
-                lapso_academico DESC, m.nombre, er.id
+                lapso_academico DESC, m.nombre, e.fecha_evaluacion DESC
         `;
 
         return new Promise((resolve, reject) => {

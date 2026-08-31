@@ -146,7 +146,12 @@ class DashboardModel {
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
                 WHERE ins.cedula_estudiante = ? AND r.activo = 1;
             `;
-            const q2 = `SELECT COUNT(DISTINCT er.id) as total FROM evaluacion_realizada er WHERE er.cedula_evaluado = ?;`;
+            const q2 = `SELECT 
+                            COUNT(DISTINCT er.id) as total 
+                        FROM evaluacion_realizada er 
+                        INNER JOIN evaluacion e ON er.id_evaluacion = e.id
+                        INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
+                        WHERE er.cedula_evaluado = ?;`;
             const q3 = `
                 SELECT COUNT(*) AS total
                 FROM (

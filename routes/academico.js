@@ -5,6 +5,7 @@ const ReportesController = require('../controllers/ReportesController');
 const authMiddleware = require('../middleware/auth.middleware');
 const evaluacionesRouter = require('./evaluaciones');
 
+router.use(authMiddleware);
 
 // Rutas generales
 router.get('/carreras', AcademicoController.getCarreras);

@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const RubricaController = require('../controllers/RubricaController');
-const RubricaModel = require('../model/RubricaModel');
 const authMiddleware = require('../middleware/auth.middleware');
 
-// Todas las rutas están protegidas
 router.use(authMiddleware);
 
 // Listar todas las rúbricas (GET /api/rubricas)
@@ -20,9 +18,6 @@ router.get('/evaluaciones/:seccionId', RubricaController.getEvaluaciones);
 // Ruta de creación
 router.post('/guardar', RubricaController.createRubrica);
 
-// ============================================================
-// RUTAS ADICIONALES PARA GESTIÓN DE RÚBRICAS
-// ============================================================
 
 // Listar todas las rúbricas
 router.get("/admin/rubricas", RubricaController.getAllRubricas);

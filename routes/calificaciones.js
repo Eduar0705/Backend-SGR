@@ -5,7 +5,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 
 router.use(authMiddleware);
 
-// GET /api/calificaciones → Obtener calificaciones del estudiante autenticado
+// GET /api/calificaciones: calificaciones del estudiante autenticado
 router.get('/', CalificacionesController.getCalificaciones);
 
 module.exports = router;

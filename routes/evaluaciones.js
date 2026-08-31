@@ -21,8 +21,6 @@ router.get('/materia/:materiaCodigo/:carreraCodigo/secciones', EvaluacionControl
 router.get('/seccion/:seccionId/estudiantes', EvaluacionController.getEstudiantesBySeccion);
 router.get('/seccion/:seccionId/horario', EvaluacionController.getHorarioBySeccion);
 
-// CRUD
-
 router.get('/detalle/:id', EvaluacionController.getEvaluacionById);
 router.put('/update/:id', EvaluacionController.updateEvaluacion);
 router.delete('/delete/:id', EvaluacionController.deleteEvaluacion);

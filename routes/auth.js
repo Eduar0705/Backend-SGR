@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 var router = express.Router();
 const authController = require('../controllers/AuthController');
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
+    windowMs: 10 * 60 * 1000, // 10 minutos de timeout
     max: 5,
     message: { success: false, message: 'Demasiados intentos. Intente en 15 minutos.' }
 });

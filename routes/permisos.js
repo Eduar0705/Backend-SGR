@@ -3,7 +3,6 @@ const router = express.Router();
 const PermisosController = require('../controllers/PermisosController');
 const authMiddleware = require('../middleware/auth.middleware');
 
-// Todas las rutas de permisos requieren autenticación
 router.use(authMiddleware);
 
 // GET    /api/permisos/docente/:cedula  → Listar permisos de un docente

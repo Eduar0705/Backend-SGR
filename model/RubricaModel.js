@@ -349,6 +349,8 @@ class RubricaModel {
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
                     CASE WHEN r.activo = 1 THEN ru.estado ELSE 'Inactivo' END AS estado,
                     s.letra AS seccion_letra,
+                    u.cedula AS docente_cedula,
+                    r.cedula_docente AS cedula_creador,
                     CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
                 FROM rubrica r
                 INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica

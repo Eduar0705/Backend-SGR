@@ -300,6 +300,7 @@ class TeacherEvaluacionesModel {
                 LEFT JOIN (
                     SELECT 
                         er.id AS er_id,
+                        er.id_evaluacion,
                         SUM(de.puntaje_obtenido * nd.puntaje_maximo * cr.puntaje_maximo * e2.ponderacion / 1000000) AS puntaje
                     FROM evaluacion_realizada er
                     INNER JOIN evaluacion e2 ON er.id_evaluacion = e2.id
@@ -307,7 +308,7 @@ class TeacherEvaluacionesModel {
                     INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id AND de.orden_detalle = nd.orden
                     INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id
                     GROUP BY er.id
-                ) puntaje_sub ON puntaje_sub.er_id = er.id
+                ) puntaje_sub ON puntaje_sub.er_id = er.id AND puntaje_sub.id_evaluacion = e.id
                 WHERE e.id = ?
                 GROUP BY e.id, ins.cedula_estudiante
                 ORDER BY e.fecha_evaluacion, er.fecha_evaluado DESC;
@@ -492,6 +493,7 @@ class TeacherEvaluacionesModel {
             LEFT JOIN (
                 SELECT 
                     er.id AS er_id,
+                    er.id_evaluacion,
                     SUM(de.puntaje_obtenido * nd.puntaje_maximo * cr.puntaje_maximo * e2.ponderacion / 1000000) AS puntaje
                 FROM evaluacion_realizada er
                 INNER JOIN evaluacion e2 ON er.id_evaluacion = e2.id
@@ -500,7 +502,7 @@ class TeacherEvaluacionesModel {
                 INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id
                 WHERE er.cedula_evaluado = ?
                 GROUP BY er.id
-            ) puntaje_sub ON puntaje_sub.er_id = er.id
+            ) puntaje_sub ON puntaje_sub.er_id = er.id AND puntaje_sub.id_evaluacion = e.id
             WHERE ins.cedula_estudiante = ?
             AND e.id = ?
             GROUP BY e.id, er.id

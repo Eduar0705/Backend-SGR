@@ -198,6 +198,8 @@ class TeacherRubricaModel {
                 CASE WHEN r.activo = 1 THEN ru.estado ELSE 'Inactivo' END AS estado,
                 r.activo,
                 s.letra AS seccion_letra,
+                u.cedula AS docente_cedula,
+                r.cedula_docente AS cedula_creador,
                 CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
             FROM rubrica r
             INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
@@ -576,12 +578,12 @@ async updateRubrica(id, data) {
                             INNER JOIN evaluacion e ON ru.id_eval = e.id
                             INNER JOIN seccion s ON e.id_seccion = s.id
                             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                            WHERE r.id = ? AND pd.docente_cedula = ?
+                            WHERE r.id = ? AND (pd.docente_cedula = ? OR
                         `;
                         const checkResults = await new Promise((res, rej) => conn.query(checkOwnerQuery, [id, cedula], (e, r) => e ? rej(e) : res(r)));
                         
                         if (checkResults[0].count === 0) {
-                            throw new Error('Rúbrica no encontrada o no tiene permisos para eliminarla');
+                            throw new Error('No tiene permisos para eliminar esta rúbrica');
                         }
 
                         const updateQ = 'UPDATE rubrica SET activo = 0, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = ?';

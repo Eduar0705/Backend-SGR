@@ -100,6 +100,7 @@ class StudentEvaluacionesModel {
             LEFT JOIN (
                 SELECT 
                     er.id AS er_id,
+                    er.id_evaluacion,
                     SUM(de.puntaje_obtenido * nd.puntaje_maximo * cr.puntaje_maximo * e2.ponderacion / 1000000) AS puntaje
                 FROM evaluacion_realizada er
                 INNER JOIN evaluacion e2 ON er.id_evaluacion = e2.id
@@ -108,7 +109,7 @@ class StudentEvaluacionesModel {
                 INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id
                 WHERE er.cedula_evaluado = ?
                 GROUP BY er.id
-            ) puntaje_sub ON puntaje_sub.er_id = er.id
+            ) puntaje_sub ON puntaje_sub.er_id = er.id AND puntaje_sub.id_evaluacion = e.id
             WHERE ins.cedula_estudiante = ?
             AND e.id = ?
             GROUP BY e.id, er.id
@@ -189,6 +190,7 @@ class StudentEvaluacionesModel {
             INNER JOIN criterio_rubrica cr ON nd.criterio_id = cr.id 
             INNER JOIN evaluacion_realizada er ON de.evaluacion_r_id = er.id
             INNER JOIN evaluacion e ON er.id_evaluacion = e.id
+            INNER JOIN rubrica_uso ru ON ru.id_eval = e.id AND ru.id_rubrica = cr.rubrica_id
             WHERE e.id = ? AND er.cedula_evaluado = ?
             GROUP BY de.id_criterio_detalle, de.orden_detalle 
         `;

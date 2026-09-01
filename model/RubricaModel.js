@@ -1076,7 +1076,7 @@ class RubricaModel {
                             const rubricaInfo = infoRows[0];
                             const destinoCedula = rubricaInfo.cedula_docente || rubricaInfo.seccion_docente_cedula;
                             const accion = (estado.toLowerCase() === 'aprobada') ? 'aprobado' : 'rechazado';
-                            
+                            //
                             if (destinoCedula) {
                                 await NotificacionModel.create({
                                     usuario_destino: destinoCedula,

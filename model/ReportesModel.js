@@ -77,7 +77,6 @@ class ReportesModel {
                     INNER JOIN evaluacion e ON s.id = e.id_seccion
                     INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
                     INNER JOIN rubrica r ON ru.id_rubrica = r.id
-                    WHERE r.activo = 1
                     GROUP BY m.codigo
                     ORDER BY total_rubricas DESC
                     LIMIT 10
@@ -197,7 +196,6 @@ class ReportesModel {
                                     FROM periodo_academico
                                     WHERE codigo = '${periodo}'
                                 ) p ON r.fecha_creacion BETWEEN p.fecha_inicio AND p.fecha_fin
-                                WHERE r.activo = 1
                             ) as totalRubricas,
                             (   SELECT COUNT(*) 
                                 FROM evaluacion_realizada er
@@ -294,8 +292,7 @@ class ReportesModel {
                         INNER JOIN evaluacion e ON s.id = e.id_seccion
                         INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
                         INNER JOIN rubrica r ON ru.id_rubrica = r.id
-                        WHERE r.activo = 1
-                        AND s.codigo_periodo = '${periodo}'
+                        WHERE s.codigo_periodo = '${periodo}'
                         GROUP BY m.codigo
                         ORDER BY total_rubricas DESC
                         LIMIT 10

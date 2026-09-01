@@ -317,10 +317,10 @@ class RubricaController {
             }
 
             let estadoFinal = estado;
-            if (estado === 'A' || estado.toLowerCase() === 'aprobada' || estado.toLowerCase() === 'aprobar') {
-                estadoFinal = 'Aprobada';
-            } else if (estado === 'R' || estado.toLowerCase() === 'rechazada' || estado.toLowerCase() === 'rechazar') {
-                estadoFinal = 'Rechazada';
+            if (estado === 'A' || estado.toLowerCase() === 'aprobado' || estado.toLowerCase() === 'aprobar') {
+                estadoFinal = 'Aprobado';
+            } else if (estado === 'R' || estado.toLowerCase() === 'rechazado' || estado.toLowerCase() === 'rechazar') {
+                estadoFinal = 'Rechazado';
             }
 
             await RubricaModel.auditarRubrica(id_rubrica, id_eval, estadoFinal);

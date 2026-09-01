@@ -136,16 +136,15 @@ class TeacherRubricaController {
         }
     }
 
-    async deleteRubrica(req, res) {
+    async desvincularRubrica(req, res) {
         try {
             let result;
-            const {id} = req.params;
-            if(req.user.id_rol == 1) result = await RubricaModel.deleteRubrica(id);
-            else result = await TeacherRubricaModel.deleteRubrica(id, req.user.cedula);
+            const {id, id_eval} = req.params;
+            result = await TeacherRubricaModel.desvincularRubrica(id, id_eval, req.user.cedula);
             res.json({ success: true, message: result.message });
         } catch (error) {
-            console.error('Error deleteRubrica:', error);
-            res.status(500).json({ success: false, message: 'Error al eliminar rúbrica: ' + error.message });
+            console.error('Error desvincularRubrica:', error);
+            res.status(500).json({ success: false, message: 'Error al desvincular rúbrica: ' + error.message });
         }
     }
 }

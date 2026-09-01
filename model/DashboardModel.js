@@ -80,7 +80,7 @@ class DashboardModel {
                 INNER JOIN usuario u ON ue.cedula_usuario = u.cedula
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion AND u.cedula = er.cedula_evaluado
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
-                WHERE r.activo = 1 AND u.activo = 1 AND er.id IS NOT NULL
+                WHERE u.activo = 1 AND er.id IS NOT NULL
                 AND s.codigo_periodo = ? 
                 GROUP BY er.id, er.fecha_evaluado, ins.cedula_estudiante, ins.id_seccion
                 ORDER BY fecha_evaluado DESC LIMIT 4;
@@ -144,7 +144,7 @@ class DashboardModel {
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
-                WHERE ins.cedula_estudiante = ? AND r.activo = 1;
+                WHERE ins.cedula_estudiante = ?;
             `;
             const q2 = `SELECT 
                             COUNT(DISTINCT er.id) as total 
@@ -216,7 +216,7 @@ class DashboardModel {
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN tipo_rubrica tr ON tr.id = r.id_tipo
                 LEFT JOIN evaluacion_realizada er ON e.id = er.id_evaluacion
-                WHERE ins.cedula_estudiante = ? AND e.fecha_evaluacion > CURDATE() AND r.activo = 1 AND er.id IS NULL
+                WHERE ins.cedula_estudiante = ? AND e.fecha_evaluacion > CURDATE() AND er.id IS NULL
                 GROUP BY e.id ORDER BY e.fecha_evaluacion ASC LIMIT 5
             `;
 
@@ -309,7 +309,7 @@ class DashboardModel {
                 LEFT JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id
                 LEFT JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 
                 	AND cr.id = nd.criterio_id 
-                WHERE pd.docente_cedula = ? AND r.activo = 1 AND u.activo = 1 
+                WHERE pd.docente_cedula = ? AND u.activo = 1 
                 AND s.codigo_periodo = ?
                 GROUP BY er.id, er.fecha_evaluado, ins.cedula_estudiante, ins.id_seccion
                 ORDER BY fecha_evaluado DESC LIMIT 4;

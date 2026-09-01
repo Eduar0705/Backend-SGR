@@ -9,7 +9,6 @@ router.get('/', PeriodosController.getPeriodos);
 router.post('/crear', PeriodosController.createPeriodo);
 router.delete('/delete/:codigo_periodo', PeriodosController.deletePeriodo)
 
-router.get('/:cedula_estud', PeriodosController.getPeriodosByEstudiante);
 
 router.get('/cortes', PeriodosController.getCortes);
 router.post('/crearcorte', PeriodosController.createCorte);
@@ -22,5 +21,6 @@ router.put('/lapsos/update/:id', PeriodosController.updateLapso);
 router.delete('/lapsos/delete/:id', PeriodosController.deleteLapso);
 
 router.get('/pensums', PeriodosController.getPensums)
+router.get('/:cedula_estud', PeriodosController.getPeriodosByEstudiante);
 
 module.exports = router;

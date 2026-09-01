@@ -578,12 +578,12 @@ async updateRubrica(id, data) {
                             INNER JOIN evaluacion e ON ru.id_eval = e.id
                             INNER JOIN seccion s ON e.id_seccion = s.id
                             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                            WHERE r.id = ? AND (pd.docente_cedula = ? OR
+                            WHERE r.id = ? AND pd.docente_cedula = ?
                         `;
                         const checkResults = await new Promise((res, rej) => conn.query(checkOwnerQuery, [id, cedula], (e, r) => e ? rej(e) : res(r)));
                         
                         if (checkResults[0].count === 0) {
-                            throw new Error('No tiene permisos para eliminar esta rúbrica');
+                            throw new Error('No tiene permisos para eliminar el uso de esta rubrica');
                         }
 
                         const updateQ = 'UPDATE rubrica SET activo = 0, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = ?';
@@ -597,7 +597,7 @@ async updateRubrica(id, data) {
                                 });
                             }
                             conn.release();
-                            resolve({ success: true, message: 'Rúbrica eliminada correctamente' });
+                            resolve({ success: true, message: 'Uso de la rubrica eliminado. Recuerde asignar otra rubrica a la evaluación' });
                         });
                     } catch (error) {
                         conn.rollback(() => {

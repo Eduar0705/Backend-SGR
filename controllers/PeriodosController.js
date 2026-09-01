@@ -44,7 +44,6 @@ class PeriodosController {
     async getPeriodosByEstudiante(req, res) {
         try {
             const { cedula_estud } = req.params
-            console.log(cedula_estud, 'lol')
             const periodos = await PeriodosModel.getPeriodosByEstudiante(cedula_estud);
             res.json({ success: true, data: periodos });
         } catch (error) {

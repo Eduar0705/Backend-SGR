@@ -1050,12 +1050,8 @@ class RubricaModel {
 
     async auditarRubrica(id_rubrica, id_eval, estado) {
         return new Promise((resolve, reject) => {
-            let query = 'UPDATE rubrica_uso SET estado = ? WHERE id_rubrica = ?';
-            let params = [estado, id_rubrica];
-            if (id_eval) {
-                query += ' AND id_eval = ?';
-                params.push(id_eval);
-            }
+            let query = 'UPDATE rubrica_uso SET estado = ? WHERE id_eval = ?';
+            let params = [estado, id_eval];
             connection.query(query, params, async (err, result) => {
                 if (err) return reject(err);
 
@@ -1068,18 +1064,18 @@ class RubricaModel {
                             r.cedula_docente,
                             pd.docente_cedula AS seccion_docente_cedula
                         FROM rubrica r
-                        LEFT JOIN rubrica_uso ru ON r.id = ru.id_rubrica
-                        LEFT JOIN evaluacion e ON ru.id_eval = e.id
-                        LEFT JOIN seccion s ON e.id_seccion = s.id
-                        LEFT JOIN permiso_docente pd ON s.id = pd.id_seccion
-                        WHERE r.id = ? AND (? IS NULL OR ru.id_eval = ?)
+                        INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+                        INNER JOIN evaluacion e ON ru.id_eval = e.id
+                        INNER JOIN seccion s ON e.id_seccion = s.id
+                        INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                        WHERE r.id = ? AND ru.id_eval = ?
                         LIMIT 1
                     `;
-                    connection.query(infoQuery, [id_rubrica, id_eval || null, id_eval || null], async (infoErr, infoRows) => {
+                    connection.query(infoQuery, [id_rubrica, id_eval], async (infoErr, infoRows) => {
                         if (!infoErr && infoRows && infoRows.length > 0) {
                             const rubricaInfo = infoRows[0];
                             const destinoCedula = rubricaInfo.cedula_docente || rubricaInfo.seccion_docente_cedula;
-                            const accion = (estado.toLowerCase() === 'aprobada' || estado === 'A') ? 'aprobado' : 'rechazado';
+                            const accion = (estado.toLowerCase() === 'aprobada') ? 'aprobado' : 'rechazado';
                             
                             if (destinoCedula) {
                                 await NotificacionModel.create({

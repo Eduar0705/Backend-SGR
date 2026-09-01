@@ -1054,7 +1054,6 @@ class RubricaModel {
             let params = [estado, id_eval];
             connection.query(query, params, async (err, result) => {
                 if (err) return reject(err);
-
                 // Enviar notificación al creador de la rúbrica o docente asignado a la sección
                 try {
                     const infoQuery = `

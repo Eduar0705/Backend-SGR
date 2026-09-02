@@ -121,6 +121,17 @@ class TeacherRubricaController {
         }
     }
 
+    async getRubricaForDuplica(req, res) {
+        try {
+            const result = await TeacherRubricaModel.getRubricaForDuplica(req.params.id, req.params.id_eval, req.user.cedula);
+            if (!result) return res.status(404).json({ success: false, message: 'Rúbrica no encontrada o sin permisos' });
+            res.json({ success: true, rubrica: result.rubrica, criterios: result.criterios });
+        } catch (error) {
+            console.error('Error getRubricaForDuplica:', error);
+            res.status(500).json({ success: false, message: 'Error al obtener rúbrica para vincular' });
+        }
+    }
+
     async updateRubrica(req, res) {
         try {
             const validacion = validarEstructuraRubrica({
@@ -138,17 +149,6 @@ class TeacherRubricaController {
         } catch (error) {
             console.error('Error updateRubrica:', error);
             res.status(500).json({ success: false, mensaje: 'Error al actualizar rúbrica: ' + error.message });
-        }
-    }
-    async vincularRubrica(req, res) {
-        try {
-            let result;
-            const {id, id_eval} = req.params;
-            result = await TeacherRubricaModel.vincularRubrica(id, id_eval, req.user.cedula);
-            res.json({ success: true, message: result.message });
-        } catch (error) {
-            console.error('Error vincularRubrica:', error);
-            res.status(500).json({ success: false, message: 'Error al vincular rúbrica: ' + error.message });
         }
     }
     async desvincularRubrica(req, res) {

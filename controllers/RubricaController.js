@@ -15,29 +15,29 @@ class RubricaController {
         }
     }
     async getCarreras(req, res) {
-    try {
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getCarreras(req.user.cedula, esAdmin);
-        res.json({ success: true, carreras: resultado });
-    } catch (error) {
-        console.error('Error:', error);
-        res.json({ success: false, message: 'Error al obtener carreras' });
-    }
-}
-    async getCarreraYSemestreBySeccion(req, res) {
-    try {
-        const { seccion_codigo } = req.params;
-        const resultado = await RubricaModel.getCarreraYSemestreBySeccion(seccion_codigo);
-        if (resultado) {
-            res.json({ success: true, ...resultado });
-        } else {
-            res.json({ success: false, message: 'Materia no encontrada' });
+        try {
+            const esAdmin = req.user.id_rol === 1;
+            const resultado = await RubricaModel.getCarreras(req.user.cedula, esAdmin);
+            res.json({ success: true, carreras: resultado });
+        } catch (error) {
+            console.error('Error:', error);
+            res.json({ success: false, message: 'Error al obtener carreras' });
         }
-    } catch (error) {
-        console.error('Error:', error);
-        res.json({ success: false, message: 'Error al obtener información' });
     }
-}
+    async getCarreraYSemestreBySeccion(req, res) {
+        try {
+            const { seccion_codigo } = req.params;
+            const resultado = await RubricaModel.getCarreraYSemestreBySeccion(seccion_codigo);
+            if (resultado) {
+                res.json({ success: true, ...resultado });
+            } else {
+                res.json({ success: false, message: 'Materia no encontrada' });
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            res.json({ success: false, message: 'Error al obtener información' });
+        }
+    }
 
     async getSemestres(req, res) {
         try {
@@ -86,59 +86,59 @@ class RubricaController {
         }
     }
     async getProfesores(req, res) {
-    try {
-        const profesores = await RubricaModel.getProfesores();
-        res.json({ success: true, profesores });
-    } catch (error) {
-        console.error('Error al obtener profesores:', error);
-        res.status(500).json({ success: false, message: 'Error interno del servidor' });
+        try {
+            const profesores = await RubricaModel.getProfesores();
+            res.json({ success: true, profesores });
+        } catch (error) {
+            console.error('Error al obtener profesores:', error);
+            res.status(500).json({ success: false, message: 'Error interno del servidor' });
+        }
     }
-}
     async getTiposRubrica(req, res) {
-    try {
-        const tipos = await RubricaModel.getTiposRubrica();
-        res.json(tipos);
-    } catch (error) {
-        console.error('Error al obtener tipos de rubrica:', error);
-        res.status(500).json({ error: 'Error al obtener tipos de rubrica' });
+        try {
+            const tipos = await RubricaModel.getTiposRubrica();
+            res.json(tipos);
+        } catch (error) {
+            console.error('Error al obtener tipos de rubrica:', error);
+            res.status(500).json({ error: 'Error al obtener tipos de rubrica' });
+        }
     }
-}
     async getEvaluacionesConRubrica(req, res) {
-    try {
-        const { seccionId } = req.params;
-        const evaluaciones = await RubricaModel.getEvaluacionesConRubrica(seccionId);
-        res.json({ success: true, evaluaciones });
-    } catch (error) {
-        console.error('Error al obtener evaluaciones:', error);
-        res.json({ success: false, message: 'Error al obtener evaluaciones' });
+        try {
+            const { seccionId } = req.params;
+            const evaluaciones = await RubricaModel.getEvaluacionesConRubrica(seccionId);
+            res.json({ success: true, evaluaciones });
+        } catch (error) {
+            console.error('Error al obtener evaluaciones:', error);
+            res.json({ success: false, message: 'Error al obtener evaluaciones' });
+        }
     }
-}
     async getSemestresAdmin(req, res) {
-    try {
-        const { carrera } = req.params;
-        const periodo = req.query.periodo;
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getSemestresAdmin(carrera, req.user.cedula, esAdmin, periodo);
-        res.json(resultado);
-    } catch (error) {
-        console.error('Error al obtener semestres:', error);
-        res.status(500).json({ error: 'Error al obtener semestres' });
+        try {
+            const { carrera } = req.params;
+            const periodo = req.query.periodo;
+            const esAdmin = req.user.id_rol === 1;
+            const resultado = await RubricaModel.getSemestresAdmin(carrera, req.user.cedula, esAdmin, periodo);
+            res.json(resultado);
+        } catch (error) {
+            console.error('Error al obtener semestres:', error);
+            res.status(500).json({ error: 'Error al obtener semestres' });
+        }
     }
-}
     async getAllRubricas(req, res) {
-    try {
-        const periodo = req.query.periodo;
-        const search = req.query.search || '';
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        try {
+            const periodo = req.query.periodo;
+            const search = req.query.search || '';
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
 
-        const result = await RubricaModel.getAllRubricasPaginadas({ periodo, search, page, limit });
-        res.json({ success: true, ...result });
-    } catch (error) {
-        console.error('Error al obtener rúbricas:', error);
-        res.json({ success: false, rubricas: [], total: 0, page: 1, totalPages: 1 });
+            const result = await RubricaModel.getAllRubricasPaginadas({ periodo, search, page, limit });
+            res.json({ success: true, ...result });
+        } catch (error) {
+            console.error('Error al obtener rúbricas:', error);
+            res.json({ success: false, rubricas: [], total: 0, page: 1, totalPages: 1 });
+        }
     }
-}
     async createRubrica(req, res) {
         try {
             const {
@@ -196,7 +196,7 @@ class RubricaController {
         try {
             const { id } = req.params;
             await RubricaModel.deleteRubrica(id);
-            res.json({success: true, message: "Se ha eliminado la rubrica exitosamente."});
+            res.json({ success: true, message: "Se ha eliminado la rubrica exitosamente." });
         } catch (error) {
             console.error('Error al eliminar rubrica:', error);
             res.status(500).json({ error: 'Error al eliminar rubrica. Por favor, intente de nuevo mas tarde.' });
@@ -211,7 +211,7 @@ class RubricaController {
 
         const { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje } = req.body;
         let data = { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje };
-        
+
         let criteriosParsed = criterios;
         if (typeof criterios === 'string') {
             try {
@@ -251,45 +251,59 @@ class RubricaController {
         }
     }
     async getRubricaDetalle(req, res) {
-    try {
-        const { id, id_eval } = req.params;
-        const resultado = await RubricaModel.getRubricaDetalle(id, id_eval);
-        if (resultado) {
-            res.json({ success: true, rubrica: resultado.rubrica, criterios: resultado.criterios });
-        } else {
-            res.status(404).json({ success: false, message: 'Rúbrica no encontrada' });
+        try {
+            const { id, id_eval } = req.params;
+            const resultado = await RubricaModel.getRubricaDetalle(id, id_eval);
+            if (resultado) {
+                res.json({ success: true, rubrica: resultado.rubrica, criterios: resultado.criterios });
+            } else {
+                res.status(404).json({ success: false, message: 'Rúbrica no encontrada' });
+            }
+        } catch (error) {
+            console.error('Error al obtener detalle de rúbrica:', error);
+            res.status(500).json({ success: false, message: 'Error al obtener detalle' });
         }
-    } catch (error) {
-        console.error('Error al obtener detalle de rúbrica:', error);
-        res.status(500).json({ success: false, message: 'Error al obtener detalle' });
     }
-}
     async getRubricaForEdit(req, res) {
-    try {
-        const { id, id_eval } = req.params;
-        const resultado = await RubricaModel.getRubricaForEdit(id, id_eval, req.user);
-        if (resultado) {
-            res.json({ success: true, ...resultado });
-        } else {
-            res.json({ success: false, message: 'Rúbrica no encontrada o sin permisos' });
+        try {
+            const { id, id_eval } = req.params;
+            const resultado = await RubricaModel.getRubricaForEdit(id, id_eval, req.user);
+            if (resultado) {
+                res.json({ success: true, ...resultado });
+            } else {
+                res.json({ success: false, message: 'Rúbrica no encontrada o sin permisos' });
+            }
+        } catch (error) {
+            console.error('Error al obtener rúbrica para editar:', error);
+            res.json({ success: false, message: 'Error al obtener la rúbrica' });
         }
-    } catch (error) {
-        console.error('Error al obtener rúbrica para editar:', error);
-        res.json({ success: false, message: 'Error al obtener la rúbrica' });
     }
-}
+    async getRubricaForDuplica(req, res) {
+        try {
+            const { id, id_eval } = req.params;
+            const resultado = await RubricaModel.getRubricaForDuplica(id, id_eval, req.user);
+            if (resultado) {
+                res.json({ success: true, ...resultado });
+            } else {
+                res.json({ success: false, message: 'Rúbrica no encontrada o sin permisos' });
+            }
+        } catch (error) {
+            console.error('Error al obtener rúbrica para editar:', error);
+            res.json({ success: false, message: 'Error al obtener la rúbrica' });
+        }
+    }
     async getMateriasAdmin(req, res) {
-    try {
-        const { carrera, semestre } = req.params;
-        const periodo = req.query.periodo;
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getMateriasAdmin(carrera, semestre, req.user.cedula, esAdmin, periodo);
-        res.json(resultado);
-    } catch (error) {
-        console.error('Error al obtener materias:', error);
-        res.status(500).json({ error: 'Error al obtener materias' });
+        try {
+            const { carrera, semestre } = req.params;
+            const periodo = req.query.periodo;
+            const esAdmin = req.user.id_rol === 1;
+            const resultado = await RubricaModel.getMateriasAdmin(carrera, semestre, req.user.cedula, esAdmin, periodo);
+            res.json(resultado);
+        } catch (error) {
+            console.error('Error al obtener materias:', error);
+            res.status(500).json({ error: 'Error al obtener materias' });
+        }
     }
-}
     async getSeccionesAdmin(req, res) {
         try {
             const { materia, carreraCodigo } = req.params;
@@ -322,17 +336,6 @@ class RubricaController {
         } catch (error) {
             console.error('Error al auditar rúbrica:', error);
             res.status(500).json({ success: false, message: error.message || 'Error al auditar rúbrica' });
-        }
-    }
-
-    async vincularRubrica(req, res) {
-        try {
-            const { id, id_eval } = req.params;
-            const result = await RubricaModel.vincularRubrica(id, id_eval);
-            res.json({ success: true, message: result.message });
-        } catch (error) {
-            console.error('Error vincularRubrica:', error);
-            res.status(500).json({ success: false, message: error.message || 'Error al vincular rúbrica' });
         }
     }
 }

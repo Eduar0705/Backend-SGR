@@ -27,12 +27,13 @@ router.get("/admin/rubricas/detalle/:id/:id_eval", RubricaController.getRubricaD
 
 // Actualizar rúbrica
 router.post('/rubrica/actualizar/:id', RubricaController.updateRubrica);
-router.post('/admin/rubricas/link/:id/:id_eval', RubricaController.vincularRubrica);
 router.delete('/admin/rubricas/delete/:id', RubricaController.deleteRubrica);
 // Auditar rúbrica (aprobar / rechazar)
 router.put('/admin/rubricas/auditar', RubricaController.auditarRubrica);
 // Obtener datos para editar rúbrica
 router.get('/admin/rubricas/editar/:id/:id_eval', RubricaController.getRubricaForEdit);
+// Obtener datos para editar rúbrica
+router.get('/admin/rubricas/duplicar/:id/:id_eval', RubricaController.getRubricaForEdit);
 
 // Obtener carrera y semestre de una materia
 router.get('/admin/rubricas/carrera-seccion/:seccion_codigo', RubricaController.getCarreraYSemestreBySeccion);

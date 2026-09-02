@@ -186,7 +186,7 @@ class TeacherRubricaModel {
                 e.id AS id_evaluacion,
                 e.contenido,
                 r.nombre_rubrica,
-                e.fecha_evaluacion,
+                MAX(e.fecha_evaluacion) AS fecha_evaluacion,
                 s.codigo_periodo,
                 r.fecha_creacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
@@ -203,7 +203,7 @@ class TeacherRubricaModel {
                 CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
             FROM rubrica r
             INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
-            INNER JOIN evaluacion e ON ru.id_eval = e.id
+            LEFT JOIN evaluacion e ON ru.id_eval = e.id
             LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
             LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
             INNER JOIN seccion s ON e.id_seccion = s.id
@@ -245,7 +245,7 @@ class TeacherRubricaModel {
                 e.contenido,
                 e.id AS id_evaluacion,
                 r.nombre_rubrica,
-                e.fecha_evaluacion,
+                MAX(e.fecha_evaluacion) AS fecha_evaluacion,
                 s.codigo_periodo,
                 r.fecha_creacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
@@ -485,7 +485,183 @@ class TeacherRubricaModel {
             });
         });
     }
+    async getRubricaForDuplica(id_rubrica, id_evaluacion, cedula) {
+        // 1. Obtener datos de la rúbrica
+        const queryRubrica = `
+        SELECT 
+            r.id,
+            r.nombre_rubrica,
+            r.cedula_docente,
+            r.instrucciones,
+            r.activo,
+            r.fecha_creacion AS created_at,
+            r.fecha_actualizacion AS updated_at,
+            tr.id AS id_tipo,
+            IFNULL(tr.nombre, 'Tipo no asignado') AS tipo_rubrica
+        FROM rubrica r
+        LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+        WHERE r.id = ? AND r.activo = 1
+    `;
 
+        // 2. Obtener datos de la evaluación
+        const queryEvaluacion = `
+        SELECT 
+            e.id AS evaluacion_id,
+            e.fecha_evaluacion,
+            e.ponderacion AS porcentaje_evaluacion,
+            e.contenido AS contenido_evaluacion,
+            e.competencias,
+            e.instrumentos,
+            e.cantidad_personas,
+            CASE 
+                WHEN e.cantidad_personas = 1 THEN 'Individual'
+                WHEN e.cantidad_personas = 2 THEN 'En Pareja'
+                ELSE 'Grupal'
+            END AS modalidad,
+            m.nombre AS materia_nombre,
+            m.codigo AS materia_codigo,
+            s.id AS id_seccion,
+            CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+            s.codigo_periodo AS lapse_academico,
+            u.cedula AS docente_cedula,
+            CONCAT(u.nombre, ' ', u.apellido) AS docente_nombre,
+            c.nombre AS carrera_nombre,
+            mp.codigo_carrera AS carrera_codigo,
+            mp.codigo_materia AS materia_codigo_plan
+        FROM evaluacion e
+        INNER JOIN seccion s ON e.id_seccion = s.id
+        INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+        INNER JOIN materia m ON mp.codigo_materia = m.codigo
+        INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+        INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+        INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
+        INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+        WHERE e.id = ? AND pd.docente_cedula = ?
+    `;
+
+        // 3. Obtener estrategias de la evaluación
+        const queryEstrategias = `
+        SELECT eeval.*
+        FROM estrategia_eval eeval
+        INNER JOIN estrategia_empleada eemp ON eeval.id = eemp.id_estrategia
+        WHERE eemp.id_eval = ?
+    `;
+
+        // 4. Obtener criterios y niveles de la rúbrica
+        const queryCriterios = `
+        SELECT id, descripcion, puntaje_maximo, orden
+        FROM criterio_rubrica
+        WHERE rubrica_id = ?
+        ORDER BY orden
+    `;
+        const queryNiveles = `
+        SELECT criterio_id, nombre_nivel, descripcion, puntaje_maximo AS puntaje, orden
+        FROM nivel_desempeno
+        WHERE criterio_id IN (?)
+        ORDER BY criterio_id, orden DESC
+    `;
+
+        return new Promise((resolve, reject) => {
+            // Obtener rúbrica
+            connection.query(queryRubrica, [id_rubrica], (err, rubricaRows) => {
+                if (err) return reject(err);
+                if (rubricaRows.length === 0) return resolve(null); // rúbrica no existe o inactiva
+
+                const rubricaData = rubricaRows[0];
+
+                // Obtener evaluación
+                connection.query(queryEvaluacion, [id_evaluacion, cedula], (err, evalRows) => {
+                    if (err) return reject(err);
+                    if (evalRows.length === 0) return resolve(null); // sin permisos o no existe
+
+                    const evalData = evalRows[0];
+
+                    // Obtener estrategias
+                    connection.query(queryEstrategias, [id_evaluacion], (err, estrategias) => {
+                        if (err) return reject(err);
+                        const rubricaCompleta = {
+                            // Campos de la rúbrica
+                            id: rubricaData.id,
+                            nombre_rubrica: rubricaData.nombre_rubrica,
+                            cedula_docente: rubricaData.cedula_docente,
+                            instrucciones: rubricaData.instrucciones,
+                            activo: rubricaData.activo,
+                            created_at: rubricaData.created_at,
+                            updated_at: rubricaData.updated_at,
+                            id_tipo: rubricaData.id_tipo,
+                            tipo_rubrica: rubricaData.tipo_rubrica,
+                            // Campos de la evaluación
+                            evaluacion_id: evalData.evaluacion_id,
+                            fecha_evaluacion: evalData.fecha_evaluacion,
+                            porcentaje_evaluacion: evalData.porcentaje_evaluacion,
+                            contenido_evaluacion: evalData.contenido_evaluacion,
+                            competencias: evalData.competencias,
+                            instrumentos: evalData.instrumentos,
+                            cantidad_personas: evalData.cantidad_personas,
+                            modalidad: evalData.modalidad,
+                            materia_nombre: evalData.materia_nombre,
+                            materia_codigo: evalData.materia_codigo,
+                            id_seccion: evalData.id_seccion,
+                            seccion_codigo: evalData.seccion_codigo,
+                            lapse_academico: evalData.lapse_academico,
+                            docente_cedula: evalData.docente_cedula,
+                            docente_nombre: evalData.docente_nombre,
+                            carrera_nombre: evalData.carrera_nombre,
+                            carrera_codigo: evalData.carrera_codigo,
+                            materia_codigo_plan: evalData.materia_codigo_plan,
+                            estrategias: estrategias
+                        };
+
+                        // Obtener criterios y niveles
+                        connection.query(queryCriterios, [id_rubrica], (err, criterios) => {
+                            if (err) return reject(err);
+
+                            if (criterios.length === 0) {
+                                return resolve({
+                                    rubrica: rubricaCompleta,
+                                    criterios: []
+                                });
+                            }
+
+                            const criteriosIds = criterios.map(c => c.id);
+                            connection.query(queryNiveles, [criteriosIds], (err, niveles) => {
+                                if (err) return reject(err);
+
+                                const criteriosConNiveles = criterios.map(criterio => {
+                                    const puntajeMaximoEscalado = parseFloat(
+                                        (criterio.puntaje_maximo * evalData.porcentaje_evaluacion / 100).toFixed(3)
+                                    );
+
+                                    const nivelesDelCriterio = niveles
+                                        .filter(n => n.criterio_id === criterio.id)
+                                        .map(n => ({
+                                            criterio_id: n.criterio_id,
+                                            nombre_nivel: n.nombre_nivel,
+                                            descripcion: n.descripcion,
+                                            puntaje: parseFloat(
+                                                (n.puntaje * criterio.puntaje_maximo * evalData.porcentaje_evaluacion / 10000).toFixed(3)
+                                            ),
+                                            orden: n.orden
+                                        }));
+
+                                    return {
+                                        ...criterio,
+                                        puntaje_maximo: puntajeMaximoEscalado,
+                                        niveles: nivelesDelCriterio
+                                    };
+                                });
+
+                                resolve({
+                                    rubrica: rubricaCompleta,
+                                    criterios: criteriosConNiveles
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    }
     async updateRubrica(id, data) {
         return new Promise((resolve, reject) => {
             connection.getConnection((err, conn) => {
@@ -657,100 +833,7 @@ class TeacherRubricaModel {
             });
         });
     }
-    async vincularRubrica(id_rubrica, id_evaluacion, cedula) {
-        return new Promise((resolve, reject) => {
-            connection.getConnection((err, conn) => {
-                if (err) return reject(err);
-
-                conn.beginTransaction(async (err) => {
-                    if (err) { conn.release(); return reject(err); }
-
-                    try {
-                        // Validar que la rúbrica existe y está activa
-                        const rubricaCheck = await new Promise((res, rej) =>
-                            conn.query('SELECT id FROM rubrica WHERE id = ? AND activo = 1', [id_rubrica], (e, r) => e ? rej(e) : res(r))
-                        );
-                        if (rubricaCheck.length === 0) {
-                            throw new Error('La rúbrica no existe o no está disponible.');
-                        }
-
-                        // Verificar permisos del docente y fechas
-                        const checkOwnerQuery = `
-                        SELECT 
-                            cp.fecha_inicio AS inicio_corte, 
-                            cp.fecha_fin AS fin_corte,
-                            lc.fecha_inicio AS inicio_correcciones,
-                            lc.fecha_fin AS fin_correcciones
-                        FROM evaluacion e
-                        INNER JOIN corte_periodo cp ON e.corte_orden = cp.orden
-                        INNER JOIN periodo_academico pa ON cp.codigo_periodo = pa.codigo
-                        LEFT JOIN lapso_correcciones lc ON pa.codigo = lc.codigo_periodo
-                        INNER JOIN seccion s ON e.id_seccion = s.id
-                        INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                        WHERE e.id = ? AND pd.docente_cedula = ?
-                    `;
-                        const checkResults = await new Promise((res, rej) =>
-                            conn.query(checkOwnerQuery, [id_evaluacion, cedula], (e, r) => e ? rej(e) : res(r))
-                        );
-                        const evalData = checkResults[0];
-                        if (!evalData) {
-                            throw new Error('No tiene permisos para vincular esta rúbrica a esta evaluación.');
-                        }
-
-                        // Validación de fechas (igual que antes)
-                        const hoy = new Date();
-                        const inicioCorte = new Date(evalData.inicio_corte);
-                        const finCorte = new Date(evalData.fin_corte);
-                        const dentroDelCorte = hoy >= inicioCorte && hoy <= finCorte;
-
-                        let dentroDeCorrecciones = false;
-                        if (evalData.inicio_correcciones && evalData.fin_correcciones) {
-                            const inicioCorr = new Date(evalData.inicio_correcciones);
-                            const finCorr = new Date(evalData.fin_correcciones);
-                            dentroDeCorrecciones = hoy >= inicioCorr && hoy <= finCorr;
-                        }
-
-                        if (!dentroDelCorte && !dentroDeCorrecciones) {
-                            throw new Error('Solo se pueden modificar las evaluaciones y sus rúbricas durante sus cortes o los lapsos de correcciones de su periodo académico.');
-                        }
-
-                        // Crear la vinculación
-                        const insertUsoQuery = `
-                        INSERT INTO rubrica_uso (id_rubrica, id_eval)
-                        VALUES (?, ?)
-                    `;
-                        const resultado = await new Promise((res, rej) =>
-                            conn.query(insertUsoQuery, [id_rubrica, id_evaluacion], (e, r) => e ? rej(e) : res(r))
-                        );
-
-                        if (!resultado || resultado.affectedRows === 0) {
-                            throw new Error('Ha ocurrido un error vinculando la evaluación y rúbrica. Por favor intente más tarde.');
-                        }
-
-                        conn.commit((err) => {
-                            if (err) {
-                                return conn.rollback(() => {
-                                    conn.release();
-                                    reject(err);
-                                });
-                            }
-                            conn.release();
-                            resolve({
-                                success: true,
-                                message: '¡Éxito! Rúbrica vinculada a la evaluación correctamente.'
-                            });
-                        });
-
-                    } catch (error) {
-                        conn.rollback(() => {
-                            conn.release();
-                            reject(error);
-                        });
-                    }
-                });
-            });
-        });
-    }
+    
     async desvincularRubrica(id, id_eval, cedula) {
         return new Promise((resolve, reject) => {
             connection.getConnection((err, conn) => {
@@ -760,7 +843,7 @@ class TeacherRubricaModel {
                     if (err) { conn.release(); return reject(err); }
 
                     try {
-                        // 1. Verificar permisos del docente y fechas
+                        // 1. Verificar permisos y fechas (igual que antes)
                         const checkOwnerQuery = `
                         SELECT 
                             cp.fecha_inicio AS inicio_corte, 
@@ -785,6 +868,7 @@ class TeacherRubricaModel {
                             throw new Error('No tiene permisos para eliminar el uso de esta rúbrica');
                         }
 
+                        // Validación de fechas (corregida)
                         const hoy = new Date();
                         const inicioCorte = new Date(evalRubrica.inicio_corte);
                         const finCorte = new Date(evalRubrica.fin_corte);
@@ -801,7 +885,18 @@ class TeacherRubricaModel {
                             throw new Error('Solo se pueden modificar las evaluaciones y sus rúbricas durante sus cortes o los lapsos de correcciones de su periodo académico.');
                         }
 
-                        // 2. Eliminar los detalles de evaluación (detalle_evaluacion)
+                        // 2. Contar usos actuales de la rúbrica (para saber si es la última)
+                        const countUsoQuery = `
+                        SELECT COUNT(*) AS total
+                        FROM rubrica_uso
+                        WHERE id_rubrica = ?
+                    `;
+                        const countResult = await new Promise((res, rej) =>
+                            conn.query(countUsoQuery, [id], (e, r) => e ? rej(e) : res(r))
+                        );
+                        const esUltimoUso = countResult[0]?.total === 1;
+
+                        // 3. Eliminar detalles de evaluación (si existen)
                         const deleteDetallesQuery = `
                         DELETE de
                         FROM detalle_evaluacion de
@@ -812,7 +907,7 @@ class TeacherRubricaModel {
                             conn.query(deleteDetallesQuery, [id_eval], (e, r) => e ? rej(e) : res(r))
                         );
 
-                        // 3. Eliminar las evaluaciones realizadas
+                        // 4. Eliminar evaluaciones realizadas
                         const deleteEvalRealizadaQuery = `
                         DELETE FROM evaluacion_realizada 
                         WHERE id_evaluacion = ?
@@ -821,7 +916,7 @@ class TeacherRubricaModel {
                             conn.query(deleteEvalRealizadaQuery, [id_eval], (e, r) => e ? rej(e) : res(r))
                         );
 
-                        // 4. Eliminar la vinculación (rubrica_uso)
+                        // 5. Eliminar la vinculación (rubrica_uso)
                         const deleteUsoQuery = `
                         DELETE FROM rubrica_uso 
                         WHERE id_rubrica = ? AND id_eval = ?
@@ -830,7 +925,19 @@ class TeacherRubricaModel {
                             conn.query(deleteUsoQuery, [id, id_eval], (e, r) => e ? rej(e) : res(r))
                         );
 
-                        // 5. Confirmar transacción
+                        // 6. Si era el último uso, desactivar la rúbrica
+                        if (esUltimoUso) {
+                            const updateRubricaQuery = `
+                            UPDATE rubrica
+                            SET activo = 0
+                            WHERE id = ?
+                        `;
+                            await new Promise((res, rej) =>
+                                conn.query(updateRubricaQuery, [id], (e, r) => e ? rej(e) : res(r))
+                            );
+                        }
+
+                        // 7. Confirmar transacción
                         conn.commit((err) => {
                             if (err) {
                                 return conn.rollback(() => {
@@ -841,7 +948,8 @@ class TeacherRubricaModel {
                             conn.release();
                             resolve({
                                 success: true,
-                                message: 'Uso de la rúbrica eliminado y evaluaciones realizadas borradas. ¡Recuerde asignar otra rúbrica a la evaluación!'
+                                message: 'Uso de la rúbrica eliminado. Si corrigió esa evaluación con esta rúbrica se recomienda corregir nuevamente. ' +
+                                    (esUltimoUso ? 'La rúbrica ha sido desactivada por falta de uso.' : '')
                             });
                         });
 

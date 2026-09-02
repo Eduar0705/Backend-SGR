@@ -469,7 +469,7 @@ class RubricaModel {
 
                         const criteriosConNiveles = criterios.map(criterio => ({
                             ...criterio,
-                            puntaje_maximo:( criterio.puntaje_maximo * porcentaje_evaluacion / 100).toFixed(3),
+                            puntaje_maximo: (criterio.puntaje_maximo * porcentaje_evaluacion / 100).toFixed(3),
                             niveles: niveles.filter(nivel => nivel.criterio_id === criterio.id)
                                 .map(n => (
                                     {
@@ -482,6 +482,174 @@ class RubricaModel {
                         }));
 
                         resolve({ rubrica: rubrica[0], criterios: criteriosConNiveles });
+                    });
+                });
+            });
+        });
+    }
+
+    async getRubricaForDuplica(id_rubrica, id_evaluacion, session) {
+        return new Promise((resolve, reject) => {
+            const esAdmin = session.id_rol === 1;
+
+            // ─── 1. Obtener datos de la evaluación ───
+            let queryEvaluacion = `
+            SELECT 
+                e.id AS evaluacion_id,
+                e.fecha_evaluacion,
+                e.ponderacion AS porcentaje_evaluacion,
+                e.contenido AS contenido_evaluacion,
+                e.competencias,
+                e.instrumentos,
+                e.cantidad_personas,
+                CASE 
+                    WHEN e.cantidad_personas = 1 THEN 'Individual'
+                    WHEN e.cantidad_personas = 2 THEN 'En Pareja'
+                    ELSE 'Grupal'
+                END AS modalidad,
+                m.nombre AS materia_nombre,
+                m.codigo AS materia_codigo,
+                s.id AS seccion_id,
+                CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                s.codigo_periodo AS lapse_academico,
+                u.cedula AS docente_cedula,
+                CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre,
+                c.nombre AS carrera_nombre,
+                mp.codigo_carrera AS carrera_codigo,
+                mp.codigo_materia AS materia_codigo_plan
+            FROM evaluacion e
+            INNER JOIN seccion s ON e.id_seccion = s.id
+            INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+            INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+            INNER JOIN usuario_docente ud ON ud.cedula_usuario = pd.docente_cedula
+            INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+            WHERE e.id = ?
+        `;
+            let paramsEvaluacion = [id_evaluacion];
+            if (!esAdmin) {
+                queryEvaluacion += ` AND pd.docente_cedula = ?`;
+                paramsEvaluacion.push(session.cedula);
+            }
+            queryEvaluacion += ` GROUP BY e.id`;
+
+            // ─── 2. Obtener datos de la rúbrica ───
+            const queryRubrica = `
+            SELECT 
+                r.id,
+                r.nombre_rubrica,
+                r.instrucciones,
+                r.activo,
+                r.fecha_creacion AS created_at,
+                r.fecha_actualizacion AS updated_at,
+                tr.id AS id_tipo,
+                IFNULL(tr.nombre, 'Tipo no asignado') AS tipo_rubrica
+            FROM rubrica r
+            LEFT JOIN tipo_rubrica tr ON r.id_tipo = tr.id
+            WHERE r.id = ? AND r.activo = 1
+        `;
+
+            // ─── Ejecutar consultas ───
+            connection.query(queryEvaluacion, paramsEvaluacion, (err, evalRows) => {
+                if (err) return reject(err);
+                if (evalRows.length === 0) return resolve(null); // sin permisos o no existe
+
+                const evalData = evalRows[0];
+
+                connection.query(queryRubrica, [id_rubrica], (err, rubricaRows) => {
+                    if (err) return reject(err);
+                    if (rubricaRows.length === 0) return resolve(null); // rúbrica no existe o inactiva
+
+                    const rubricaData = rubricaRows[0];
+
+                    // ─── Combinar en un solo objeto "rubrica" (como en getRubricaForEdit) ───
+                    const rubrica = {
+                        id: rubricaData.id,
+                        evaluacion_id: evalData.evaluacion_id,
+                        nombre_rubrica: rubricaData.nombre_rubrica,
+                        id_tipo: rubricaData.id_tipo,
+                        tipo_rubrica: rubricaData.tipo_rubrica,
+                        docente_cedula: evalData.docente_cedula,
+                        materia_codigo: evalData.materia_codigo,
+                        seccion_id: evalData.seccion_id,
+                        lapse_academico: evalData.lapse_academico,
+                        fecha_evaluacion: evalData.fecha_evaluacion,
+                        porcentaje_evaluacion: evalData.porcentaje_evaluacion,
+                        // tipo_evaluacion se agregará después con estrategias
+                        contenido_evaluacion: evalData.contenido_evaluacion,
+                        competencias: evalData.competencias,
+                        instrumentos: evalData.instrumentos,
+                        instrucciones: rubricaData.instrucciones,
+                        modalidad: evalData.modalidad,
+                        cantidad_personas: evalData.cantidad_personas,
+                        activo: rubricaData.activo,
+                        created_at: rubricaData.created_at,
+                        updated_at: rubricaData.updated_at,
+                        materia_nombre: evalData.materia_nombre,
+                        id_seccion: evalData.seccion_id,
+                        seccion_codigo: evalData.seccion_codigo,
+                        docente_nombre: evalData.docente_nombre,
+                        carrera_nombre: evalData.carrera_nombre,
+                        carrera_codigo: evalData.carrera_codigo,
+                        materia_codigo_plan: evalData.materia_codigo_plan
+                    };
+
+                    // ─── Obtener estrategias y construir tipo_evaluacion ───
+                    const queryEstrategias = `
+                    SELECT eeval.*
+                    FROM estrategia_eval eeval
+                    INNER JOIN estrategia_empleada eemp ON eeval.id = eemp.id_estrategia
+                    WHERE eemp.id_eval = ?
+                `;
+                    connection.query(queryEstrategias, [id_evaluacion], (err, estrategias) => {
+                        if (err) return reject(err);
+                        rubrica.estrategias = estrategias;
+                        rubrica.tipo_evaluacion = estrategias.map(est => est.nombre).join(', ');
+
+                        // ─── Obtener criterios y niveles ───
+                        const queryCriterios = `
+                        SELECT id, descripcion, puntaje_maximo, orden
+                        FROM criterio_rubrica
+                        WHERE rubrica_id = ?
+                        ORDER BY orden
+                    `;
+                        connection.query(queryCriterios, [id_rubrica], (err, criterios) => {
+                            if (err) return reject(err);
+                            if (criterios.length === 0) {
+                                return resolve({ rubrica, criterios: [] });
+                            }
+
+                            const criteriosIds = criterios.map(c => c.id);
+                            const queryNiveles = `
+                            SELECT criterio_id, nombre_nivel, descripcion, puntaje_maximo AS puntaje, orden
+                            FROM nivel_desempeno
+                            WHERE criterio_id IN (?)
+                            ORDER BY criterio_id, orden DESC
+                        `;
+                            connection.query(queryNiveles, [criteriosIds], (err, niveles) => {
+                                if (err) return reject(err);
+
+                                const criteriosConNiveles = criterios.map(criterio => ({
+                                    ...criterio,
+                                    puntaje_maximo: parseFloat(
+                                        (criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 100).toFixed(3)
+                                    ),
+                                    niveles: niveles.filter(n => n.criterio_id === criterio.id)
+                                        .map(n => ({
+                                            criterio_id: n.criterio_id,
+                                            nombre_nivel: n.nombre_nivel,
+                                            descripcion: n.descripcion,
+                                            puntaje: parseFloat(
+                                                (n.puntaje * criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 10000).toFixed(3)
+                                            ),
+                                            orden: n.orden
+                                        }))
+                                }));
+
+                                resolve({ rubrica, criterios: criteriosConNiveles });
+                            });
+                        });
                     });
                 });
             });
@@ -594,7 +762,6 @@ class RubricaModel {
             });
         });
     }
-
     async getCarreraYSemestreBySeccion(idSecc) {
         return new Promise((resolve, reject) => {
             const query = ` SELECT 
@@ -728,89 +895,89 @@ class RubricaModel {
             });
         });
     }
- async updateRubrica(id, data) {
-    return new Promise((resolve, reject) => {
-        connection.getConnection((err, conn) => {
-            if (err) return reject(err);
+    async updateRubrica(id, data) {
+        return new Promise((resolve, reject) => {
+            connection.getConnection((err, conn) => {
+                if (err) return reject(err);
 
-            conn.beginTransaction(async (err) => {
-                if (err) { conn.release(); return reject(err); }
+                conn.beginTransaction(async (err) => {
+                    if (err) { conn.release(); return reject(err); }
 
-                try {
-                    // 1. Actualizar datos base de la rúbrica
-                    const updateRubricaQ = `
+                    try {
+                        // 1. Actualizar datos base de la rúbrica
+                        const updateRubricaQ = `
                         UPDATE rubrica 
                         SET nombre_rubrica = ?, instrucciones = ?, id_tipo = ? 
                         WHERE id = ?
                     `;
-                    await new Promise((res, rej) =>
-                        conn.query(updateRubricaQ, [data.nombre_rubrica, data.instrucciones, data.tipo_rubrica, id], (e, r) => e ? rej(e) : res(r))
-                    );
-
-                    // 2. Actualizar relación con evaluación
-                    const deleteEvalQ = 'DELETE FROM rubrica_uso WHERE id_rubrica = ?';
-                    await new Promise((res, rej) =>
-                        conn.query(deleteEvalQ, [id], (e, r) => e ? rej(e) : res(r))
-                    );
-
-                    const insertEvalQ = 'INSERT INTO rubrica_uso (id_rubrica, id_eval) VALUES (?, ?)';
-                    await new Promise((res, rej) =>
-                        conn.query(insertEvalQ, [id, data.id_evaluacion], (e, r) => e ? rej(e) : res(r))
-                    );
-
-                    // 3. Update/insert de criterios y sus niveles
-                    const idsCriteriosPayload = [];
-
-                    for (let i = 0; i < data.criterios.length; i++) {
-                        const criterio = data.criterios[i];
-                        const ordenCriterio = parseInt(criterio.orden) || (i + 1);
-                        const puntajeMaximoPorcentaje = parseFloat(
-                            ((criterio.puntaje_maximo / data.porcentaje) * 100).toFixed(2)
+                        await new Promise((res, rej) =>
+                            conn.query(updateRubricaQ, [data.nombre_rubrica, data.instrucciones, data.tipo_rubrica, id], (e, r) => e ? rej(e) : res(r))
                         );
 
-                        let criterioId = criterio.id ? parseInt(criterio.id) : null;
-                        let esNuevo = !criterioId
+                        // 2. Actualizar relación con evaluación
+                        const deleteEvalQ = 'DELETE FROM rubrica_uso WHERE id_rubrica = ?';
+                        await new Promise((res, rej) =>
+                            conn.query(deleteEvalQ, [id], (e, r) => e ? rej(e) : res(r))
+                        );
 
-                        if (criterioId) {
-                            const resUpdate = await new Promise((res, rej) =>
-                                conn.query(
-                                    `UPDATE criterio_rubrica 
+                        const insertEvalQ = 'INSERT INTO rubrica_uso (id_rubrica, id_eval) VALUES (?, ?)';
+                        await new Promise((res, rej) =>
+                            conn.query(insertEvalQ, [id, data.id_evaluacion], (e, r) => e ? rej(e) : res(r))
+                        );
+
+                        // 3. Update/insert de criterios y sus niveles
+                        const idsCriteriosPayload = [];
+
+                        for (let i = 0; i < data.criterios.length; i++) {
+                            const criterio = data.criterios[i];
+                            const ordenCriterio = parseInt(criterio.orden) || (i + 1);
+                            const puntajeMaximoPorcentaje = parseFloat(
+                                ((criterio.puntaje_maximo / data.porcentaje) * 100).toFixed(2)
+                            );
+
+                            let criterioId = criterio.id ? parseInt(criterio.id) : null;
+                            let esNuevo = !criterioId
+
+                            if (criterioId) {
+                                const resUpdate = await new Promise((res, rej) =>
+                                    conn.query(
+                                        `UPDATE criterio_rubrica 
                                      SET descripcion = ?, puntaje_maximo = ?, orden = ?
                                      WHERE id = ? AND rubrica_id = ?`,
-                                    [criterio.descripcion.trim(), puntajeMaximoPorcentaje, ordenCriterio, criterioId, id],
-                                    (e, r) => e ? rej(e) : res(r)
-                                )
-                            );
-                            if (resUpdate.affectedRows === 0) {
-                                esNuevo = true;
-                            }
-                        }
-                        if(esNuevo) {
-                            const resCrit = await new Promise((res, rej) =>
-                                conn.query(
-                                    `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden)
-                                     VALUES (?, ?, ?, ?)`,
-                                    [id, criterio.descripcion.trim(), puntajeMaximoPorcentaje, ordenCriterio],
-                                    (e, r) => e ? rej(e) : res(r)
-                                )
-                            );
-                            criterioId = resCrit.insertId;
-                        }
-
-                        idsCriteriosPayload.push(criterioId);
-                        if (criterio.niveles && criterio.niveles.length > 0) {
-                            const ordenesNivelesPayload = [];
-
-                            for (let j = 0; j < criterio.niveles.length; j++) {
-                                const nivel = criterio.niveles[j];
-                                const ordenNivel = parseInt(nivel.orden) || (j + 1);
-                                ordenesNivelesPayload.push(ordenNivel);
-
-                                const puntajeNivelPorcentaje = parseFloat(
-                                    ((nivel.puntaje / criterio.puntaje_maximo) * 100).toFixed(2)
+                                        [criterio.descripcion.trim(), puntajeMaximoPorcentaje, ordenCriterio, criterioId, id],
+                                        (e, r) => e ? rej(e) : res(r)
+                                    )
                                 );
+                                if (resUpdate.affectedRows === 0) {
+                                    esNuevo = true;
+                                }
+                            }
+                            if (esNuevo) {
+                                const resCrit = await new Promise((res, rej) =>
+                                    conn.query(
+                                        `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden)
+                                     VALUES (?, ?, ?, ?)`,
+                                        [id, criterio.descripcion.trim(), puntajeMaximoPorcentaje, ordenCriterio],
+                                        (e, r) => e ? rej(e) : res(r)
+                                    )
+                                );
+                                criterioId = resCrit.insertId;
+                            }
 
-                                const upsertNivelQuery = `
+                            idsCriteriosPayload.push(criterioId);
+                            if (criterio.niveles && criterio.niveles.length > 0) {
+                                const ordenesNivelesPayload = [];
+
+                                for (let j = 0; j < criterio.niveles.length; j++) {
+                                    const nivel = criterio.niveles[j];
+                                    const ordenNivel = parseInt(nivel.orden) || (j + 1);
+                                    ordenesNivelesPayload.push(ordenNivel);
+
+                                    const puntajeNivelPorcentaje = parseFloat(
+                                        ((nivel.puntaje / criterio.puntaje_maximo) * 100).toFixed(2)
+                                    );
+
+                                    const upsertNivelQuery = `
                                     INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden)
                                     VALUES (?, ?, ?, ?, ?)
                                     ON DUPLICATE KEY UPDATE
@@ -818,82 +985,82 @@ class RubricaModel {
                                         descripcion = VALUES(descripcion),
                                         puntaje_maximo = VALUES(puntaje_maximo)
                                 `;
+                                    await new Promise((res, rej) =>
+                                        conn.query(
+                                            upsertNivelQuery,
+                                            [criterioId, nivel.nombre_nivel.trim(), nivel.descripcion.trim(), puntajeNivelPorcentaje, ordenNivel],
+                                            (e, r) => e ? rej(e) : res(r)
+                                        )
+                                    );
+                                }
                                 await new Promise((res, rej) =>
                                     conn.query(
-                                        upsertNivelQuery,
-                                        [criterioId, nivel.nombre_nivel.trim(), nivel.descripcion.trim(), puntajeNivelPorcentaje, ordenNivel],
+                                        'DELETE FROM nivel_desempeno WHERE criterio_id = ? AND orden NOT IN (?)',
+                                        [criterioId, ordenesNivelesPayload],
                                         (e, r) => e ? rej(e) : res(r)
                                     )
                                 );
+                            } else {
+                                await new Promise((res, rej) =>
+                                    conn.query('DELETE FROM nivel_desempeno WHERE criterio_id = ?', [criterioId], (e, r) => e ? rej(e) : res(r))
+                                );
                             }
-                            await new Promise((res, rej) =>
+                        }
+
+                        // 4. Eliminar criterios (y sus niveles) que ya no vienen en el payload
+                        if (idsCriteriosPayload.length > 0) {
+                            const criteriosABorrar = await new Promise((res, rej) =>
                                 conn.query(
-                                    'DELETE FROM nivel_desempeno WHERE criterio_id = ? AND orden NOT IN (?)',
-                                    [criterioId, ordenesNivelesPayload],
+                                    'SELECT id FROM criterio_rubrica WHERE rubrica_id = ? AND id NOT IN (?)',
+                                    [id, idsCriteriosPayload],
                                     (e, r) => e ? rej(e) : res(r)
                                 )
                             );
+                            if (criteriosABorrar.length > 0) {
+                                const idsABorrar = criteriosABorrar.map(c => c.id);
+                                await new Promise((res, rej) =>
+                                    conn.query('DELETE FROM nivel_desempeno WHERE criterio_id IN (?)', [idsABorrar], (e, r) => e ? rej(e) : res(r))
+                                );
+                                await new Promise((res, rej) =>
+                                    conn.query('DELETE FROM criterio_rubrica WHERE id IN (?)', [idsABorrar], (e, r) => e ? rej(e) : res(r))
+                                );
+                            }
                         } else {
-                            await new Promise((res, rej) =>
-                                conn.query('DELETE FROM nivel_desempeno WHERE criterio_id = ?', [criterioId], (e, r) => e ? rej(e) : res(r))
+                            const criteriosExistentes = await new Promise((res, rej) =>
+                                conn.query('SELECT id FROM criterio_rubrica WHERE rubrica_id = ?', [id], (e, r) => e ? rej(e) : res(r))
                             );
+                            if (criteriosExistentes.length > 0) {
+                                const idsExistentes = criteriosExistentes.map(c => c.id);
+                                await new Promise((res, rej) =>
+                                    conn.query('DELETE FROM nivel_desempeno WHERE criterio_id IN (?)', [idsExistentes], (e, r) => e ? rej(e) : res(r))
+                                );
+                                await new Promise((res, rej) =>
+                                    conn.query('DELETE FROM criterio_rubrica WHERE rubrica_id = ?', [id], (e, r) => e ? rej(e) : res(r))
+                                );
+                            }
                         }
+
+                        conn.commit((err) => {
+                            if (err) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    reject(err);
+                                });
+                            }
+                            conn.release();
+                            resolve({ success: true, message: 'Rúbrica actualizada correctamente' });
+                        });
+
+                    } catch (error) {
+                        conn.rollback(() => {
+                            conn.release();
+                            reject(error);
+                        });
                     }
-
-                    // 4. Eliminar criterios (y sus niveles) que ya no vienen en el payload
-                    if (idsCriteriosPayload.length > 0) {
-                        const criteriosABorrar = await new Promise((res, rej) =>
-                            conn.query(
-                                'SELECT id FROM criterio_rubrica WHERE rubrica_id = ? AND id NOT IN (?)',
-                                [id, idsCriteriosPayload],
-                                (e, r) => e ? rej(e) : res(r)
-                            )
-                        );
-                        if (criteriosABorrar.length > 0) {
-                            const idsABorrar = criteriosABorrar.map(c => c.id);
-                            await new Promise((res, rej) =>
-                                conn.query('DELETE FROM nivel_desempeno WHERE criterio_id IN (?)', [idsABorrar], (e, r) => e ? rej(e) : res(r))
-                            );
-                            await new Promise((res, rej) =>
-                                conn.query('DELETE FROM criterio_rubrica WHERE id IN (?)', [idsABorrar], (e, r) => e ? rej(e) : res(r))
-                            );
-                        }
-                    } else {
-                        const criteriosExistentes = await new Promise((res, rej) =>
-                            conn.query('SELECT id FROM criterio_rubrica WHERE rubrica_id = ?', [id], (e, r) => e ? rej(e) : res(r))
-                        );
-                        if (criteriosExistentes.length > 0) {
-                            const idsExistentes = criteriosExistentes.map(c => c.id);
-                            await new Promise((res, rej) =>
-                                conn.query('DELETE FROM nivel_desempeno WHERE criterio_id IN (?)', [idsExistentes], (e, r) => e ? rej(e) : res(r))
-                            );
-                            await new Promise((res, rej) =>
-                                conn.query('DELETE FROM criterio_rubrica WHERE rubrica_id = ?', [id], (e, r) => e ? rej(e) : res(r))
-                            );
-                        }
-                    }
-
-                    conn.commit((err) => {
-                        if (err) {
-                            return conn.rollback(() => {
-                                conn.release();
-                                reject(err);
-                            });
-                        }
-                        conn.release();
-                        resolve({ success: true, message: 'Rúbrica actualizada correctamente' });
-                    });
-
-                } catch (error) {
-                    conn.rollback(() => {
-                        conn.release();
-                        reject(error);
-                    });
-                }
+                });
             });
         });
-    });
-}
+    }
     async getSemestresAdmin(carrera, cedula, esAdmin, periodo) {
         return new Promise((resolve, reject) => {
             let query, params = [];
@@ -1067,62 +1234,6 @@ class RubricaModel {
                 }
 
                 resolve({ success: true, affectedRows: result.affectedRows });
-            });
-        });
-    }
-
-    async vincularRubrica(id_rubrica, id_evaluacion) {
-        return new Promise((resolve, reject) => {
-            connection.getConnection(async (err, conn) => {
-                if (err) return reject(err);
-
-                try {
-                    // Validar que la rúbrica existe y está activa
-                    const rubricaCheck = await new Promise((res, rej) =>
-                        conn.query('SELECT id FROM rubrica WHERE id = ? AND activo = 1', [id_rubrica], (e, r) => e ? rej(e) : res(r))
-                    );
-                    if (rubricaCheck.length === 0) {
-                        conn.release();
-                        return reject(new Error('La rúbrica no existe o no está disponible.'));
-                    }
-
-                    // Validar que la evaluación existe
-                    const evalCheck = await new Promise((res, rej) =>
-                        conn.query('SELECT id FROM evaluacion WHERE id = ?', [id_evaluacion], (e, r) => e ? rej(e) : res(r))
-                    );
-                    if (evalCheck.length === 0) {
-                        conn.release();
-                        return reject(new Error('La evaluación no existe.'));
-                    }
-
-                    // Verificar si ya tiene una rúbrica vinculada
-                    const existingCheck = await new Promise((res, rej) =>
-                        conn.query('SELECT id_rubrica FROM rubrica_uso WHERE id_eval = ?', [id_evaluacion], (e, r) => e ? rej(e) : res(r))
-                    );
-                    if (existingCheck.length > 0) {
-                        conn.release();
-                        return reject(new Error('Esta evaluación ya tiene una rúbrica asignada.'));
-                    }
-
-                    // Crear la vinculación
-                    const insertUsoQuery = 'INSERT INTO rubrica_uso (id_rubrica, id_eval, estado) VALUES (?, ?, ?)';
-                    const resultado = await new Promise((res, rej) =>
-                        conn.query(insertUsoQuery, [id_rubrica, id_evaluacion, 'Aprobado'], (e, r) => e ? rej(e) : res(r))
-                    );
-
-                    conn.release();
-                    if (!resultado || resultado.affectedRows === 0) {
-                        return reject(new Error('No se pudo vincular la rúbrica a la evaluación.'));
-                    }
-
-                    resolve({
-                        success: true,
-                        message: '¡Éxito! Rúbrica vinculada a la evaluación correctamente.'
-                    });
-                } catch (error) {
-                    conn.release();
-                    reject(error);
-                }
             });
         });
     }

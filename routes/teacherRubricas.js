@@ -26,11 +26,11 @@ router.get('/detalle/:id/:id_eval', TeacherRubricaController.getRubricaDetalle);
 // GET /api/teacher/rubricas/editar/:id/:id_eval → Obtener rúbrica para editar
 router.get('/editar/:id/:id_eval', TeacherRubricaController.getRubricaForEdit);
 
+// GET /api/teacher/rubricas/duplicar/:id/:id_eval → Obtener rúbrica para editar
+router.get('/duplicar/:id/:id_eval', TeacherRubricaController.getRubricaForDuplica);
+
 // PUT /api/teacher/rubricas/:id → Editar rúbrica
 router.put('/:id', TeacherRubricaController.updateRubrica);
-
-// POST /api/teacher/rubricas/:id → desvincular rúbrica de evaluacion
-router.post('/link/:id/:id_eval', TeacherRubricaController.vincularRubrica);
 
 // DELETE /api/teacher/rubricas/:id → desvincular rúbrica de evaluacion
 router.delete('/unlink/:id/:id_eval', TeacherRubricaController.desvincularRubrica);

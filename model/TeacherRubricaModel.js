@@ -228,7 +228,16 @@ class TeacherRubricaModel {
 
         // modo='mis': solo rúbricas creadas por el docente en sus secciones
         // modo='materias': todas las rúbricas de secciones donde el docente tiene permiso
-        const modoClause = modo === 'materias' ? '' : 'AND r.cedula_docente = ?';
+        const modoClause = modo === 'materias'
+                        ? `AND EXISTS (
+                            SELECT 1
+                            FROM permiso_docente pd2
+                            INNER JOIN seccion s2 ON pd2.id_seccion = s2.id
+                            INNER JOIN materia_pensum mp2 ON s2.id_materia_plan = mp2.id
+                            WHERE mp2.codigo_materia = mp.codigo_materia
+                                AND pd2.docente_cedula = ?
+                        )`
+                        : 'AND pd.docente_cedula = ?';
 
         const dataQuery = `
             SELECT
@@ -250,7 +259,7 @@ class TeacherRubricaModel {
                 s.letra AS seccion_letra,
                 u.cedula AS docente_cedula,
                 r.cedula_docente AS cedula_creador,
-                CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
+                GROUP_CONCAT(DISTINCT CONCAT(u.nombre, ' ', u.apeliido)) AS docente_nombre
             FROM rubrica r
             INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
             INNER JOIN evaluacion e ON ru.id_eval = e.id
@@ -263,8 +272,7 @@ class TeacherRubricaModel {
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
             INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
-            WHERE pd.docente_cedula = ?
-              AND r.activo = 1
+            WHERE r.activo = 1
               ${modoClause}
               AND (r.nombre_rubrica LIKE ? OR e.contenido LIKE ?)
             GROUP BY e.id
@@ -278,20 +286,19 @@ class TeacherRubricaModel {
             INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
             INNER JOIN evaluacion e ON ru.id_eval = e.id
             INNER JOIN seccion s ON e.id_seccion = s.id
+            INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-            WHERE pd.docente_cedula = ?
-              AND r.activo = 1
+            WHERE r.activo = 1
               ${modoClause}
               AND (r.nombre_rubrica LIKE ? OR e.contenido LIKE ?)
         `;
-
         // Build param arrays depending on modo
         const dataParams = modo === 'materias'
             ? [cedula, like, like, parseInt(limit), offset]
-            : [cedula, cedula, like, like, parseInt(limit), offset];
+            : [cedula, like, like, parseInt(limit), offset];
         const countParams = modo === 'materias'
             ? [cedula, like, like]
-            : [cedula, cedula, like, like];
+            : [cedula, like, like];
 
         const [rubricas, countResult] = await Promise.all([
             new Promise((res, rej) =>

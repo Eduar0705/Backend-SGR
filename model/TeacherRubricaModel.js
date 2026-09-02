@@ -222,6 +222,95 @@ class TeacherRubricaModel {
         });
     }
 
+    async getRubricasPaginadas({ cedula, search = '', page = 1, limit = 10, modo = 'mis' }) {
+        const like = `%${search}%`;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        // modo='mis': solo rúbricas creadas por el docente en sus secciones
+        // modo='materias': todas las rúbricas de secciones donde el docente tiene permiso
+        const modoClause = modo === 'materias' ? '' : 'AND r.cedula_docente = ?';
+
+        const dataQuery = `
+            SELECT
+                r.id,
+                e.contenido,
+                e.id AS id_evaluacion,
+                r.nombre_rubrica,
+                e.fecha_evaluacion,
+                s.codigo_periodo,
+                r.fecha_creacion,
+                GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
+                e.ponderacion AS porcentaje_evaluacion,
+                c.nombre AS carrera_nombre,
+                m.nombre AS materia_nombre,
+                m.codigo AS materia_codigo,
+                CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                CASE WHEN r.activo = 1 THEN ru.estado ELSE 'Inactivo' END AS estado,
+                r.activo,
+                s.letra AS seccion_letra,
+                u.cedula AS docente_cedula,
+                r.cedula_docente AS cedula_creador,
+                CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
+            FROM rubrica r
+            INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+            INNER JOIN evaluacion e ON ru.id_eval = e.id
+            LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
+            LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
+            INNER JOIN seccion s ON e.id_seccion = s.id
+            INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+            INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+            INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
+            INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+            WHERE pd.docente_cedula = ?
+              AND r.activo = 1
+              ${modoClause}
+              AND (r.nombre_rubrica LIKE ? OR e.contenido LIKE ?)
+            GROUP BY e.id
+            ORDER BY r.fecha_creacion DESC
+            LIMIT ? OFFSET ?
+        `;
+
+        const countQuery = `
+            SELECT COUNT(DISTINCT e.id) AS total
+            FROM rubrica r
+            INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+            INNER JOIN evaluacion e ON ru.id_eval = e.id
+            INNER JOIN seccion s ON e.id_seccion = s.id
+            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+            WHERE pd.docente_cedula = ?
+              AND r.activo = 1
+              ${modoClause}
+              AND (r.nombre_rubrica LIKE ? OR e.contenido LIKE ?)
+        `;
+
+        // Build param arrays depending on modo
+        const dataParams = modo === 'materias'
+            ? [cedula, like, like, parseInt(limit), offset]
+            : [cedula, cedula, like, like, parseInt(limit), offset];
+        const countParams = modo === 'materias'
+            ? [cedula, like, like]
+            : [cedula, cedula, like, like];
+
+        const [rubricas, countResult] = await Promise.all([
+            new Promise((res, rej) =>
+                connection.query(dataQuery, dataParams, (err, rows) =>
+                    err ? rej(err) : res(rows)
+                )
+            ),
+            new Promise((res, rej) =>
+                connection.query(countQuery, countParams, (err, rows) =>
+                    err ? rej(err) : res(rows)
+                )
+            )
+        ]);
+
+        const total = countResult[0]?.total || 0;
+        return { rubricas, total, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) || 1 };
+    }
+
+
     async getRubricaDetalle(id, id_eval, cedula) {
         let porcentaje_evaluacion;
         const queryRubrica = `
@@ -573,10 +662,17 @@ class TeacherRubricaModel {
                     try {
                         // 1. Verificar permisos del docente
                         const checkOwnerQuery = `
-                        SELECT COUNT(*) as count
+                        SELECT 
+                            cp.fecha_inicio AS inicio_corte, 
+                            cp.fecha_fin AS fin_corte,
+                            lc.fecha_inicio AS inicio_correcciones,
+                            lc.fecha_fin AS fin_correcciones
                         FROM rubrica r
                         INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
                         INNER JOIN evaluacion e ON ru.id_eval = e.id
+                        INNER JOIN corte_periodo cp ON e.corte_orden = cp.orden
+                        INNER JOIN periodo_academico pa ON cp.codigo_periodo = pa.codigo
+                        LEFT JOIN lapso_correcciones lc ON pa.codigo = lc.codigo_periodo
                         INNER JOIN seccion s ON e.id_seccion = s.id
                         INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
                         WHERE r.id = ? AND e.id = ? AND pd.docente_cedula = ?
@@ -584,11 +680,28 @@ class TeacherRubricaModel {
                         const checkResults = await new Promise((res, rej) =>
                             conn.query(checkOwnerQuery, [id, id_eval, cedula], (e, r) => e ? rej(e) : res(r))
                         );
-
-                        if (checkResults[0].count === 0) {
+                        const evalRubrica = checkResults[0];
+                        if (!evalRubrica) {
                             throw new Error('No tiene permisos para eliminar el uso de esta rúbrica');
                         }
 
+                        // Fecha actual fija para pruebas
+                        const hoy = new Date();
+
+                        const inicioCorte = new Date(evalRubrica.inicio_corte);
+                        const finCorte = new Date(evalRubrica.fin_corte);
+                        const dentroDelCorte = hoy >= inicioCorte && hoy <= finCorte;
+
+                        let dentroDeCorrecciones = false;
+                        if (evalRubrica.inicio_correcciones && evalRubrica.fin_correcciones) {
+                            const inicioCorr = new Date(evalRubrica.inicio_correcciones);
+                            const finCorr = new Date(evalRubrica.fin_correcciones);
+                            dentroDeCorrecciones = hoy >= inicioCorr && hoy <= finCorr;
+                        }
+
+                        if (!dentroDelCorte && !dentroDeCorrecciones) {
+                            throw new Error('Solo se pueden modificar las evaluaciones y sus rúbricas durante sus cortes o los lapsos de correcciones de su periodo académico.');
+                        }
                         // 2. Eliminar el registro de rubrica_uso (la vinculación específica)
                         const deleteUsoQuery = `
                         DELETE FROM rubrica_uso 

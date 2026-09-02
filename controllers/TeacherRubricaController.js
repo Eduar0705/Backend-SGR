@@ -86,11 +86,16 @@ class TeacherRubricaController {
     async getRubricas(req, res) {
         try {
             const cedula = req.user.cedula;
-            const rubricas = await TeacherRubricaModel.getRubricas(cedula);
-            res.json({ success: true, rubricas });
+            const search = req.query.search || '';
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const modo = req.query.modo || 'mis';
+
+            const result = await TeacherRubricaModel.getRubricasPaginadas({ cedula, search, page, limit, modo });
+            res.json({ success: true, ...result });
         } catch (error) {
             console.error('Error getRubricas:', error);
-            res.status(500).json({ success: false, message: 'Error al cargar rúbricas' });
+            res.status(500).json({ success: false, message: 'Error al cargar rúbricas', rubricas: [], total: 0, page: 1, totalPages: 1 });
         }
     }
 

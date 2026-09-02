@@ -137,12 +137,16 @@ class RubricaController {
 }
     async getAllRubricas(req, res) {
     try {
-        const periodo = req.query.periodo
-        const rubricas = await RubricaModel.getAllRubricas(periodo);
-        res.json({ success: true, rubricas });
+        const periodo = req.query.periodo;
+        const search = req.query.search || '';
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const result = await RubricaModel.getAllRubricasPaginadas({ periodo, search, page, limit });
+        res.json({ success: true, ...result });
     } catch (error) {
         console.error('Error al obtener rúbricas:', error);
-        res.json({ success: false, rubricas: [] });
+        res.json({ success: false, rubricas: [], total: 0, page: 1, totalPages: 1 });
     }
 }
     async createRubrica(req, res) {

@@ -327,53 +327,82 @@ class RubricaModel {
             connection.query(query, [rubrica_id], (err, r) => err ? reject(err) : resolve(r));
         });
     }
+
     // GESTIÓN DE RÚBRICAS
-    async getAllRubricas(periodo) {
-        return new Promise((resolve, reject) => {
-            const query = `
-                SELECT
-                    r.id,
-                    e.contenido,
-                    e.id AS id_evaluacion,
-                    r.nombre_rubrica,
-                    r.cedula_docente,
-                    ud.cedula_usuario AS docente_cedula,
-                    e.fecha_evaluacion,
-                    r.fecha_creacion,
-                    GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
-                    e.ponderacion AS porcentaje_evaluacion,
-                    r.activo,
-                    c.nombre AS carrera_nombre,
-                    m.nombre AS materia_nombre,
-                    m.codigo AS materia_codigo,
-                    CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                    CASE WHEN r.activo = 1 THEN ru.estado ELSE 'Inactivo' END AS estado,
-                    s.letra AS seccion_letra,
-                    u.cedula AS docente_cedula,
-                    r.cedula_docente AS cedula_creador,
-                    CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
-                FROM rubrica r
-                INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
-                INNER JOIN evaluacion e ON ru.id_eval = e.id
-                INNER JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
-                INNER JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
-                INNER JOIN seccion s ON e.id_seccion = s.id
-                INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
-                INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
-                INNER JOIN materia m ON mp.codigo_materia = m.codigo
-                INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
-                INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
-                WHERE r.activo = 1 AND u.activo = 1
-                AND s.codigo_periodo = ?
-                GROUP BY e.id
-                ORDER BY fecha_creacion DESC;
-            `;
-            connection.query(query, [periodo], (err, results) => {
-                if (err) return reject(err);
-                resolve(results);
-            });
-        });
+    async getAllRubricasPaginadas({ periodo, search = '', page = 1, limit = 10 }) {
+        const like = `%${search}%`;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        const dataQuery = `
+            SELECT
+                r.id,
+                e.contenido,
+                e.id AS id_evaluacion,
+                r.nombre_rubrica,
+                r.cedula_docente,
+                e.fecha_evaluacion,
+                r.fecha_creacion,
+                GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
+                e.ponderacion AS porcentaje_evaluacion,
+                r.activo,
+                c.nombre AS carrera_nombre,
+                m.nombre AS materia_nombre,
+                m.codigo AS materia_codigo,
+                CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
+                CASE WHEN r.activo = 1 THEN ru.estado ELSE 'Inactivo' END AS estado,
+                s.letra AS seccion_letra,
+                u.cedula AS docente_cedula,
+                r.cedula_docente AS cedula_creador,
+                CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre
+            FROM rubrica r
+            INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+            INNER JOIN evaluacion e ON ru.id_eval = e.id
+            LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
+            LEFT JOIN estrategia_eval eeval ON eemp.id_estrategia = eeval.id
+            INNER JOIN seccion s ON e.id_seccion = s.id
+            INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
+            INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
+            INNER JOIN materia m ON mp.codigo_materia = m.codigo
+            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+            INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
+            INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+            WHERE r.activo = 1 AND u.activo = 1
+              AND s.codigo_periodo = ?
+              AND (r.nombre_rubrica LIKE ? OR e.contenido LIKE ?)
+            GROUP BY e.id
+            ORDER BY r.fecha_creacion DESC
+            LIMIT ? OFFSET ?
+        `;
+
+        const countQuery = `
+            SELECT COUNT(DISTINCT e.id) AS total
+            FROM rubrica r
+            INNER JOIN rubrica_uso ru ON r.id = ru.id_rubrica
+            INNER JOIN evaluacion e ON ru.id_eval = e.id
+            INNER JOIN seccion s ON e.id_seccion = s.id
+            INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+            INNER JOIN usuario_docente ud ON pd.docente_cedula = ud.cedula_usuario
+            INNER JOIN usuario u ON ud.cedula_usuario = u.cedula
+            WHERE r.activo = 1 AND u.activo = 1
+              AND s.codigo_periodo = ?
+              AND (r.nombre_rubrica LIKE ? OR e.contenido LIKE ?)
+        `;
+
+        const [rubricas, countResult] = await Promise.all([
+            new Promise((res, rej) =>
+                connection.query(dataQuery, [periodo, like, like, parseInt(limit), offset], (err, rows) =>
+                    err ? rej(err) : res(rows)
+                )
+            ),
+            new Promise((res, rej) =>
+                connection.query(countQuery, [periodo, like, like], (err, rows) =>
+                    err ? rej(err) : res(rows)
+                )
+            )
+        ]);
+
+        const total = countResult[0]?.total || 0;
+        return { rubricas, total, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) || 1 };
     }
 
     async getRubricaDetalle(id, id_eval) {

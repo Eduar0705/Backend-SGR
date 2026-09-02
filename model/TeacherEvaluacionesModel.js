@@ -14,7 +14,6 @@ function query(sql, params = []) {
 class TeacherEvaluacionesModel {
     static async getAllTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
-        periodo = "2025-1"
         let queryParams = [];
 
         if (esAdmin) {
@@ -35,9 +34,7 @@ class TeacherEvaluacionesModel {
                     u.apeliido AS estudiante_apellido,
                     r.nombre_rubrica as nombre_rubrica,
                     tr.nombre as tipo_evaluacion,
-                    IFNULL((SELECT SUM(cr2.puntaje_maximo)
-                    FROM criterio_rubrica cr2
-                    WHERE cr2.rubrica_id = r.id), e.ponderacion) as porcentaje_evaluacion,
+                    e.ponderacion as porcentaje_evaluacion,
                     r.instrucciones,
                     e.competencias,
                     m.nombre as materia_nombre,
@@ -92,9 +89,7 @@ class TeacherEvaluacionesModel {
                     u.apeliido AS estudiante_apellido,
                     r.nombre_rubrica as nombre_rubrica,
                     tr.nombre as tipo_evaluacion,
-                    IFNULL((SELECT SUM(cr2.puntaje_maximo)
-                    FROM criterio_rubrica cr2
-                    WHERE cr2.rubrica_id = r.id), e.ponderacion) as porcentaje_evaluacion,
+                    e.ponderacion as porcentaje_evaluacion,
                     r.instrucciones,
                     e.competencias,
                     m.nombre as materia_nombre,
@@ -157,7 +152,6 @@ class TeacherEvaluacionesModel {
     }
     static async getTeacherEvaluaciones(docenteCedula, esAdmin, periodo) {
         let sqlQuery;
-        periodo = "2025-1"
         let queryParams = [];
 
         if (esAdmin) {
@@ -335,7 +329,6 @@ class TeacherEvaluacionesModel {
         });
     }
     static async getCarreras(docenteCedula, periodo) {
-        periodo = "2025-1"
         const sqlQuery = `
             SELECT DISTINCT
                 c.codigo,
@@ -356,7 +349,6 @@ class TeacherEvaluacionesModel {
     }
 
     static async getMaterias(carreraCodigo, docenteCedula, periodo) {
-        periodo = "2025-1"
         const sqlQuery = `
             SELECT DISTINCT
                 m.codigo,
@@ -379,7 +371,6 @@ class TeacherEvaluacionesModel {
     }
 
     static async getSecciones(materiaCodigo, docenteCedula, periodo) {
-        periodo = "2025-1"
         const sqlQuery = `
             SELECT DISTINCT
                 s.id,

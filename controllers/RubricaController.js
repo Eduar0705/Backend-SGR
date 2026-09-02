@@ -85,16 +85,6 @@ class RubricaController {
             res.status(500).json({ success: false, message: 'Error al obtener evaluaciones' });
         }
     }
-    async getOpciones(req, res) {
-    try {
-        const esAdmin = req.user.id_rol === 1;
-        const resultado = await RubricaModel.getOpciones(req.user.cedula, esAdmin);
-        res.json({ success: true, ...resultado });
-    } catch (error) {
-        console.error('Error al obtener opciones:', error);
-        res.json({ success: false, message: 'Error al obtener opciones' });
-    }
-}
     async getProfesores(req, res) {
     try {
         const profesores = await RubricaModel.getProfesores();

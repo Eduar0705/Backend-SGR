@@ -40,9 +40,6 @@ router.get('/admin/rubricas/carrera-seccion/:seccion_codigo', RubricaController.
 // Obtener carreras
 router.get('/admin/carreras', RubricaController.getCarreras);
 
-// Obtener materias y secciones (para el modal)
-router.get('/admin/opciones', RubricaController.getOpciones);
-
 // Obtener profesores únicos
 router.get("/admin/rubricas/profesores", RubricaController.getProfesores);
 

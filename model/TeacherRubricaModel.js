@@ -69,7 +69,7 @@ class TeacherRubricaModel {
             FROM seccion s
             INNER JOIN materia_pensum mp ON mp.id = s.id_materia_plan
             INNER JOIN pensum pen ON mp.id_pensum = pen.id
-            INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
+            INNER JOIN periodo_academico pa ON s.codigo_periodo = pa.codigo
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
             WHERE mp.codigo_materia = ? AND pd.docente_cedula = ?
             AND pa.codigo = ?
@@ -401,7 +401,7 @@ class TeacherRubricaModel {
                 u.cedula as docente_cedula, 
                 m.codigo AS materia_codigo, 
                 s.id AS seccion_id,
-                pa.codigo AS lapse_academico, 
+                s.codigo_periodo AS lapse_academico, 
                 e.fecha_evaluacion,
                 e.ponderacion AS porcentaje_evaluacion,
                 GROUP_CONCAT(DISTINCT eeval.nombre SEPARATOR ', ') AS tipo_evaluacion,
@@ -426,7 +426,6 @@ class TeacherRubricaModel {
             INNER JOIN seccion s ON e.id_seccion = s.id
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
             INNER JOIN pensum pen ON mp.id_pensum = pen.id
-            INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
             INNER JOIN materia m ON mp.codigo_materia = m.codigo
             INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
             INNER JOIN permiso_docente pd ON s.id = pd.id_seccion

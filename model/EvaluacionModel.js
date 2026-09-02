@@ -610,15 +610,16 @@ class EvaluacionModel {
             const query = `
                 SELECT 
                     hs.id, hs.dia, hs.dia_num, hs.aula, hs.hora_inicio, hs.hora_cierre,
-                    pa.codigo AS periodo, pa.fecha_inicio, pa.fecha_fin
+                    s.codigo_periodo AS periodo, pa.fecha_inicio, pa.fecha_fin
                 FROM seccion s
                 INNER JOIN horario_seccion hs ON s.id = hs.id_seccion
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
+                INNER JOIN periodo_academico pa ON s.codigo_periodo = pa.codigo
                 WHERE s.id = ?
                 GROUP BY hs.id;
             `;
+            console.log(seccionId)
             pool.query(query, [seccionId], (error, results) => {
                 if (error) return reject(error);
                 resolve(results);

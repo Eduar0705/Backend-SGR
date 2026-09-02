@@ -89,7 +89,7 @@ class RubricaModel {
                 FROM seccion s
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
+                INNER JOIN periodo_academico pa ON s.codigo_periodo = pa.codigo
                 LEFT JOIN horario_seccion hs ON s.id = hs.id_seccion
                 LEFT JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 WHERE mp.codigo_materia = ? 
@@ -642,58 +642,6 @@ class RubricaModel {
             connection.query(query, params, (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
-            });
-        });
-    }
-
-    async getOpciones(cedula, esAdmin) {
-        return new Promise((resolve, reject) => {
-            let queryMaterias, paramsMaterias = [];
-            if (esAdmin) { //CONDICIONAR POR PERIODO URGENTEMENTE
-                queryMaterias = `SELECT codigo, nombre FROM materia ORDER BY nombre;`;
-            } else { //CONDICIONAR POR PERIODO URGENTEMENTE
-                queryMaterias = `SELECT m.codigo, m.nombre FROM materia m INNER JOIN materia_pensum mp ON m.codigo = mp.codigo_materia INNER JOIN seccion s ON mp.id = s.id_materia_plan INNER JOIN permiso_docente pd ON s.id = pd.id_seccion WHERE pd.docente_cedula = ? GROUP BY m.codigo ORDER BY m.nombre;`;
-                paramsMaterias = [cedula];
-            }
-
-            connection.query(queryMaterias, paramsMaterias, (err, materias) => {
-                if (err) return reject(err);
-
-                let querySecciones, paramsSecciones = [];
-                if (esAdmin) {
-                    querySecciones = `SELECT 
-                                        s.id_materia_plan AS id, 
-                                        s.letra, 
-                                        CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo, 
-                                        mp.codigo_materia AS materia_codigo,
-                                        pa.codigo AS lapse_academico 
-                                    FROM seccion s 
-                                    INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
-                                    INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                                    INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
-                                    GROUP BY codigo, lapse_academico 
-                                    ORDER BY codigo;`;
-                } else {
-                    querySecciones = `SELECT 
-                                        s.id_materia_plan AS id, 
-                                        s.letra, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, '-', s.letra) AS codigo, 
-                                        mp.codigo_materia AS materia_codigo, 
-                                        pa.codigo AS lapse_academico 
-                                    FROM seccion s 
-                                    INNER JOIN permiso_docente pd ON pd.id_seccion = s.id 
-                                    INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id 
-                                    INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                                    INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
-                                    WHERE pd.docente_cedula = ? 
-                                    GROUP BY codigo, lapse_academico 
-                                    ORDER BY codigo;`;
-                    paramsSecciones = [cedula];
-                }
-
-                connection.query(querySecciones, paramsSecciones, (err, secciones) => {
-                    if (err) return reject(err);
-                    resolve({ materias, secciones });
-                });
             });
         });
     }

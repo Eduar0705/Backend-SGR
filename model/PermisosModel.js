@@ -48,7 +48,7 @@ class PermisosModel {
                 INNER JOIN seccion s ON pd.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                 INNER JOIN pensum pen ON mp.id_pensum = pen.id
-                INNER JOIN periodo_academico pa ON pen.id = pa.id_pensum
+                INNER JOIN periodo_academico pa ON s.codigo_periodo = pa.codigo
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 INNER JOIN usuario u ON pd.docente_cedula = u.cedula

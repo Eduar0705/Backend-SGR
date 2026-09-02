@@ -334,6 +334,17 @@ class RubricaController {
             res.status(500).json({ success: false, message: error.message || 'Error al auditar rúbrica' });
         }
     }
+
+    async vincularRubrica(req, res) {
+        try {
+            const { id, id_eval } = req.params;
+            const result = await RubricaModel.vincularRubrica(id, id_eval);
+            res.json({ success: true, message: result.message });
+        } catch (error) {
+            console.error('Error vincularRubrica:', error);
+            res.status(500).json({ success: false, message: error.message || 'Error al vincular rúbrica' });
+        }
+    }
 }
 
 module.exports = new RubricaController();

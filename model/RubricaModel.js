@@ -1122,6 +1122,62 @@ class RubricaModel {
             });
         });
     }
+
+    async vincularRubrica(id_rubrica, id_evaluacion) {
+        return new Promise((resolve, reject) => {
+            connection.getConnection(async (err, conn) => {
+                if (err) return reject(err);
+
+                try {
+                    // Validar que la rúbrica existe y está activa
+                    const rubricaCheck = await new Promise((res, rej) =>
+                        conn.query('SELECT id FROM rubrica WHERE id = ? AND activo = 1', [id_rubrica], (e, r) => e ? rej(e) : res(r))
+                    );
+                    if (rubricaCheck.length === 0) {
+                        conn.release();
+                        return reject(new Error('La rúbrica no existe o no está disponible.'));
+                    }
+
+                    // Validar que la evaluación existe
+                    const evalCheck = await new Promise((res, rej) =>
+                        conn.query('SELECT id FROM evaluacion WHERE id = ?', [id_evaluacion], (e, r) => e ? rej(e) : res(r))
+                    );
+                    if (evalCheck.length === 0) {
+                        conn.release();
+                        return reject(new Error('La evaluación no existe.'));
+                    }
+
+                    // Verificar si ya tiene una rúbrica vinculada
+                    const existingCheck = await new Promise((res, rej) =>
+                        conn.query('SELECT id_rubrica FROM rubrica_uso WHERE id_eval = ?', [id_evaluacion], (e, r) => e ? rej(e) : res(r))
+                    );
+                    if (existingCheck.length > 0) {
+                        conn.release();
+                        return reject(new Error('Esta evaluación ya tiene una rúbrica asignada.'));
+                    }
+
+                    // Crear la vinculación
+                    const insertUsoQuery = 'INSERT INTO rubrica_uso (id_rubrica, id_eval, estado) VALUES (?, ?, ?)';
+                    const resultado = await new Promise((res, rej) =>
+                        conn.query(insertUsoQuery, [id_rubrica, id_evaluacion, 'Aprobado'], (e, r) => e ? rej(e) : res(r))
+                    );
+
+                    conn.release();
+                    if (!resultado || resultado.affectedRows === 0) {
+                        return reject(new Error('No se pudo vincular la rúbrica a la evaluación.'));
+                    }
+
+                    resolve({
+                        success: true,
+                        message: '¡Éxito! Rúbrica vinculada a la evaluación correctamente.'
+                    });
+                } catch (error) {
+                    conn.release();
+                    reject(error);
+                }
+            });
+        });
+    }
 }
 
 module.exports = new RubricaModel();

@@ -761,7 +761,7 @@ class TeacherRubricaModel {
                     if (err) { conn.release(); return reject(err); }
 
                     try {
-                        // 1. Verificar permisos del docente
+                        // 1. Verificar permisos del docente y fechas
                         const checkOwnerQuery = `
                         SELECT 
                             cp.fecha_inicio AS inicio_corte, 
@@ -786,9 +786,7 @@ class TeacherRubricaModel {
                             throw new Error('No tiene permisos para eliminar el uso de esta rúbrica');
                         }
 
-                        // Fecha actual fija para pruebas
                         const hoy = new Date();
-
                         const inicioCorte = new Date(evalRubrica.inicio_corte);
                         const finCorte = new Date(evalRubrica.fin_corte);
                         const dentroDelCorte = hoy >= inicioCorte && hoy <= finCorte;
@@ -803,16 +801,19 @@ class TeacherRubricaModel {
                         if (!dentroDelCorte && !dentroDeCorrecciones) {
                             throw new Error('Solo se pueden modificar las evaluaciones y sus rúbricas durante sus cortes o los lapsos de correcciones de su periodo académico.');
                         }
-                        // 2. Eliminar el registro de rubrica_uso (la vinculación específica)
-                        const deleteUsoQuery = `
-                        DELETE FROM rubrica_uso 
-                        WHERE id_rubrica = ? AND id_eval = ?
+
+                        // 2. Eliminar los detalles de evaluación (detalle_evaluacion)
+                        const deleteDetallesQuery = `
+                        DELETE de
+                        FROM detalle_evaluacion de
+                        INNER JOIN evaluacion_realizada er ON de.evaluacion_r_id = er.id
+                        WHERE er.id_evaluacion = ?
                     `;
                         await new Promise((res, rej) =>
-                            conn.query(deleteUsoQuery, [id, id_eval], (e, r) => e ? rej(e) : res(r))
+                            conn.query(deleteDetallesQuery, [id_eval], (e, r) => e ? rej(e) : res(r))
                         );
 
-                        // 3. Eliminar todas las evaluaciones realizadas de esa evaluación
+                        // 3. Eliminar las evaluaciones realizadas
                         const deleteEvalRealizadaQuery = `
                         DELETE FROM evaluacion_realizada 
                         WHERE id_evaluacion = ?
@@ -821,7 +822,16 @@ class TeacherRubricaModel {
                             conn.query(deleteEvalRealizadaQuery, [id_eval], (e, r) => e ? rej(e) : res(r))
                         );
 
-                        // 4. Confirmar transacción
+                        // 4. Eliminar la vinculación (rubrica_uso)
+                        const deleteUsoQuery = `
+                        DELETE FROM rubrica_uso 
+                        WHERE id_rubrica = ? AND id_eval = ?
+                    `;
+                        await new Promise((res, rej) =>
+                            conn.query(deleteUsoQuery, [id, id_eval], (e, r) => e ? rej(e) : res(r))
+                        );
+
+                        // 5. Confirmar transacción
                         conn.commit((err) => {
                             if (err) {
                                 return conn.rollback(() => {
@@ -835,6 +845,7 @@ class TeacherRubricaModel {
                                 message: 'Uso de la rúbrica eliminado y evaluaciones realizadas borradas. ¡Recuerde asignar otra rúbrica a la evaluación!'
                             });
                         });
+
                     } catch (error) {
                         conn.rollback(() => {
                             conn.release();

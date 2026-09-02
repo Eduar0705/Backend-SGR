@@ -27,6 +27,7 @@ router.get("/admin/rubricas/detalle/:id/:id_eval", RubricaController.getRubricaD
 
 // Actualizar rúbrica
 router.post('/rubrica/actualizar/:id', RubricaController.updateRubrica);
+router.post('/admin/rubricas/link/:id/:id_eval', RubricaController.vincularRubrica);
 router.delete('/admin/rubricas/delete/:id', RubricaController.deleteRubrica);
 // Auditar rúbrica (aprobar / rechazar)
 router.put('/admin/rubricas/auditar', RubricaController.auditarRubrica);

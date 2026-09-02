@@ -229,7 +229,7 @@ class TeacherRubricaModel {
         // modo='mis': solo rúbricas creadas por el docente en sus secciones
         // modo='materias': todas las rúbricas de secciones donde el docente tiene permiso
         const modoClause = modo === 'materias'
-                        ? `AND EXISTS (
+            ? `AND EXISTS (
                             SELECT 1
                             FROM permiso_docente pd2
                             INNER JOIN seccion s2 ON pd2.id_seccion = s2.id
@@ -237,7 +237,7 @@ class TeacherRubricaModel {
                             WHERE mp2.codigo_materia = mp.codigo_materia
                                 AND pd2.docente_cedula = ?
                         )`
-                        : 'AND pd.docente_cedula = ?';
+            : 'AND pd.docente_cedula = ?';
 
         const dataQuery = `
             SELECT
@@ -658,7 +658,100 @@ class TeacherRubricaModel {
             });
         });
     }
+    async vincularRubrica(id_rubrica, id_evaluacion, cedula) {
+        return new Promise((resolve, reject) => {
+            connection.getConnection((err, conn) => {
+                if (err) return reject(err);
 
+                conn.beginTransaction(async (err) => {
+                    if (err) { conn.release(); return reject(err); }
+
+                    try {
+                        // Validar que la rúbrica existe y está activa
+                        const rubricaCheck = await new Promise((res, rej) =>
+                            conn.query('SELECT id FROM rubrica WHERE id = ? AND activo = 1', [id_rubrica], (e, r) => e ? rej(e) : res(r))
+                        );
+                        if (rubricaCheck.length === 0) {
+                            throw new Error('La rúbrica no existe o no está disponible.');
+                        }
+
+                        // Verificar permisos del docente y fechas
+                        const checkOwnerQuery = `
+                        SELECT 
+                            cp.fecha_inicio AS inicio_corte, 
+                            cp.fecha_fin AS fin_corte,
+                            lc.fecha_inicio AS inicio_correcciones,
+                            lc.fecha_fin AS fin_correcciones
+                        FROM evaluacion e
+                        INNER JOIN corte_periodo cp ON e.corte_orden = cp.orden
+                        INNER JOIN periodo_academico pa ON cp.codigo_periodo = pa.codigo
+                        LEFT JOIN lapso_correcciones lc ON pa.codigo = lc.codigo_periodo
+                        INNER JOIN seccion s ON e.id_seccion = s.id
+                        INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
+                        WHERE e.id = ? AND pd.docente_cedula = ?
+                    `;
+                        const checkResults = await new Promise((res, rej) =>
+                            conn.query(checkOwnerQuery, [id_evaluacion, cedula], (e, r) => e ? rej(e) : res(r))
+                        );
+                        const evalData = checkResults[0];
+                        if (!evalData) {
+                            throw new Error('No tiene permisos para vincular esta rúbrica a esta evaluación.');
+                        }
+
+                        // Validación de fechas (igual que antes)
+                        const hoy = new Date();
+                        const inicioCorte = new Date(evalData.inicio_corte);
+                        const finCorte = new Date(evalData.fin_corte);
+                        const dentroDelCorte = hoy >= inicioCorte && hoy <= finCorte;
+
+                        let dentroDeCorrecciones = false;
+                        if (evalData.inicio_correcciones && evalData.fin_correcciones) {
+                            const inicioCorr = new Date(evalData.inicio_correcciones);
+                            const finCorr = new Date(evalData.fin_correcciones);
+                            dentroDeCorrecciones = hoy >= inicioCorr && hoy <= finCorr;
+                        }
+
+                        if (!dentroDelCorte && !dentroDeCorrecciones) {
+                            throw new Error('Solo se pueden modificar las evaluaciones y sus rúbricas durante sus cortes o los lapsos de correcciones de su periodo académico.');
+                        }
+
+                        // Crear la vinculación
+                        const insertUsoQuery = `
+                        INSERT INTO rubrica_uso (id_rubrica, id_eval)
+                        VALUES (?, ?)
+                    `;
+                        const resultado = await new Promise((res, rej) =>
+                            conn.query(insertUsoQuery, [id_rubrica, id_evaluacion], (e, r) => e ? rej(e) : res(r))
+                        );
+
+                        if (!resultado || resultado.affectedRows === 0) {
+                            throw new Error('Ha ocurrido un error vinculando la evaluación y rúbrica. Por favor intente más tarde.');
+                        }
+
+                        conn.commit((err) => {
+                            if (err) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    reject(err);
+                                });
+                            }
+                            conn.release();
+                            resolve({
+                                success: true,
+                                message: '¡Éxito! Rúbrica vinculada a la evaluación correctamente.'
+                            });
+                        });
+
+                    } catch (error) {
+                        conn.rollback(() => {
+                            conn.release();
+                            reject(error);
+                        });
+                    }
+                });
+            });
+        });
+    }
     async desvincularRubrica(id, id_eval, cedula) {
         return new Promise((resolve, reject) => {
             connection.getConnection((err, conn) => {

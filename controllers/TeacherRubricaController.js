@@ -140,7 +140,17 @@ class TeacherRubricaController {
             res.status(500).json({ success: false, mensaje: 'Error al actualizar rúbrica: ' + error.message });
         }
     }
-
+    async vincularRubrica(req, res) {
+        try {
+            let result;
+            const {id, id_eval} = req.params;
+            result = await TeacherRubricaModel.vincularRubrica(id, id_eval, req.user.cedula);
+            res.json({ success: true, message: result.message });
+        } catch (error) {
+            console.error('Error vincularRubrica:', error);
+            res.status(500).json({ success: false, message: 'Error al vincular rúbrica: ' + error.message });
+        }
+    }
     async desvincularRubrica(req, res) {
         try {
             let result;

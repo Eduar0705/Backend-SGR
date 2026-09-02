@@ -101,7 +101,7 @@ class TeacherRubricaController {
 
     async getRubricaDetalle(req, res) {
         try {
-            const result = await TeacherRubricaModel.getRubricaDetalle(req.params.id, req.params.id_eval, req.user.cedula);
+            const result = await TeacherRubricaModel.getRubricaDetalle(req.params.id, req.params.id_eval);
             if (!result) return res.status(404).json({ success: false, message: 'Rúbrica no encontrada' });
             res.json({ success: true, rubrica: result.rubrica, criterios: result.criterios });
         } catch (error) {

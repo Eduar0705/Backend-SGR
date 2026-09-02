@@ -318,7 +318,7 @@ class TeacherRubricaModel {
     }
 
 
-    async getRubricaDetalle(id, id_eval, cedula) {
+    async getRubricaDetalle(id, id_eval) {
         let porcentaje_evaluacion;
         const queryRubrica = `
             SELECT
@@ -331,7 +331,8 @@ class TeacherRubricaModel {
                 CASE WHEN cantidad_personas=1 THEN 'Individual' WHEN cantidad_personas=2 THEN 'En Pareja' ELSE 'Grupal' END AS modalidad,
                 e.cantidad_personas, r.activo, r.fecha_creacion AS created_at, r.fecha_actualizacion AS updated_at,
                 m.nombre AS materia_nombre, CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                c.nombre AS carrera_nombre, CONCAT(u_p.nombre, ' ', u_p.apeliido) AS docente_nombre
+                c.nombre AS carrera_nombre, CONCAT(u_p.nombre, ' ', u_p.apeliido) AS docente_nombre,
+                s.codigo_periodo AS lapse_academico
             FROM evaluacion e
             INNER JOIN rubrica_uso ru ON ru.id_eval = e.id
             INNER JOIN rubrica r ON r.id = ru.id_rubrica
@@ -345,7 +346,7 @@ class TeacherRubricaModel {
             INNER JOIN usuario u_p ON u_p.cedula = ud_p.cedula_usuario
             LEFT JOIN estrategia_empleada eemp ON e.id = eemp.id_eval
             LEFT JOIN estrategia_eval eeval ON eeval.id = eemp.id_estrategia
-            WHERE r.id = ? AND e.id = ? AND pd.docente_cedula = ? -- Aseguramos acceso por sección
+            WHERE r.id = ? AND e.id = ?
             GROUP BY r.id
         `;
         const queryCriterios = `SELECT cr.id, cr.descripcion, cr.puntaje_maximo, cr.orden FROM criterio_rubrica cr WHERE cr.rubrica_id = ? ORDER BY cr.orden`;
@@ -358,7 +359,7 @@ class TeacherRubricaModel {
         `;
 
         return new Promise((resolve, reject) => {
-            connection.query(queryRubrica, [id, id_eval, cedula], (err, rubrica) => {
+            connection.query(queryRubrica, [id, id_eval], (err, rubrica) => {
                 if (err) return reject(err);
                 if (rubrica.length === 0) return resolve(null);
                 porcentaje_evaluacion = rubrica[0].porcentaje_evaluacion

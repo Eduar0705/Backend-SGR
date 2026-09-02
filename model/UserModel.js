@@ -198,12 +198,9 @@ class UserModel {
                         ultimoPeriodoUsuarioQuery = `
                         SELECT DISTINCT pa.codigo
                         FROM periodo_academico pa
-                        INNER JOIN pensum p ON pa.id_pensum = p.id
-                        INNER JOIN materia_pensum mp ON p.id = mp.id_pensum
-                        INNER JOIN seccion s ON mp.id = s.id_materia_plan
+                        INNER JOIN seccion s ON pa.codigo = s.codigo_periodo
                         INNER JOIN permiso_docente pd ON s.id = pd.id_seccion
-                        WHERE pd.docente_cedula = ? 
-                        AND (CURRENT_DATE BETWEEN pa.fecha_inicio AND pa.fecha_fin)
+                        WHERE pd.docente_cedula = ?
                         ORDER BY pa.fecha_fin DESC
                         LIMIT 1;
                     `;
@@ -217,7 +214,6 @@ class UserModel {
                         INNER JOIN seccion s ON mp.id = s.id_materia_plan
                         INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                         WHERE ins.cedula_estudiante = ?
-                        AND (CURRENT_DATE BETWEEN pa.fecha_inicio AND pa.fecha_fin)
                         ORDER BY pa.fecha_fin DESC
                         LIMIT 1;
                     `;

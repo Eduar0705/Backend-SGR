@@ -129,7 +129,7 @@ class EvaluacionModel {
                     INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
                     INNER JOIN materia m ON mp.codigo_materia = m.codigo
                     INNER JOIN pensum p ON mp.id_pensum = p.id
-                    INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
+                    INNER JOIN periodo_academico pa ON s.codigo_periodo = pa.codigo
                     INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                     LEFT JOIN evaluacion e ON s.id = e.id_seccion
                     LEFT JOIN permiso_docente pd ON s.id = pd.id_seccion

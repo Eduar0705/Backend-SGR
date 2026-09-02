@@ -1,7 +1,7 @@
 const connection = require('./conexion');
 
 class PermisosModel {
-    async getPermisosByDocente(cedula, periodo) {
+    async getPermisosByDocente(cedula, periodo) { //eliminar parametro
         return new Promise((resolve, reject) => {
             const query = `
                 SELECT 
@@ -13,20 +13,17 @@ class PermisosModel {
                     c.nombre as carrera_nombre,
                     m.nombre as materia_nombre,
                     CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
-                    pa.codigo AS lapso_academico
+                    s.codigo_periodo AS lapso_academico
                 FROM permiso_docente pd
                 INNER JOIN seccion s ON pd.id_seccion = s.id
                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
-                INNER JOIN pensum p ON mp.id_pensum = p.id
-                INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
                 INNER JOIN materia m ON mp.codigo_materia = m.codigo
                 INNER JOIN carrera c ON mp.codigo_carrera = c.codigo
                 WHERE pd.docente_cedula = ? AND pd.activo = 1
-                AND pa.codigo = ?
                 GROUP BY pd.id
                 ORDER BY carrera_nombre, semestre, materia_nombre, seccion_codigo;
             `;
-            connection.query(query, [cedula, periodo], (err, results) => {
+            connection.query(query, [cedula], (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
             });

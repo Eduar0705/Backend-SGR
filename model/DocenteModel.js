@@ -1,7 +1,7 @@
 const connection = require('./conexion');
 
 class DocenteModel {
-    async getDocentes(periodo) {
+    async getDocentes(periodo) { //eliminar parametro
         const query = `
             SELECT 
                 u.cedula, 
@@ -19,14 +19,14 @@ class DocenteModel {
             INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
             INNER JOIN pensum p ON mp.id_pensum = p.id
             INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
-            WHERE u.activo = 1 AND pa.codigo = ?
+            WHERE u.activo = 1
             AND u.id_rol = 2 
             GROUP BY u.cedula
             ORDER BY apellido, nombre
         `;
 
         return new Promise((resolve, reject) => {
-            connection.query(query, [periodo], (err, results) => {
+            connection.query(query, (err, results) => {
                 if (err) return reject(err);
                 resolve(results);
             });

@@ -33,7 +33,7 @@ router.put('/admin/rubricas/auditar', RubricaController.auditarRubrica);
 // Obtener datos para editar rúbrica
 router.get('/admin/rubricas/editar/:id/:id_eval', RubricaController.getRubricaForEdit);
 // Obtener datos para editar rúbrica
-router.get('/admin/rubricas/duplicar/:id/:id_eval', RubricaController.getRubricaForEdit);
+router.get('/admin/rubricas/duplicar/:id/:id_eval', RubricaController.getRubricaForDuplica);
 
 // Obtener carrera y semestre de una materia
 router.get('/admin/rubricas/carrera-seccion/:seccion_codigo', RubricaController.getCarreraYSemestreBySeccion);
@@ -58,5 +58,11 @@ router.get("/api/admin/materias/:carrera/:semestre", RubricaController.getMateri
 
 // Obtener secciones por materia (admin)
 router.get("/api/admin/secciones/:materia/:carreraCodigo", RubricaController.getSeccionesAdmin);
+
+// DELETE /api/rubricas/admin/rubricas/:id → eliminacion (logica) de rubrica.
+router.delete('/admin/rubricas/:id', RubricaController.deleteRubrica);
+
+// DELETE /api/rubricas/admin/rubricas/unlink/:id/:id_eval → desvincular rúbrica de evaluacion
+router.delete('/admin/rubricas/unlink/:id/:id_eval', RubricaController.desvincularRubrica);
 
 module.exports = router;

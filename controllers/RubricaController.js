@@ -147,7 +147,7 @@ class RubricaController {
                 tipo_rubrica,
                 instrucciones,
                 criterios,
-                porcentaje
+                porcentaje_evaluacion
             } = req.body;
 
             const cedula_docente = req.user.cedula;
@@ -168,7 +168,7 @@ class RubricaController {
             const { validarEstructuraRubrica } = require('../utils/evaluacionUtils');
             const validacion = validarEstructuraRubrica({
                 criterios: criteriosParsed,
-                porcentaje: porcentaje || req.body.porcentaje_evaluacion,
+                porcentaje: porcentaje_evaluacion || req.body.porcentaje_evaluacion,
                 esCreacion: true
             });
 
@@ -182,7 +182,7 @@ class RubricaController {
                 tipo_rubrica,
                 instrucciones,
                 criterios: criteriosParsed,
-                porcentaje: porcentaje || req.body.porcentaje_evaluacion,
+                porcentaje_evaluacion: porcentaje_evaluacion,
                 cedula_docente
             });
 
@@ -250,6 +250,17 @@ class RubricaController {
             res.status(500).json({ success: false, mensaje: error.message || 'Error interno del servidor' });
         }
     }
+    async desvincularRubrica(req, res) {
+        try {
+            let result;
+            const { id, id_eval } = req.params;
+            result = await RubricaModel.desvincularRubrica(id, id_eval);
+            res.json({ success: true, message: result.message });
+        } catch (error) {
+            console.error('Error desvincularRubrica:', error);
+            res.status(500).json({ success: false, message: 'Error al desvincular rúbrica: ' + error.message });
+        }
+    }
     async getRubricaDetalle(req, res) {
         try {
             const { id, id_eval } = req.params;
@@ -281,6 +292,7 @@ class RubricaController {
     async getRubricaForDuplica(req, res) {
         try {
             const { id, id_eval } = req.params;
+            console.log(id, id_eval)
             const resultado = await RubricaModel.getRubricaForDuplica(id, id_eval, req.user);
             if (resultado) {
                 res.json({ success: true, ...resultado });

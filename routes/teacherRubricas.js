@@ -32,7 +32,7 @@ router.get('/duplicar/:id/:id_eval', TeacherRubricaController.getRubricaForDupli
 // PUT /api/teacher/rubricas/:id → Editar rúbrica
 router.put('/:id', TeacherRubricaController.updateRubrica);
 
-// DELETE /api/teacher/rubricas/:id → desvincular rúbrica de evaluacion
+// DELETE /api/teacher/rubricas/unlink/:id/:id_eval → desvincular rúbrica de evaluacion
 router.delete('/unlink/:id/:id_eval', TeacherRubricaController.desvincularRubrica);
 
 module.exports = router;

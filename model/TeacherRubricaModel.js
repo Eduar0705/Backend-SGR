@@ -524,7 +524,7 @@ class TeacherRubricaModel {
             CONCAT(mp.codigo_carrera, '-', mp.codigo_materia, ' ', s.letra) AS seccion_codigo,
             s.codigo_periodo AS lapse_academico,
             u.cedula AS docente_cedula,
-            CONCAT(u.nombre, ' ', u.apellido) AS docente_nombre,
+            CONCAT(u.nombre, ' ', u.apeliido) AS docente_nombre,
             c.nombre AS carrera_nombre,
             mp.codigo_carrera AS carrera_codigo,
             mp.codigo_materia AS materia_codigo_plan

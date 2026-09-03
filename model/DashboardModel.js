@@ -11,8 +11,7 @@ class DashboardModel {
                                 INNER JOIN permiso_docente pd ON u.cedula = pd.docente_cedula
                                 INNER JOIN seccion s ON pd.id_seccion = s.id
                                 INNER JOIN materia_pensum mp ON s.id_materia_plan = mp.id
-                                INNER JOIN pensum p ON s.codigo_periodo = p.codigo
-                                INNER JOIN periodo_academico pa ON p.id = pa.id_pensum
+                                INNER JOIN periodo_academico pa ON s.codigo_periodo = pa.codigo
                                 WHERE u.activo = 1
                                 AND pa.codigo = ?`;
             

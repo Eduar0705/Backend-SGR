@@ -265,7 +265,10 @@ class RubricaModel {
             conn = await this.getConnectionAsync();
             await this.beginTransactionAsync(conn);
 
-            const existing = await this.queryAsync(conn, 'SELECT id_rubrica FROM rubrica_uso WHERE id_eval = ?', [data.id_evaluacion]);
+            const existing = await this.queryAsync(conn,
+                'SELECT id_rubrica FROM rubrica_uso WHERE id_eval = ?',
+                [data.id_evaluacion]
+            );
             if (existing.length > 0) {
                 throw new Error('Esta evaluación ya tiene una rúbrica asignada.');
             }
@@ -276,11 +279,6 @@ class RubricaModel {
             );
             const rubricaId = resRubrica.insertId;
 
-            await this.queryAsync(conn,
-                'INSERT INTO rubrica_uso (id_eval, id_rubrica) VALUES (?, ?)',
-                [data.id_evaluacion, rubricaId]
-            );
-
             for (const crit of data.criterios) {
                 const resCrit = await this.queryAsync(conn,
                     `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)`,
@@ -290,6 +288,7 @@ class RubricaModel {
 
                 if (crit.niveles && crit.niveles.length > 0) {
                     for (const nivel of crit.niveles) {
+                        // Insertar nivel (escalando puntaje al 100%)
                         await this.queryAsync(conn,
                             `INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)`,
                             [criterioId, nivel.nombre_nivel, nivel.descripcion, ((nivel.puntaje / crit.puntaje_maximo) * 100), nivel.orden]
@@ -297,6 +296,11 @@ class RubricaModel {
                     }
                 }
             }
+
+            await this.queryAsync(conn,
+                'INSERT INTO rubrica_uso (id_eval, id_rubrica) VALUES (?, ?)',
+                [data.id_evaluacion, rubricaId]
+            );
 
             await this.commitAsync(conn);
             conn.release();
@@ -308,6 +312,7 @@ class RubricaModel {
                     id_rubrica: rubricaId
                 });
             } catch (notifErr) {
+                // Si la notificación falla, no rompemos la transacción (se puede hacer rollback también si se desea)
                 console.error('Error al crear notificación de rúbrica:', notifErr);
             }
 
@@ -488,10 +493,9 @@ class RubricaModel {
         });
     }
 
-    async getRubricaForDuplica(id_rubrica, id_evaluacion, session) {
+    async getRubricaForDuplica(id_rubrica, id_evaluacion) {
         return new Promise((resolve, reject) => {
-            const esAdmin = session.id_rol === 1;
-
+            console.log(id_rubrica, id_evaluacion, 'lol')
             // ─── 1. Obtener datos de la evaluación ───
             let queryEvaluacion = `
             SELECT 
@@ -528,11 +532,6 @@ class RubricaModel {
             WHERE e.id = ?
         `;
             let paramsEvaluacion = [id_evaluacion];
-            if (!esAdmin) {
-                queryEvaluacion += ` AND pd.docente_cedula = ?`;
-                paramsEvaluacion.push(session.cedula);
-            }
-            queryEvaluacion += ` GROUP BY e.id`;
 
             // ─── 2. Obtener datos de la rúbrica ───
             const queryRubrica = `
@@ -875,8 +874,7 @@ class RubricaModel {
                     LEFT JOIN 
                     	(SELECT 
                     		er.id, 
-                            er.id_evaluacion,
-                    		er.id_evaluacion 
+                            er.id_evaluacion
                     	FROM evaluacion_realizada er 
                     	INNER JOIN detalle_evaluacion de ON er.id = de.evaluacion_r_id 
                     	GROUP BY er.id, er.id_evaluacion
@@ -1061,6 +1059,93 @@ class RubricaModel {
             });
         });
     }
+    async desvincularRubrica(id, id_eval) {
+        return new Promise((resolve, reject) => {
+            connection.getConnection((err, conn) => {
+                if (err) return reject(err);
+
+                conn.beginTransaction(async (err) => {
+                    if (err) { conn.release(); return reject(err); }
+
+                    try {
+                        // 1. Contar usos actuales de la rúbrica (para saber si es la última)
+                        const countUsoQuery = `
+                        SELECT COUNT(*) AS total
+                        FROM rubrica_uso
+                        WHERE id_rubrica = ?
+                    `;
+                        const countResult = await new Promise((res, rej) =>
+                            conn.query(countUsoQuery, [id], (e, r) => e ? rej(e) : res(r))
+                        );
+                        const esUltimoUso = countResult[0]?.total === 1;
+
+                        // 2. Eliminar detalles de evaluación (si existen)
+                        const deleteDetallesQuery = `
+                        DELETE de
+                        FROM detalle_evaluacion de
+                        INNER JOIN evaluacion_realizada er ON de.evaluacion_r_id = er.id
+                        WHERE er.id_evaluacion = ?
+                    `;
+                        await new Promise((res, rej) =>
+                            conn.query(deleteDetallesQuery, [id_eval], (e, r) => e ? rej(e) : res(r))
+                        );
+
+                        // 3. Eliminar evaluaciones realizadas
+                        const deleteEvalRealizadaQuery = `
+                        DELETE FROM evaluacion_realizada 
+                        WHERE id_evaluacion = ?
+                    `;
+                        await new Promise((res, rej) =>
+                            conn.query(deleteEvalRealizadaQuery, [id_eval], (e, r) => e ? rej(e) : res(r))
+                        );
+
+                        // 4. Eliminar la vinculación (rubrica_uso)
+                        const deleteUsoQuery = `
+                        DELETE FROM rubrica_uso 
+                        WHERE id_rubrica = ? AND id_eval = ?
+                    `;
+                        await new Promise((res, rej) =>
+                            conn.query(deleteUsoQuery, [id, id_eval], (e, r) => e ? rej(e) : res(r))
+                        );
+
+                        // 5. Si era el último uso, desactivar la rúbrica
+                        if (esUltimoUso) {
+                            const updateRubricaQuery = `
+                            UPDATE rubrica
+                            SET activo = 0
+                            WHERE id = ?
+                        `;
+                            await new Promise((res, rej) =>
+                                conn.query(updateRubricaQuery, [id], (e, r) => e ? rej(e) : res(r))
+                            );
+                        }
+
+                        // 6. Confirmar transacción
+                        conn.commit((err) => {
+                            if (err) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    reject(err);
+                                });
+                            }
+                            conn.release();
+                            resolve({
+                                success: true,
+                                message: 'Uso de la rúbrica eliminado. Si corrigió esa evaluación con esta rúbrica se recomienda corregir nuevamente. ' +
+                                    (esUltimoUso ? 'La rúbrica ha sido desactivada por falta de uso.' : '')
+                            });
+                        });
+
+                    } catch (error) {
+                        conn.rollback(() => {
+                            conn.release();
+                            reject(error);
+                        });
+                    }
+                });
+            });
+        });
+    }
     async getSemestresAdmin(carrera, cedula, esAdmin, periodo) {
         return new Promise((resolve, reject) => {
             let query, params = [];
@@ -1191,7 +1276,7 @@ class RubricaModel {
             });
         });
     }
-
+    
     async auditarRubrica(id_rubrica, id_eval, estado) {
         return new Promise((resolve, reject) => {
             let query = 'UPDATE rubrica_uso SET estado = ? WHERE id_eval = ?';

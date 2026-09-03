@@ -257,6 +257,7 @@ class DashboardModel {
     }
 
     async getTeacherStats(cedula, periodo) {
+        console.log(cedula,periodo)
         return new Promise((resolve, reject) => {
             const q1 = `SELECT COUNT(*) as total FROM rubrica WHERE cedula_docente = ? AND activo = 1;`;
             const q2 = `

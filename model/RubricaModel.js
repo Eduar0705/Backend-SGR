@@ -498,14 +498,14 @@ class RubricaModel {
 
                         const criteriosConNiveles = criterios.map(criterio => ({
                             ...criterio,
-                            puntaje_maximo: (criterio.puntaje_maximo * porcentaje_evaluacion / 100).toFixed(3),
+                            puntaje_maximo: (criterio.puntaje_maximo * porcentaje_evaluacion / 100),
                             niveles: niveles.filter(nivel => nivel.criterio_id === criterio.id)
                                 .map(n => (
                                     {
                                         criterio_id: n.criterio_id,
                                         nombre_nivel: n.nombre_nivel,
                                         descripcion: n.descripcion,
-                                        puntaje: parseFloat(n.puntaje * criterio.puntaje_maximo * porcentaje_evaluacion / 10000).toFixed(3),
+                                        puntaje: parseFloat(n.puntaje * criterio.puntaje_maximo * porcentaje_evaluacion / 10000),
                                         orden: n.orden
                                     }))
                         }));
@@ -656,7 +656,7 @@ class RubricaModel {
                                 const criteriosConNiveles = criterios.map(criterio => ({
                                     ...criterio,
                                     puntaje_maximo: parseFloat(
-                                        (criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 100).toFixed(3)
+                                        (criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 100)
                                     ),
                                     niveles: niveles.filter(n => n.criterio_id === criterio.id)
                                         .map(n => ({
@@ -664,7 +664,7 @@ class RubricaModel {
                                             nombre_nivel: n.nombre_nivel,
                                             descripcion: n.descripcion,
                                             puntaje: parseFloat(
-                                                (n.puntaje * criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 10000).toFixed(3)
+                                                (n.puntaje * criterio.puntaje_maximo * rubrica.porcentaje_evaluacion / 10000)
                                             ),
                                             orden: n.orden
                                         }))
@@ -961,8 +961,9 @@ class RubricaModel {
             for (let i = 0; i < data.criterios.length; i++) {
                 const criterio = data.criterios[i];
                 const ordenCriterio = parseInt(criterio.orden) || (i + 1);
+                console.log(criterio.puntaje_maximo, data.porcentaje_evaluacion)
                 const puntajeMaximoPorcentaje = parseFloat(
-                    ((criterio.puntaje_maximo / data.porcentaje_evaluacion) * 100).toFixed(2)
+                    ((criterio.puntaje_maximo / data.porcentaje_evaluacion) * 100)
                 );
 
                 let criterioId = criterio.id ? parseInt(criterio.id) : null;
@@ -999,7 +1000,7 @@ class RubricaModel {
                         ordenesNivelesPayload.push(ordenNivel);
 
                         const puntajeNivelPorcentaje = parseFloat(
-                            ((nivel.puntaje / criterio.puntaje_maximo) * 100).toFixed(2)
+                            ((nivel.puntaje / criterio.puntaje_maximo) * 100)
                         );
 
                         await this.queryAsync(conn,
@@ -1068,7 +1069,7 @@ class RubricaModel {
                         );
                     });
 
-                    const mensaje = `Se ha actualizado la rúbrica "${nombreRubrica}" asociada a la evaluación "${contenidoEval}".`;
+                    const mensaje = `Un administrador ha actualizado la rúbrica "${nombreRubrica}" asociada a la evaluación "${contenidoEval}".`;
                     for (const row of docRows) {
                         const cedula = row.docente_cedula;
                         try {

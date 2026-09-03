@@ -209,8 +209,8 @@ class RubricaController {
             return res.status(401).json({ success: false, mensaje: 'Sesión no válida' });
         }
 
-        const { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje } = req.body;
-        let data = { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje };
+        const { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje_evaluacion } = req.body;
+        let data = { nombre_rubrica, id_evaluacion, tipo_rubrica, instrucciones, criterios, porcentaje_evaluacion };
 
         let criteriosParsed = criterios;
         if (typeof criterios === 'string') {
@@ -228,7 +228,7 @@ class RubricaController {
         const { validarEstructuraRubrica } = require('../utils/evaluacionUtils');
         const validacion = validarEstructuraRubrica({
             criterios: criteriosParsed,
-            porcentaje: porcentaje || req.body.porcentaje_evaluacion,
+            porcentaje: porcentaje_evaluacion,
             esCreacion: false
         });
 

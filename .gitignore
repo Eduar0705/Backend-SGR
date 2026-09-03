@@ -10,6 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+script_secciones.py
+sistems_sgr.sql
+seed_data_sysrubr.sql
 *.local
 
 # Editor directories and files

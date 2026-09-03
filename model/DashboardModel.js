@@ -134,7 +134,7 @@ class DashboardModel {
         });
     }
 
-    async getStudentStats(cedula) {
+    async getStudentStats(cedula, periodo) {
         return new Promise((resolve, reject) => {
             const q1 = `
                 SELECT COUNT(DISTINCT e.id) AS total
@@ -143,14 +143,17 @@ class DashboardModel {
                 INNER JOIN inscripcion_seccion ins ON s.id = ins.id_seccion
                 INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
                 INNER JOIN rubrica r ON ru.id_rubrica = r.id
-                WHERE ins.cedula_estudiante = ?;
+                WHERE ins.cedula_estudiante = ?
+                AND s.codigo_periodo = ?;
             `;
             const q2 = `SELECT 
                             COUNT(DISTINCT er.id) as total 
                         FROM evaluacion_realizada er 
                         INNER JOIN evaluacion e ON er.id_evaluacion = e.id
+                        INNER JOIN seccion s ON e.id_seccion = s.id
                         INNER JOIN rubrica_uso ru ON e.id = ru.id_eval
-                        WHERE er.cedula_evaluado = ?;`;
+                        WHERE er.cedula_evaluado = ?
+                        AND s.codigo_periodo = ?;`;
             const q3 = `
                 SELECT COUNT(*) AS total
                 FROM (
@@ -161,6 +164,7 @@ class DashboardModel {
                     LEFT JOIN evaluacion_realizada er 
                         ON e.id = er.id_evaluacion AND ins.cedula_estudiante = er.cedula_evaluado 
                     WHERE ins.cedula_estudiante = ?
+                    AND s.codigo_periodo = ?
                     GROUP BY e.id
                     HAVING COUNT(er.id) = 0
                 ) AS evaluaciones_sin_evaluarse
@@ -191,6 +195,7 @@ class DashboardModel {
                                 INNER JOIN nivel_desempeno nd ON de.id_criterio_detalle = nd.criterio_id  AND de.orden_detalle = nd.orden 
                                 AND cr.id = nd.criterio_id 
                                 WHERE er.cedula_evaluado = ?
+                                AND s.codigo_periodo = ?
                                 GROUP BY e.id 
                                 ORDER BY er.fecha_evaluado DESC LIMIT 3
                                 ) AS ult_evaluaciones
@@ -219,13 +224,13 @@ class DashboardModel {
                 GROUP BY e.id ORDER BY e.fecha_evaluacion ASC LIMIT 5
             `;
 
-            connection.query(q1, [cedula], (err, r1) => {
+            connection.query(q1, [cedula, periodo], (err, r1) => {
                 if (err) return reject(err);
-                connection.query(q2, [cedula], (err, r2) => {
+                connection.query(q2, [cedula, periodo], (err, r2) => {
                     if (err) return reject(err);
-                    connection.query(q3, [cedula], (err, r3) => {
+                    connection.query(q3, [cedula, periodo], (err, r3) => {
                         if (err) return reject(err);
-                        connection.query(q4, [cedula], (err, r4) => {
+                        connection.query(q4, [cedula, periodo], (err, r4) => {
                             if (err) return reject(err);
                             connection.query(q5, [cedula], (err, r5) => {
                                 if (err) return reject(err);

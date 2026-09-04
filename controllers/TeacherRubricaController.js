@@ -66,7 +66,7 @@ class TeacherRubricaController {
         try {
             const validacion = validarEstructuraRubrica({
                 criterios: req.body.criterios,
-                porcentaje: req.body.porcentaje_evaluacion || req.body.porcentaje,
+                porcentaje: req.body.porcentaje_evaluacion != null ? req.body.porcentaje_evaluacion : req.body.porcentaje,
                 esCreacion: true
             });
 
@@ -136,7 +136,7 @@ class TeacherRubricaController {
         try {
             const validacion = validarEstructuraRubrica({
                 criterios: req.body.criterios,
-                porcentaje: req.body.porcentaje_evaluacion || req.body.porcentaje,
+                porcentaje: req.body.porcentaje_evaluacion != null ? req.body.porcentaje_evaluacion : req.body.porcentaje,
                 esCreacion: false
             });
 

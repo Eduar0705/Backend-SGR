@@ -283,17 +283,23 @@ class RubricaModel {
 
             // 3. Insertar criterios y niveles
             for (const crit of data.criterios) {
+                const critPuntajeMax = parseFloat(data.porcentaje_evaluacion) > 0
+                    ? ((crit.puntaje_maximo / data.porcentaje_evaluacion) * 100)
+                    : 0;
                 const resCrit = await this.queryAsync(conn,
                     `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)`,
-                    [rubricaId, crit.descripcion, ((crit.puntaje_maximo / data.porcentaje_evaluacion) * 100), crit.orden]
+                    [rubricaId, crit.descripcion, critPuntajeMax, crit.orden]
                 );
                 const criterioId = resCrit.insertId;
 
                 if (crit.niveles && crit.niveles.length > 0) {
                     for (const nivel of crit.niveles) {
+                        const nivelPuntajeMax = parseFloat(crit.puntaje_maximo) > 0
+                            ? ((nivel.puntaje / crit.puntaje_maximo) * 100)
+                            : 0;
                         await this.queryAsync(conn,
                             `INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)`,
-                            [criterioId, nivel.nombre_nivel, nivel.descripcion, ((nivel.puntaje / crit.puntaje_maximo) * 100), nivel.orden]
+                            [criterioId, nivel.nombre_nivel, nivel.descripcion, nivelPuntajeMax, nivel.orden]
                         );
                     }
                 }
@@ -962,9 +968,9 @@ class RubricaModel {
                 const criterio = data.criterios[i];
                 const ordenCriterio = parseInt(criterio.orden) || (i + 1);
                 console.log(criterio.puntaje_maximo, data.porcentaje_evaluacion)
-                const puntajeMaximoPorcentaje = parseFloat(
-                    ((criterio.puntaje_maximo / data.porcentaje_evaluacion) * 100)
-                );
+                const puntajeMaximoPorcentaje = parseFloat(data.porcentaje_evaluacion) > 0
+                    ? parseFloat(((criterio.puntaje_maximo / data.porcentaje_evaluacion) * 100))
+                    : 0;
 
                 let criterioId = criterio.id ? parseInt(criterio.id) : null;
                 let esNuevo = !criterioId;
@@ -999,9 +1005,9 @@ class RubricaModel {
                         const ordenNivel = parseInt(nivel.orden) || (j + 1);
                         ordenesNivelesPayload.push(ordenNivel);
 
-                        const puntajeNivelPorcentaje = parseFloat(
-                            ((nivel.puntaje / criterio.puntaje_maximo) * 100)
-                        );
+                        const puntajeNivelPorcentaje = parseFloat(criterio.puntaje_maximo) > 0
+                            ? parseFloat(((nivel.puntaje / criterio.puntaje_maximo) * 100))
+                            : 0;
 
                         await this.queryAsync(conn,
                             `INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden)

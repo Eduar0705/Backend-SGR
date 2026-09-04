@@ -138,8 +138,11 @@ class TeacherRubricaModel {
                             criterios.forEach((criterio, ci) => {
                                 if (hayError) return;
 
+                                const critPuntajeMax = parseFloat(porcentaje_evaluacion) > 0 
+                                    ? ((criterio.puntaje_maximo / porcentaje_evaluacion) * 100) 
+                                    : 0;
                                 const qCriterio = `INSERT INTO criterio_rubrica (rubrica_id, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?)`;
-                                conn.query(qCriterio, [rubricaId, criterio.descripcion, ((criterio.puntaje_maximo / porcentaje_evaluacion) * 100), criterio.orden || ci + 1], (err, resCrit) => {
+                                conn.query(qCriterio, [rubricaId, criterio.descripcion, critPuntajeMax, criterio.orden || ci + 1], (err, resCrit) => {
                                     if (hayError) return;
                                     if (err) { hayError = true; return conn.rollback(() => { conn.release(); reject(err); }); }
 
@@ -156,8 +159,11 @@ class TeacherRubricaModel {
                                     let nivelesCompletados = 0;
                                     criterio.niveles.forEach((nivel, ni) => {
                                         if (hayError) return;
+                                        const nivelPuntajeMax = parseFloat(criterio.puntaje_maximo) > 0
+                                            ? ((nivel.puntaje / criterio.puntaje_maximo) * 100)
+                                            : 0;
                                         const qNivel = `INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden) VALUES (?, ?, ?, ?, ?)`;
-                                        conn.query(qNivel, [criterioId, nivel.nombre_nivel, nivel.descripcion, ((nivel.puntaje / criterio.puntaje_maximo) * 100), nivel.orden || ni + 1], (err) => {
+                                        conn.query(qNivel, [criterioId, nivel.nombre_nivel, nivel.descripcion, nivelPuntajeMax, nivel.orden || ni + 1], (err) => {
                                             if (hayError) return;
                                             if (err) { hayError = true; return conn.rollback(() => { conn.release(); reject(err); }); }
                                             nivelesCompletados++;
@@ -698,8 +704,10 @@ class TeacherRubricaModel {
                         for (let i = 0; i < data.criterios.length; i++) {
                             const criterio = data.criterios[i];
                             const ordenCriterio = parseInt(criterio.orden) || (i + 1);
-                            const puntajeMaximoPorcentaje =
-                                (((parseFloat(criterio.puntaje_maximo) / parseFloat(data.porcentaje)) * 100).toFixed(2));
+                            const porcentajeTotal = parseFloat(data.porcentaje != null ? data.porcentaje : data.porcentaje_evaluacion);
+                            const puntajeMaximoPorcentaje = porcentajeTotal > 0
+                                ? (((parseFloat(criterio.puntaje_maximo) / porcentajeTotal) * 100).toFixed(2))
+                                : '0.00';
                             let criterioId = criterio.id ? parseInt(criterio.id) : null;
                             let esNuevo = !criterioId;
                             if (criterioId) {
@@ -741,9 +749,9 @@ class TeacherRubricaModel {
                                     const ordenNivel = parseInt(nivel.orden) || (j + 1);
                                     ordenesNivelesPayload.push(ordenNivel);
 
-                                    const puntajeNivelPorcentaje = parseFloat(
-                                        ((nivel.puntaje / criterio.puntaje_maximo) * 100).toFixed(2)
-                                    );
+                                    const puntajeNivelPorcentaje = parseFloat(criterio.puntaje_maximo) > 0
+                                        ? parseFloat(((nivel.puntaje / criterio.puntaje_maximo) * 100).toFixed(2))
+                                        : 0;
 
                                     const upsertNivelQuery = `
                                     INSERT INTO nivel_desempeno (criterio_id, nombre_nivel, descripcion, puntaje_maximo, orden)

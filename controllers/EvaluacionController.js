@@ -151,6 +151,23 @@ class EvaluacionController {
                 });
             }
 
+            // Validar que si no es de tipo no ponderable, la ponderación no pueda ser 0
+            if (estrategias_eval && estrategias_eval.length > 0) {
+                const todasEstrategias = await EvaluacionModel.getEstrategias();
+                const estIds = estrategias_eval.map(e => Number(typeof e === 'object' && e !== null ? e.id : e));
+                const esNoPonderable = todasEstrategias
+                    .filter(est => estIds.includes(Number(est.id)))
+                    .some(est => est.ponderable === 0);
+
+                const pValor = parseFloat(porcentaje);
+                if (!esNoPonderable && (isNaN(pValor) || pValor <= 0)) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: 'La ponderación debe ser mayor a 0% para estrategias ponderables.' 
+                    });
+                }
+            }
+
             if (tipo_horario === 'Sección') {
                 const duplicados = await EvaluacionModel.checkDuplicadosHorario(fecha_evaluacion, id_horario);
                 if (duplicados.length > 0) return res.status(400).json({ success: false, message: 'Ya existe una evaluación registrada para esta sección en este horario.' });
@@ -194,6 +211,30 @@ class EvaluacionController {
                 fecha_evaluacion, tipo_horario, id_horario, hora_inicio, hora_fin,
                 competencias, instrumentos, corte
             } = req.body;
+
+            // Validar que si no es de tipo no ponderable, la ponderación no pueda ser 0
+            let estrategiasIds = estrategias_eval;
+            if (!estrategiasIds || estrategiasIds.length === 0) {
+                const currentEval = await EvaluacionModel.getEvaluacionById(id);
+                if (currentEval && currentEval.estrategias) {
+                    estrategiasIds = currentEval.estrategias;
+                }
+            }
+            if (estrategiasIds && estrategiasIds.length > 0 && porcentaje != null) {
+                const todasEstrategias = await EvaluacionModel.getEstrategias();
+                const estIds = estrategiasIds.map(e => Number(typeof e === 'object' && e !== null ? e.id : e));
+                const esNoPonderable = todasEstrategias
+                    .filter(est => estIds.includes(Number(est.id)))
+                    .some(est => est.ponderable === 0);
+
+                const pValor = parseFloat(porcentaje);
+                if (!esNoPonderable && (isNaN(pValor) || pValor <= 0)) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: 'La ponderación debe ser mayor a 0% para estrategias ponderables.' 
+                    });
+                }
+            }
 
             const evalData = { contenido, porcentaje, cant_personas, competencias, instrumentos, fecha_evaluacion, id_seccion, corte };
             const horarioData = tipo_horario === 'Sección' ? { id_horario } : { hora_inicio, hora_cierre: hora_fin };

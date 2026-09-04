@@ -1,4 +1,5 @@
 const TeacherEvaluacionesModel = require('../model/TeacherEvaluacionesModel');
+const EvaluacionModel = require('../model/EvaluacionModel');
 
 class TeacherEvaluacionesController {
     static async getAllTeacherEvaluaciones(req, res) {
@@ -117,10 +118,15 @@ class TeacherEvaluacionesController {
             const cedula_evaluador = req.user.cedula;
 
             const puntajeTotal = parseFloat(payload.puntaje_total);
-            if (isNaN(puntajeTotal) || puntajeTotal < 0.02499) {
+            const evalInfo = await EvaluacionModel.getEvaluacionById(evaluacionId);
+            const esEvalCero = evalInfo && parseFloat(evalInfo.porcentaje) === 0;
+
+            if (isNaN(puntajeTotal) || (!esEvalCero && puntajeTotal < 0.02499) || (esEvalCero && puntajeTotal < 0)) {
                 return res.status(400).json({
                     success: false,
-                    message: 'La calificación total no puede ser inferior a 0.025 puntos.'
+                    message: esEvalCero
+                        ? 'La calificación total no puede ser negativa.'
+                        : 'La calificación total no puede ser inferior a 0.025 puntos.'
                 });
             }
 

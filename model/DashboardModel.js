@@ -114,7 +114,7 @@ class DashboardModel {
                                     docente_nombre: a.docente_nombre,
                                     docente_apellido: a.docente_apellido,
                                     puntaje_total: a.puntaje_total !== null && a.puntaje_total !== undefined
-                                        ? aplicarRedondeoPuntaje(a.puntaje_total, a.porcentaje_evaluacion || 20)
+                                        ? aplicarRedondeoPuntaje(a.puntaje_total, a.porcentaje_evaluacion != null ? a.porcentaje_evaluacion : 20)
                                         : null,
                                     fecha: a.fecha_evaluacion
                                 }));

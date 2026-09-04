@@ -168,7 +168,7 @@ class RubricaController {
             const { validarEstructuraRubrica } = require('../utils/evaluacionUtils');
             const validacion = validarEstructuraRubrica({
                 criterios: criteriosParsed,
-                porcentaje: porcentaje_evaluacion || req.body.porcentaje_evaluacion,
+                porcentaje: porcentaje_evaluacion != null ? porcentaje_evaluacion : req.body.porcentaje_evaluacion,
                 esCreacion: true
             });
 

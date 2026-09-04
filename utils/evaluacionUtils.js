@@ -39,7 +39,7 @@ function validarEstructuraRubrica({ criterios, porcentaje, esCreacion = false })
     }
 
     const porcentajeTotal = parseFloat(porcentaje);
-    if (isNaN(porcentajeTotal) || porcentajeTotal <= 0) {
+    if (isNaN(porcentajeTotal) || porcentajeTotal < 0) {
         return { valido: false, mensaje: 'El porcentaje de la evaluación debe ser mayor a 0.' };
     }
 

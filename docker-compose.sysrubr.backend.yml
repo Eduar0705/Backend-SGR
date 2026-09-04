@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -8,7 +6,7 @@ services:
     container_name: sgr_backend
     restart: always
     ports:
-      - "3007:3000"
+      - "3008:3000"
     env_file:
       - .env
     depends_on:
@@ -21,12 +19,14 @@ services:
     image: mysql:8.0
     container_name: sgr_mysql
     restart: always
-    command: --default-authentication-plugin=mysql_native_password
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: sistems_sgr
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
     ports:
-      - "3307:3306"
+      - "${DB_PORT_HOST:-3308}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
